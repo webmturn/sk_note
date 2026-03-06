@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.sknote.app.ui.home.HomeFragment"
+        android:label="首页"
+        tools:layout="@layout/fragment_home">
+
+        <action
+            android:id="@+id/action_home_to_articleDetail"
+            app:destination="@id/articleDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_home_to_articleList"
+            app:destination="@id/articleListFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/articleListFragment"
+        android:name="com.sknote.app.ui.article.ArticleListFragment"
+        android:label="文章列表"
+        tools:layout="@layout/fragment_article_list">
+
+        <argument
+            android:name="category_id"
+            app:argType="long" />
+        <argument
+            android:name="category_name"
+            app:argType="string"
+            android:defaultValue="文章列表" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/articleDetailFragment"
+        android:name="com.sknote.app.ui.article.ArticleDetailFragment"
+        android:label="文章详情"
+        tools:layout="@layout/fragment_article_detail">
+
+        <argument
+            android:name="article_id"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/discussionListFragment"
+        android:name="com.sknote.app.ui.discussion.DiscussionListFragment"
+        android:label="讨论"
+        tools:layout="@layout/fragment_discussion_list">
+
+        <action
+            android:id="@+id/action_discussions_to_detail"
+            app:destination="@id/discussionDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_discussions_to_create"
+            app:destination="@id/createDiscussionFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/discussionDetailFragment"
+        android:name="com.sknote.app.ui.discussion.DiscussionDetailFragment"
+        android:label="讨论详情"
+        tools:layout="@layout/fragment_discussion_detail">
+
+        <argument
+            android:name="discussion_id"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/createDiscussionFragment"
+        android:name="com.sknote.app.ui.discussion.CreateDiscussionFragment"
+        android:label="发起讨论"
+        tools:layout="@layout/fragment_create_discussion">
+
+        <argument
+            android:name="block_json"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="palette_json"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/paletteDetailFragment"
+        android:name="com.sknote.app.ui.discussion.PaletteDetailFragment"
+        android:label="调色板详情"
+        tools:layout="@layout/fragment_palette_detail">
+
+        <argument
+            android:name="palette_json"
+            app:argType="string" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/referenceFragment"
+        android:name="com.sknote.app.ui.reference.ReferenceContainerFragment"
+        android:label="参考"
+        tools:layout="@layout/fragment_reference_container" />
+
+    <fragment
+        android:id="@+id/referenceDetailFragment"
+        android:name="com.sknote.app.ui.reference.ReferenceDetailFragment"
+        android:label="参考详情"
+        tools:layout="@layout/fragment_reference_detail">
+
+        <argument
+            android:name="reference_id"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/referenceSearchFragment"
+        android:name="com.sknote.app.ui.reference.ReferenceSearchFragment"
+        android:label="搜索参考"
+        tools:layout="@layout/fragment_reference_search" />
+
+    <fragment
+        android:id="@+id/snippetListFragment"
+        android:name="com.sknote.app.ui.snippet.SnippetListFragment"
+        android:label="代码片段"
+        tools:layout="@layout/fragment_snippet_list">
+
+        <action
+            android:id="@+id/action_snippets_to_detail"
+            app:destination="@id/snippetDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
+        <action
+            android:id="@+id/action_snippets_to_create"
+            app:destination="@id/createSnippetFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/snippetDetailFragment"
+        android:name="com.sknote.app.ui.snippet.SnippetDetailFragment"
+        android:label="代码片段详情"
+        tools:layout="@layout/fragment_snippet_detail">
+
+        <argument
+            android:name="snippet_id"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/createSnippetFragment"
+        android:name="com.sknote.app.ui.snippet.CreateSnippetFragment"
+        android:label="分享代码片段"
+        tools:layout="@layout/fragment_create_snippet" />
+
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.sknote.app.ui.search.SearchFragment"
+        android:label="搜索"
+        tools:layout="@layout/fragment_search" />
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.sknote.app.ui.auth.LoginFragment"
+        android:label="登录"
+        tools:layout="@layout/fragment_login" />
+
+    <fragment
+        android:id="@+id/adminFragment"
+        android:name="com.sknote.app.ui.admin.AdminFragment"
+        android:label="我的"
+        tools:layout="@layout/fragment_admin" />
+
+    <fragment
+        android:id="@+id/categoryManageFragment"
+        android:name="com.sknote.app.ui.admin.CategoryManageFragment"
+        android:label="分类管理"
+        tools:layout="@layout/fragment_category_manage" />
+
+    <fragment
+        android:id="@+id/articleManageFragment"
+        android:name="com.sknote.app.ui.admin.ArticleManageFragment"
+        android:label="文章管理"
+        tools:layout="@layout/fragment_article_manage" />
+
+    <fragment
+        android:id="@+id/discussionManageFragment"
+        android:name="com.sknote.app.ui.admin.DiscussionManageFragment"
+        android:label="讨论管理"
+        tools:layout="@layout/fragment_discussion_manage" />
+
+    <fragment
+        android:id="@+id/snippetManageFragment"
+        android:name="com.sknote.app.ui.admin.SnippetManageFragment"
+        android:label="代码片段管理"
+        tools:layout="@layout/fragment_snippet_manage" />
+
+    <fragment
+        android:id="@+id/userManageFragment"
+        android:name="com.sknote.app.ui.admin.UserManageFragment"
+        android:label="账号管理"
+        tools:layout="@layout/fragment_user_manage" />
+
+    <fragment
+        android:id="@+id/articleEditorFragment"
+        android:name="com.sknote.app.ui.admin.ArticleEditorFragment"
+        android:label="编辑文章"
+        tools:layout="@layout/fragment_article_editor">
+
+        <argument
+            android:name="article_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileEditFragment"
+        android:name="com.sknote.app.ui.auth.ProfileEditFragment"
+        android:label="编辑资料"
+        tools:layout="@layout/fragment_profile_edit" />
+
+    <fragment
+        android:id="@+id/bookmarkListFragment"
+        android:name="com.sknote.app.ui.bookmark.BookmarkListFragment"
+        android:label="我的收藏"
+        tools:layout="@layout/fragment_bookmark_list" />
+
+    <fragment
+        android:id="@+id/readingHistoryFragment"
+        android:name="com.sknote.app.ui.bookmark.ReadingHistoryFragment"
+        android:label="阅读历史"
+        tools:layout="@layout/fragment_reading_history" />
+
+    <fragment
+        android:id="@+id/notificationFragment"
+        android:name="com.sknote.app.ui.notification.NotificationFragment"
+        android:label="通知"
+        tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/swToolsFragment"
+        android:name="com.sknote.app.ui.analyzer.SwToolsFragment"
+        android:label="Sketchware 工具箱"
+        tools:layout="@layout/fragment_sw_tools" />
+
+    <fragment
+        android:id="@+id/logicVisualizerFragment"
+        android:name="com.sknote.app.ui.analyzer.LogicVisualizerFragment"
+        android:label="逻辑可视化"
+        tools:layout="@layout/fragment_logic_visualizer" />
+
+    <fragment
+        android:id="@+id/blockEditorFragment"
+        android:name="com.sknote.app.ui.analyzer.BlockEditorFragment"
+        android:label="Block Editor"
+        tools:layout="@layout/fragment_block_editor" />
+
+    <fragment
+        android:id="@+id/projectResourceFragment"
+        android:name="com.sknote.app.ui.analyzer.ProjectResourceFragment"
+        android:label="项目资源管理"
+        tools:layout="@layout/fragment_project_resource" />
+
+    <fragment
+        android:id="@+id/customBlocksFragment"
+        android:name="com.sknote.app.ui.analyzer.CustomBlocksFragment"
+        android:label="自定义积木块管理"
+        tools:layout="@layout/fragment_custom_blocks" />
+
+    <fragment
+        android:id="@+id/projectAnalyzerFragment"
+        android:name="com.sknote.app.ui.analyzer.ProjectAnalyzerFragment"
+        android:label="项目分析器"
+        tools:layout="@layout/fragment_project_analyzer" />
+
+    <fragment
+        android:id="@+id/customComponentsFragment"
+        android:name="com.sknote.app.ui.analyzer.CustomComponentsFragment"
+        android:label="组件管理"
+        tools:layout="@layout/fragment_component_manage" />
+
+    <fragment
+        android:id="@+id/customEventsFragment"
+        android:name="com.sknote.app.ui.analyzer.CustomEventsFragment"
+        android:label="事件管理"
+        tools:layout="@layout/fragment_event_manage" />
+
+    <fragment
+        android:id="@+id/componentEditorFragment"
+        android:name="com.sknote.app.ui.analyzer.ComponentEditorFragment"
+        android:label="编辑组件"
+        tools:layout="@layout/fragment_component_editor">
+
+        <argument
+            android:name="pos"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/eventEditorFragment"
+        android:name="com.sknote.app.ui.analyzer.EventEditorFragment"
+        android:label="编辑事件"
+        tools:layout="@layout/fragment_event_editor">
+
+        <argument
+            android:name="lis_name"
+            app:argType="string"
+            android:defaultValue="" />
+        <argument
+            android:name="event_index"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+</navigation>

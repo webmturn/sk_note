@@ -1,0 +1,125 @@
+[
+  {"id":3000,"name":"onClick","category":"Click","type":"event","description":"当用户点击控件时触发。","usage":"最常用的事件，绑定到按钮执行操作。","parameters":"view (View): 被点击的控件
+说明: 用户单击控件时触发，最常用的交互事件","example":"button1.setOnClickListener(v -> { });","color":"#FFE1A92A","shape":"h"},
+  {"id":3001,"name":"onLongClick","category":"Click","type":"event","description":"当用户长按控件时触发。","usage":"用于弹出菜单或删除操作。","parameters":"view (View): 被长按的控件
+说明: 用户长按控件约1秒后触发
+返回true消费事件，不再触发onClick","example":"view.setOnLongClickListener(v -> { return true; });","color":"#FFE1A92A","shape":"h"},
+  {"id":3002,"name":"onDoubleClick","category":"Click","type":"event","description":"当用户双击控件时触发。","usage":"用于放大图片等双击操作。","parameters":"view (View): 被双击的控件
+说明: 通过GestureDetector检测双击手势","example":"// 通过 GestureDetector 实现","color":"#FFE1A92A","shape":"h"},
+  {"id":3010,"name":"onTextChanged","category":"Text","type":"event","description":"当 EditText 文本变化时触发。","usage":"实时搜索、输入验证、字符计数。","parameters":"text (CharSequence): 变化后的当前文本
+start (int): 变化起始位置
+before (int): 被替换的字符数
+count (int): 新增的字符数
+说明: 每次输入/删除文字都会触发","example":"edittext1.addTextChangedListener(new TextWatcher() { ... });","color":"#FFE1A92A","shape":"h"},
+  {"id":3011,"name":"onEditorAction","category":"Text","type":"event","description":"当用户在 EditText 按下回车或完成键时触发。","usage":"响应软键盘的搜索/完成操作。","parameters":"actionId (int): 软键盘动作ID
+常用值: IME_ACTION_DONE(完成), IME_ACTION_SEARCH(搜索), IME_ACTION_NEXT(下一个)
+说明: 按下软键盘右下角按钮时触发","example":"edittext1.setOnEditorActionListener((v, id, e) -> { });","color":"#FFE1A92A","shape":"h"},
+  {"id":3020,"name":"onItemSelected","category":"Selection","type":"event","description":"当 Spinner/ListView 选项被选中时触发。","usage":"响应列表选择操作。","parameters":"position (int): 选中项的索引位置(从0开始)
+view (View): 选中项的视图
+说明: Spinner选项变化或ListView选中项变化时触发","example":"spinner1.setOnItemSelectedListener(new OnItemSelectedListener() { ... });","color":"#FFE1A92A","shape":"h"},
+  {"id":3021,"name":"onItemClick","category":"Selection","type":"event","description":"当 ListView 的列表项被点击时触发。","usage":"响应列表项点击。","parameters":"position (int): 点击项的索引位置(从0开始)
+view (View): 被点击的列表项视图
+id (long): 列表项ID","example":"listview1.setOnItemClickListener((parent, view, pos, id) -> { });","color":"#FFE1A92A","shape":"h"},
+  {"id":3022,"name":"onItemLongClick","category":"Selection","type":"event","description":"当 ListView 列表项被长按时触发。","usage":"用于列表项的删除、编辑等操作。","parameters":"position (int): 长按项的索引位置(从0开始)
+view (View): 被长按的列表项视图
+返回true消费事件","example":"listview1.setOnItemLongClickListener((parent, view, pos, id) -> { return true; });","color":"#FFE1A92A","shape":"h"},
+  {"id":3030,"name":"onCheckedChanged","category":"State","type":"event","description":"当 CheckBox/Switch 状态改变时触发。","usage":"响应开关切换。","parameters":"isChecked (boolean): 当前是否选中
+view (CompoundButton): 触发事件的控件
+说明: CheckBox/Switch/RadioButton状态变化时触发","example":"switch1.setOnCheckedChangeListener((btn, checked) -> { });","color":"#FFE1A92A","shape":"h"},
+  {"id":3031,"name":"onSeekBarChanged","category":"State","type":"event","description":"当 SeekBar 滑动时触发。","usage":"响应滑动条数值变化。","parameters":"progress (int): 当前进度值
+fromUser (boolean): 是否由用户拖动触发(区分代码设置)
+说明: SeekBar滑动过程中持续触发","example":"seekbar1.setOnSeekBarChangeListener(new OnSeekBarChangeListener() { ... });","color":"#FFE1A92A","shape":"h"},
+  {"id":3032,"name":"onRatingChanged","category":"State","type":"event","description":"当 RatingBar 评分变化时触发。","usage":"响应评分变化。","parameters":"rating (float): 当前评分值
+fromUser (boolean): 是否由用户操作触发","example":"ratingbar1.setOnRatingBarChangeListener((bar, rating, fromUser) -> { });","color":"#FFE1A92A","shape":"h"},
+  {"id":3040,"name":"onCreate","category":"Lifecycle","type":"event","description":"Activity 创建时触发。","usage":"初始化界面、数据、事件。","parameters":"savedInstanceState (Bundle): 保存的状态数据(首次为null)
+说明: Activity创建时触发，用于初始化界面、绑定数据和事件","example":"onCreate() { initViews(); loadData(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3041,"name":"onResume","category":"Lifecycle","type":"event","description":"Activity 恢复到前台时触发。","usage":"刷新数据、恢复动画。","parameters":"无参数
+说明: Activity从后台回到前台时触发
+适合刷新数据、恢复播放等","example":"onResume() { refreshData(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3042,"name":"onPause","category":"Lifecycle","type":"event","description":"Activity 进入后台时触发。","usage":"保存数据、暂停动画。","parameters":"无参数
+说明: Activity进入后台时触发
+适合保存数据、暂停动画/播放","example":"onPause() { saveData(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3043,"name":"onDestroy","category":"Lifecycle","type":"event","description":"Activity 销毁时触发。","usage":"释放资源、取消注册。","parameters":"无参数
+说明: Activity被销毁时触发
+适合释放资源、取消注册监听器","example":"onDestroy() { releaseResources(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3044,"name":"onBackPressed","category":"Lifecycle","type":"event","description":"用户按下返回键时触发。","usage":"自定义返回行为，如弹出确认对话框。","parameters":"无参数
+说明: 用户按下系统返回键时触发
+可自定义返回行为(如弹确认框)","example":"onBackPressed() { showExitDialog(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3045,"name":"onStart","category":"Lifecycle","type":"event","description":"Activity 启动时触发（onCreate 之后）。","usage":"界面可见时的初始化。","parameters":"无参数
+说明: Activity变为可见时触发(onCreate之后)","example":"onStart() { startUpdates(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3046,"name":"onStop","category":"Lifecycle","type":"event","description":"Activity 停止时触发（不可见时）。","usage":"释放可见性相关资源。","parameters":"无参数
+说明: Activity不可见时触发(后台或被覆盖)","example":"onStop() { stopUpdates(); }","color":"#FFE1A92A","shape":"h"},
+  {"id":3050,"name":"onPageSelected","category":"Page","type":"event","description":"ViewPager 页面切换时触发。","usage":"响应标签页切换。","parameters":"position (int): 当前选中页的索引位置(从0开始)
+说明: ViewPager页面切换完成后触发","example":"viewPager.addOnPageChangeListener(new OnPageChangeListener() { ... });","color":"#FFE1A92A","shape":"h"},
+  {"id":3051,"name":"onPageScrolled","category":"Page","type":"event","description":"ViewPager 页面滚动时触发。","usage":"实现页面滚动联动效果。","parameters":"position (int): 当前页索引
+offset (float): 页面偏移比例(0.0~1.0)
+offsetPixels (int): 页面偏移像素
+说明: 页面滚动过程中持续触发","example":"// 在 onPageScrolled 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3060,"name":"onScrollChanged","category":"Scroll","type":"event","description":"ScrollView 滚动时触发。","usage":"实现滚动监听、懒加载。","parameters":"scrollX (int): 水平滚动位置(像素)
+scrollY (int): 垂直滚动位置(像素)
+说明: ScrollView滚动过程中持续触发","example":"// 检测滚动到底部加载更多","color":"#FFE1A92A","shape":"h"},
+  {"id":3061,"name":"onListScrolled","category":"Scroll","type":"event","description":"ListView 滚动时触发。","usage":"实现滚动加载更多。","parameters":"firstVisible (int): 第一个可见项索引
+visibleCount (int): 可见项数量
+totalCount (int): 总项数
+说明: 可用于检测滚到底部(firstVisible+visibleCount>=totalCount)","example":"// 检测是否滚动到底部","color":"#FFE1A92A","shape":"h"},
+  {"id":3070,"name":"onCreateOptionsMenu","category":"Menu","type":"event","description":"创建选项菜单时触发。","usage":"初始化工具栏菜单项。","parameters":"menu (Menu): 菜单对象
+说明: Activity创建时调用，用于初始化工具栏菜单
+通过inflater加载menu资源","example":"getMenuInflater().inflate(R.menu.main, menu);","color":"#FFE1A92A","shape":"h"},
+  {"id":3071,"name":"onOptionsItemSelected","category":"Menu","type":"event","description":"选项菜单项被点击时触发。","usage":"响应工具栏菜单操作。","parameters":"item (MenuItem): 被点击的菜单项
+说明: 通过item.getItemId()判断哪个菜单被点击
+返回true表示已处理","example":"switch (item.getItemId()) { case R.id.action_settings: ... }","color":"#FFE1A92A","shape":"h"},
+  {"id":3080,"name":"onActivityResult","category":"Result","type":"event","description":"从其他 Activity 返回结果时触发。","usage":"接收相机拍照、文件选择等返回的数据。","parameters":"requestCode (int): 请求码(区分不同请求)
+resultCode (int): 结果码(RESULT_OK/-1=成功)
+data (Intent): 返回的数据
+说明: 相机拍照、文件选择等返回时触发","example":"if (requestCode == PICK_IMAGE && resultCode == RESULT_OK) { ... }","color":"#FFE1A92A","shape":"h"},
+  {"id":3081,"name":"onRequestPermissionsResult","category":"Result","type":"event","description":"权限请求结果返回时触发。","usage":"处理运行时权限请求的结果。","parameters":"requestCode (int): 请求码
+permissions (String[]): 请求的权限列表
+grantResults (int[]): 授权结果(0=授权, -1=拒绝)
+说明: 运行时权限请求结果回调","example":"if (grantResults[0] == PERMISSION_GRANTED) { ... }","color":"#FFE1A92A","shape":"h"},
+  {"id":3090,"name":"onSwipeRefresh","category":"Refresh","type":"event","description":"下拉刷新时触发。","usage":"响应 SwipeRefreshLayout 的下拉刷新手势。","parameters":"无参数
+说明: 用户下拉刷新手势触发
+处理完成后需调用setRefreshing(false)关闭刷新动画","example":"swipeRefresh.setOnRefreshListener(() -> loadData());","color":"#FFE1A92A","shape":"h"},
+  {"id":3091,"name":"onTabSelected","category":"Tab","type":"event","description":"TabLayout 标签被选中时触发。","usage":"响应标签切换。","parameters":"tab (Tab): 被选中的标签对象
+position (int): 标签位置
+说明: TabLayout标签切换时触发","example":"tabLayout.addOnTabSelectedListener(listener);","color":"#FFE1A92A","shape":"h"},
+  {"id":3095,"name":"onFirebaseChildAdded","category":"Firebase","type":"event","description":"Firebase 数据库子节点被添加时触发。","usage":"实时监听新数据。","parameters":"snapshot (DataSnapshot): 新增的数据快照
+key (String): 数据的键
+value: 数据的值
+说明: Firebase实时数据库有新子节点添加时触发","example":"// 在 onChildAdded 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3096,"name":"onFirebaseChildChanged","category":"Firebase","type":"event","description":"Firebase 数据库子节点数据变化时触发。","usage":"实时监听数据更新。","parameters":"snapshot (DataSnapshot): 变化后的数据快照
+key (String): 数据的键
+说明: Firebase子节点数据被修改时触发","example":"// 在 onChildChanged 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3097,"name":"onFirebaseChildRemoved","category":"Firebase","type":"event","description":"Firebase 数据库子节点被删除时触发。","usage":"实时监听数据删除。","parameters":"snapshot (DataSnapshot): 被删除的数据快照
+key (String): 数据的键
+说明: Firebase子节点被删除时触发","example":"// 在 onChildRemoved 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3098,"name":"onNetworkResponse","category":"Network","type":"event","description":"网络请求返回响应时触发。","usage":"处理 API 请求的返回数据。","parameters":"tag (String): 请求标签(区分不同请求)
+response (String): 服务器响应内容(通常为JSON)
+headers (HashMap): 响应头
+说明: HTTP请求成功返回时触发","example":"// 在 onResponse 中解析 JSON","color":"#FFE1A92A","shape":"h"},
+  {"id":3099,"name":"onNetworkError","category":"Network","type":"event","description":"网络请求失败时触发。","usage":"处理网络错误。","parameters":"tag (String): 请求标签
+error (String): 错误信息
+说明: HTTP请求失败时触发(网络错误、超时、服务器错误等)","example":"// 在 onErrorResponse 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3100,"name":"onTimerFinished","category":"Timer","type":"event","description":"Timer 计时结束时触发。","usage":"在计时器到期后执行操作，如延迟执行、定时刷新等。","parameters":"无参数\n说明: Timer 的 delay 时间到达后触发","example":"// 在 onFinish 中处理\ntimer.start();","color":"#FFE1A92A","shape":"h"},
+  {"id":3101,"name":"onDialogOKButton","category":"Dialog","type":"event","description":"Dialog 确定按钮被点击时触发。","usage":"处理用户点击确定按钮的操作。","parameters":"无参数\n说明: 用户点击对话框的正面按钮时触发","example":"// 在 onPositiveButtonClicked 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3102,"name":"onDialogCancelButton","category":"Dialog","type":"event","description":"Dialog 取消按钮被点击时触发。","usage":"处理用户点击取消按钮的操作。","parameters":"无参数\n说明: 用户点击对话框的负面按钮时触发","example":"// 在 onNegativeButtonClicked 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3103,"name":"onMediaPlayerCompleted","category":"Media","type":"event","description":"MediaPlayer 播放完成时触发。","usage":"在音频/视频播放结束后执行操作。","parameters":"无参数\n说明: 媒体播放完毕时触发","example":"// 在 onCompletion 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3104,"name":"onMediaPlayerError","category":"Media","type":"event","description":"MediaPlayer 播放出错时触发。","usage":"处理媒体播放错误。","parameters":"what (int): 错误类型\nextra (int): 错误附加信息\n说明: 媒体播放发生错误时触发","example":"// 在 onError 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3105,"name":"onSpeechResult","category":"SpeechToText","type":"event","description":"语音识别返回结果时触发。","usage":"获取用户语音识别后的文本。","parameters":"result (String): 识别出的文本\n说明: 语音识别完成后触发","example":"edittext1.setText(result);","color":"#FFE1A92A","shape":"h"},
+  {"id":3106,"name":"onBluetoothConnected","category":"Bluetooth","type":"event","description":"蓝牙设备连接成功时触发。","usage":"在蓝牙连接建立后执行操作。","parameters":"无参数\n说明: 蓝牙设备成功连接后触发","example":"// 连接成功，开始通信","color":"#FFE1A92A","shape":"h"},
+  {"id":3107,"name":"onBluetoothDataReceived","category":"Bluetooth","type":"event","description":"蓝牙接收到数据时触发。","usage":"处理蓝牙设备发送的数据。","parameters":"data (String): 接收到的数据\n说明: 蓝牙接收到数据时触发","example":"textview1.setText(data);","color":"#FFE1A92A","shape":"h"},
+  {"id":3108,"name":"onBluetoothConnectionError","category":"Bluetooth","type":"event","description":"蓝牙连接出错时触发。","usage":"处理蓝牙连接异常。","parameters":"error (String): 错误信息\n说明: 蓝牙连接失败或断开时触发","example":"// 在 onError 中处理","color":"#FFE1A92A","shape":"h"},
+  {"id":3109,"name":"onLocationChanged","category":"Location","type":"event","description":"位置信息更新时触发。","usage":"获取用户最新的地理位置。","parameters":"latitude (double): 纬度\nlongitude (double): 经度\n说明: GPS 定位更新时触发","example":"textview1.setText(latitude + \", \" + longitude);","color":"#FFE1A92A","shape":"h"},
+  {"id":3110,"name":"onLoginSuccess","category":"FirebaseAuth","type":"event","description":"Firebase 登录成功时触发。","usage":"处理用户登录成功后的操作。","parameters":"无参数\n说明: Firebase 用户认证成功后触发","example":"// 跳转到主页","color":"#FFE1A92A","shape":"h"},
+  {"id":3111,"name":"onLoginFailed","category":"FirebaseAuth","type":"event","description":"Firebase 登录失败时触发。","usage":"处理登录失败的情况。","parameters":"error (String): 错误信息\n说明: Firebase 认证失败时触发","example":"// 显示错误提示","color":"#FFE1A92A","shape":"h"},
+  {"id":3112,"name":"onCreateUserSuccess","category":"FirebaseAuth","type":"event","description":"Firebase 创建用户成功时触发。","usage":"处理注册成功后的操作。","parameters":"无参数\n说明: Firebase 新用户注册成功后触发","example":"// 跳转到登录页","color":"#FFE1A92A","shape":"h"},
+  {"id":3113,"name":"onCreateUserFailed","category":"FirebaseAuth","type":"event","description":"Firebase 创建用户失败时触发。","usage":"处理注册失败的情况。","parameters":"error (String): 错误信息\n说明: Firebase 新用户注册失败时触发","example":"// 显示错误提示","color":"#FFE1A92A","shape":"h"},
+  {"id":3114,"name":"onUploadSuccess","category":"FirebaseStorage","type":"event","description":"Firebase Storage 文件上传成功时触发。","usage":"处理文件上传完成后的操作。","parameters":"downloadUrl (String): 文件下载地址\n说明: 文件上传完成后触发","example":"// 保存下载链接","color":"#FFE1A92A","shape":"h"},
+  {"id":3115,"name":"onUploadFailed","category":"FirebaseStorage","type":"event","description":"Firebase Storage 文件上传失败时触发。","usage":"处理文件上传失败的情况。","parameters":"error (String): 错误信息\n说明: 文件上传失败时触发","example":"// 显示错误提示","color":"#FFE1A92A","shape":"h"},
+  {"id":3116,"name":"onDownloadSuccess","category":"FirebaseStorage","type":"event","description":"Firebase Storage 文件下载成功时触发。","usage":"处理文件下载完成后的操作。","parameters":"path (String): 本地文件路径\n说明: 文件下载完成后触发","example":"// 使用下载的文件","color":"#FFE1A92A","shape":"h"},
+  {"id":3117,"name":"onDownloadFailed","category":"FirebaseStorage","type":"event","description":"Firebase Storage 文件下载失败时触发。","usage":"处理文件下载失败的情况。","parameters":"error (String): 错误信息\n说明: 文件下载失败时触发","example":"// 显示错误提示","color":"#FFE1A92A","shape":"h"},
+  {"id":3118,"name":"onAdLoaded","category":"Ad","type":"event","description":"广告加载完成时触发。","usage":"在广告加载完成后显示广告。","parameters":"无参数\n说明: 插屏/奖励广告加载完成时触发","example":"interstitialAd.show();","color":"#FFE1A92A","shape":"h"},
+  {"id":3119,"name":"onAdFailedToLoad","category":"Ad","type":"event","description":"广告加载失败时触发。","usage":"处理广告加载失败的情况。","parameters":"error (String): 错误信息\n说明: 广告加载失败时触发","example":"// 重试加载或隐藏广告位","color":"#FFE1A92A","shape":"h"},
+  {"id":3120,"name":"onAdClosed","category":"Ad","type":"event","description":"广告关闭时触发。","usage":"广告被用户关闭后执行操作。","parameters":"无参数\n说明: 用户关闭广告后触发","example":"// 继续游戏或加载下一个广告","color":"#FFE1A92A","shape":"h"},
+  {"id":3121,"name":"onAnimationEnd","category":"Animator","type":"event","description":"动画播放结束时触发。","usage":"在动画结束后执行后续操作。","parameters":"无参数\n说明: ObjectAnimator 动画结束后触发","example":"// 动画结束后执行下一步","color":"#FFE1A92A","shape":"h"},
+  {"id":3122,"name":"onGyroscopeChanged","category":"Gyroscope","type":"event","description":"陀螺仪数据更新时触发。","usage":"实时获取设备旋转数据。","parameters":"x (float): X 轴角速度\ny (float): Y 轴角速度\nz (float): Z 轴角速度\n说明: 陀螺仪传感器数据变化时触发","example":"textview1.setText(x + \", \" + y + \", \" + z);","color":"#FFE1A92A","shape":"h"}
+]

@@ -1,0 +1,196 @@
+[
+  {"id":2000,"name":"Button","category":"Widget","type":"widget","description":"按钮控件。用户点击触发操作。","usage":"最常用的交互控件，配合 onClick 事件使用。","parameters":"text (String): 按钮显示文本
+enabled (boolean): 是否可点击
+backgroundTint (ColorStateList): 背景色
+textColor (int): 文字颜色
+textSize (float): 文字大小(sp)
+事件: onClick - 点击时触发","example":"button1.setText(\"提交\");","color":"#FF4A6CD4","shape":"s"},
+  {"id":2001,"name":"TextView","category":"Widget","type":"widget","description":"文本显示控件。展示静态或动态文本。","usage":"显示标题、描述、状态信息等。","parameters":"text (String): 显示的文本内容
+textSize (float): 字号大小(sp)
+textColor (int): 文字颜色
+gravity: 文本对齐方式(center/start/end)
+lines (int): 固定行数
+maxLines (int): 最大行数
+ellipsize: 省略方式(end/start/middle)","example":"textview1.setText(\"欢迎使用\");","color":"#FF4A6CD4","shape":"s"},
+  {"id":2002,"name":"EditText","category":"Widget","type":"widget","description":"文本输入控件。允许用户输入文本。","usage":"用于表单输入，如用户名、密码等。","parameters":"hint (String): 输入提示文字
+text (String): 当前输入内容
+inputType: 输入类型(text/number/password/email等)
+maxLines (int): 最大行数
+imeOptions: 软键盘回车键类型(done/search/next)
+事件: onTextChanged - 文本变化时触发","example":"String input = edittext1.getText().toString();","color":"#FF4A6CD4","shape":"s"},
+  {"id":2003,"name":"ImageView","category":"Widget","type":"widget","description":"图片显示控件。展示图片资源。","usage":"显示本地或网络图片。","parameters":"src (Drawable): 图片资源
+scaleType: 缩放方式(centerCrop/fitCenter/centerInside等)
+adjustViewBounds (boolean): 是否调整边界保持比例
+colorFilter (int): 颜色滤镜","example":"imageview1.setImageResource(R.drawable.logo);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2004,"name":"ListView","category":"Widget","type":"widget","description":"列表视图。以垂直列表展示数据。","usage":"配合 Adapter 使用展示列表数据。","parameters":"divider (Drawable): 分隔线
+listSelector (Drawable): 选中项高亮
+dividerHeight (int): 分隔线高度
+choiceMode: 选择模式(none/single/multiple)
+事件: onItemClick - 列表项点击
+onItemLongClick - 列表项长按","example":"listview1.setAdapter(adapter);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2005,"name":"Spinner","category":"Widget","type":"widget","description":"下拉选择控件。从选项中选择一个。","usage":"用于有限选项的选择场景。","parameters":"entries (String[]): 下拉选项数组
+spinnerMode: 显示模式(dialog/dropdown)
+prompt (String): 对话框标题
+事件: onItemSelected - 选项变化时触发","example":"spinner1.setSelection(0);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2006,"name":"CheckBox","category":"Widget","type":"widget","description":"复选框。可选中或取消。","usage":"用于多选场景。","parameters":"checked (boolean): 是否选中
+text (String): 显示文本
+事件: onCheckedChanged - 选中状态变化时触发","example":"if (checkbox1.isChecked()) { ... }","color":"#FF4A6CD4","shape":"s"},
+  {"id":2007,"name":"Switch","category":"Widget","type":"widget","description":"开关控件。在开/关间切换。","usage":"用于设置页面的功能开关。","parameters":"checked (boolean): 是否开启
+text (String): 显示文本
+textOn (String): 开启状态文字
+textOff (String): 关闭状态文字
+thumbTint (ColorStateList): 滑块颜色
+trackTint (ColorStateList): 轨道颜色
+事件: onCheckedChanged","example":"switch1.setChecked(true);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2008,"name":"SeekBar","category":"Widget","type":"widget","description":"滑动条控件。通过拖动调整数值。","usage":"用于音量、亮度等连续值调节。","parameters":"max (int): 最大值(默认100)
+progress (int): 当前进度值
+thumb (Drawable): 滑块图标
+progressDrawable (Drawable): 进度条样式
+事件: onSeekBarChanged - 滑动时触发","example":"seekbar1.setProgress(50);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2009,"name":"WebView","category":"Widget","type":"widget","description":"网页视图。在应用中显示网页。","usage":"嵌入网页内容或加载 HTML。","parameters":"loadUrl(url): 加载网页URL
+loadData(html): 加载HTML字符串
+goBack(): 后退
+goForward(): 前进
+canGoBack(): 是否可后退
+stopLoading(): 停止加载
+clearCache(): 清除缓存
+事件: onPageFinished - 页面加载完成","example":"webview1.loadUrl(\"https://example.com\");","color":"#FF4A6CD4","shape":"s"},
+  {"id":2010,"name":"ProgressBar","category":"Widget","type":"widget","description":"进度条控件。显示加载进度。","usage":"用于下载进度、加载状态等。","parameters":"max (int): 最大值
+progress (int): 当前进度
+indeterminate (boolean): 是否不确定模式(加载圈)
+style: 样式(horizontal水平条/circular旋转圈)","example":"progressbar1.setProgress(75);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2011,"name":"MapView","category":"Widget","type":"widget","description":"地图视图。显示 Google 地图。","usage":"用于地图展示和定位功能。","parameters":"addMarker(id, lat, lng): 添加地图标记
+moveCamera(lat, lng): 移动相机到指定位置
+setMapType(type): 设置地图类型(普通/卫星/地形)
+zoomIn/zoomOut(): 缩放
+setMarkerInfo(id, title, desc): 设置标记信息
+需要Google Maps API Key","example":"mapView.moveCamera(lat, lng);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2012,"name":"CalendarView","category":"Widget","type":"widget","description":"日历视图。显示可选择日期的日历。","usage":"用于日期选择场景。","parameters":"getDate(): 获取选中日期(毫秒时间戳)
+setDate(ms): 设置选中日期
+setMinDate(ms): 设置最小可选日期
+setMaxDate(ms): 设置最大可选日期
+事件: onDateChanged - 日期变化时触发","example":"calendarview1.setDate(System.currentTimeMillis());","color":"#FF4A6CD4","shape":"s"},
+  {"id":2013,"name":"AdView","category":"Widget","type":"widget","description":"广告视图。显示 AdMob 横幅广告。","usage":"用于应用内横幅广告展示。","parameters":"loadAd(): 加载横幅广告
+需要设置广告单元ID
+说明: AdMob横幅广告控件","example":"adview1.loadAd();","color":"#FF4A6CD4","shape":"s"},
+  {"id":2014,"name":"VideoView","category":"Widget","type":"widget","description":"视频播放控件。播放视频文件。","usage":"嵌入视频播放器。","parameters":"setVideoPath(path): 设置视频文件路径
+setVideoURI(uri): 设置视频URI
+start(): 开始播放
+pause(): 暂停
+stopPlayback(): 停止播放
+getDuration(): 获取总时长
+getCurrentPosition(): 获取当前位置
+isPlaying(): 是否正在播放","example":"videoview1.setVideoPath(path);\nvideoview1.start();","color":"#FF4A6CD4","shape":"s"},
+  {"id":2015,"name":"SearchView","category":"Widget","type":"widget","description":"搜索视图。提供搜索输入框。","usage":"用于搜索功能。","parameters":"queryHint (String): 搜索框提示文字
+iconified (boolean): 是否折叠显示
+事件: onQueryTextChange - 搜索文本变化
+onQueryTextSubmit - 提交搜索","example":"searchview1.setQueryHint(\"搜索...\");","color":"#FF4A6CD4","shape":"s"},
+  {"id":2016,"name":"RadioButton","category":"Widget","type":"widget","description":"单选按钮。在一组选项中选择一个。","usage":"用于单选场景，配合 RadioGroup 使用。","parameters":"checked (boolean): 是否选中
+text (String): 显示文本
+说明: 需放在RadioGroup中实现单选互斥
+事件: onCheckedChanged - 选中状态变化","example":"radiobutton1.setChecked(true);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2017,"name":"RatingBar","category":"Widget","type":"widget","description":"评分条控件。通过星星评分。","usage":"用于评分场景。","parameters":"numStars (int): 星星总数(默认5)
+rating (float): 当前评分(如3.5)
+stepSize (float): 步长(如0.5表示半星)
+事件: onRatingChanged - 评分变化时触发","example":"ratingbar1.setRating(4.5f);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2018,"name":"DatePicker","category":"Widget","type":"widget","description":"日期选择器。选择年月日。","usage":"用于表单中的日期选择。","parameters":"getYear(): 获取年份
+getMonth(): 获取月份(0-11)
+getDayOfMonth(): 获取日期
+init(year, month, day): 设置初始日期","example":"int year = datepicker1.getYear();","color":"#FF4A6CD4","shape":"s"},
+  {"id":2019,"name":"TimePicker","category":"Widget","type":"widget","description":"时间选择器。选择小时和分钟。","usage":"用于表单中的时间选择。","parameters":"getHour(): 获取小时
+getMinute(): 获取分钟
+setIs24HourView(boolean): 是否24小时制
+setHour(hour): 设置小时
+setMinute(minute): 设置分钟","example":"int hour = timepicker1.getHour();","color":"#FF4A6CD4","shape":"s"},
+  {"id":2020,"name":"GridView","category":"Widget","type":"widget","description":"网格视图。以网格形式展示数据。","usage":"图片画廊、应用网格等场景。","parameters":"numColumns (int): 列数
+stretchMode: 拉伸模式(columnWidth/spacingWidth)
+horizontalSpacing (int): 水平间距
+verticalSpacing (int): 垂直间距
+事件: onItemClick - 网格项点击","example":"gridview1.setNumColumns(3);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2021,"name":"ImageButton","category":"Widget","type":"widget","description":"图片按钮。显示图片的可点击按钮。","usage":"用图片代替文字的按钮。","parameters":"src (Drawable): 按钮图片资源
+scaleType: 缩放方式
+background (Drawable): 背景
+事件: onClick - 点击时触发","example":"imagebutton1.setImageResource(R.drawable.icon);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2022,"name":"AutoCompleteTextView","category":"Widget","type":"widget","description":"自动补全文本输入框。","usage":"输入时自动提示匹配选项。","parameters":"hint (String): 输入提示
+completionThreshold (int): 触发提示的最少字符数
+需设置Adapter提供候选项
+事件: onItemClick - 选择候选项时触发","example":"autocomplete1.setAdapter(adapter);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2023,"name":"RecyclerView","category":"Widget","type":"widget","description":"高效列表/网格视图。ListView 的升级版。","usage":"大数据量列表、复杂布局列表。","parameters":"setLayoutManager(lm): 设置布局管理器
+  LinearLayoutManager: 线性列表
+  GridLayoutManager: 网格列表
+  StaggeredGridLayoutManager: 瀑布流
+setAdapter(adapter): 设置数据适配器
+scrollToPosition(pos): 滚动到指定位置
+需自定义ViewHolder和Adapter","example":"recyclerView.setLayoutManager(new LinearLayoutManager(this));","color":"#FF4A6CD4","shape":"s"},
+  {"id":2024,"name":"ViewPager","category":"Widget","type":"widget","description":"页面滑动容器。左右滑动切换页面。","usage":"实现引导页、标签页切换。","parameters":"setAdapter(adapter): 设置页面适配器
+setCurrentItem(pos): 切换到指定页面
+getCurrentItem(): 获取当前页位置
+事件: onPageSelected - 页面切换时触发
+常配合TabLayout使用","example":"viewPager.setCurrentItem(0);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2025,"name":"CardView","category":"Widget","type":"widget","description":"卡片视图。带圆角和阴影的容器。","usage":"Material Design 风格的卡片布局。","parameters":"cardCornerRadius (float): 圆角半径(dp)
+cardElevation (float): 阴影高度(dp)
+cardBackgroundColor (int): 卡片背景色
+contentPadding (int): 内容内边距
+strokeColor (int): 边框颜色
+strokeWidth (int): 边框宽度","example":"cardView.setCardBackgroundColor(Color.WHITE);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2026,"name":"CircleImageView","category":"Widget","type":"widget","description":"圆形图片视图。将图片裁剪为圆形。","usage":"显示用户头像。","parameters":"src (Drawable): 图片资源
+borderColor (int): 边框颜色
+borderWidth (int): 边框宽度(dp)
+说明: 自动将图片裁剪为圆形，常用于头像显示","example":"circleImageView.setImageResource(R.drawable.avatar);","color":"#FF4A6CD4","shape":"s"},
+
+  {"id":2040,"name":"LinearLayout","category":"Layout","type":"widget","description":"线性布局。子控件按水平或垂直方向排列。","usage":"最基础的布局容器。","parameters":"orientation: 排列方向(vertical垂直/horizontal水平)
+gravity: 子控件对齐方式(center/start/end)
+weightSum (float): 权重总和
+layout_weight (float): 子控件权重(按比例分配空间)","example":"// orientation=\"vertical\"","color":"#FF4A6CD4","shape":"s"},
+  {"id":2041,"name":"RelativeLayout","category":"Layout","type":"widget","description":"相对布局。子控件按相对位置排列。","usage":"灵活的布局容器，控件可相对于父容器或其他控件定位。","parameters":"layout_alignParentTop/Bottom/Left/Right: 对齐父容器边缘
+layout_above/below: 在指定控件上方/下方
+layout_toLeftOf/toRightOf: 在指定控件左/右方
+layout_centerInParent: 居中","example":"// layout_alignParentTop=\"true\"","color":"#FF4A6CD4","shape":"s"},
+  {"id":2042,"name":"FrameLayout","category":"Layout","type":"widget","description":"帧布局。子控件叠加在一起。","usage":"用于层叠显示，如浮动按钮覆盖在内容上。","parameters":"layout_gravity: 子控件在帧内的位置(center/top/bottom/start/end)
+说明: 子控件默认左上角堆叠，后添加的在上层","example":"// 子控件层层叠加","color":"#FF4A6CD4","shape":"s"},
+  {"id":2043,"name":"ScrollView","category":"Layout","type":"widget","description":"滚动视图。内容超出屏幕时可垂直滚动。","usage":"包裹一个子布局使其可垂直滚动。","parameters":"fillViewport (boolean): 内容不足时是否填充整个视口
+说明: 只能包含一个子布局，内容超出时可垂直滚动","example":"// 包裹 LinearLayout 实现长页面","color":"#FF4A6CD4","shape":"s"},
+  {"id":2044,"name":"HorizontalScrollView","category":"Layout","type":"widget","description":"水平滚动视图。内容可水平滚动。","usage":"包裹一个子布局使其可水平滚动。","parameters":"fillViewport (boolean): 内容不足时是否填充整个视口
+说明: 只能包含一个子布局，内容超出时可水平滚动","example":"// 水平滚动内容","color":"#FF4A6CD4","shape":"s"},
+  {"id":2045,"name":"SwipeRefreshLayout","category":"Layout","type":"widget","description":"下拉刷新布局。支持下拉手势刷新数据。","usage":"包裹列表实现下拉刷新。","parameters":"setRefreshing(boolean): 设置刷新状态
+setColorSchemeColors(colors): 设置刷新动画颜色
+事件: onSwipeRefresh - 下拉刷新时触发
+说明: 包裹列表或ScrollView使用","example":"swipeRefresh.setOnRefreshListener(() -> loadData());","color":"#FF4A6CD4","shape":"s"},
+  {"id":2046,"name":"TabLayout","category":"Layout","type":"widget","description":"标签页布局。显示多个标签页。","usage":"配合 ViewPager 实现标签页切换。","parameters":"addTab(tab): 添加标签页
+setupWithViewPager(viewPager): 与ViewPager联动
+getSelectedTabPosition(): 获取选中标签位置
+事件: onTabSelected - 标签被选中时触发","example":"tabLayout.setupWithViewPager(viewPager);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2047,"name":"BottomNavigationView","category":"Layout","type":"widget","description":"底部导航栏。底部标签页导航。","usage":"应用底部的主导航。","parameters":"menu (MenuRes): 菜单资源
+labelVisibilityMode: 标签显示模式(labeled/unlabeled/auto)
+事件: onNavigationItemSelected - 导航项被选中","example":"bottomNav.setOnNavigationItemSelectedListener(listener);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2048,"name":"CoordinatorLayout","category":"Layout","type":"widget","description":"协调布局。协调子控件的交互行为。","usage":"配合 AppBar、FAB 等实现联动效果。","parameters":"layout_behavior: 子控件交互行为
+说明: 用于协调AppBarLayout、FAB等控件的联动效果
+常与AppBarLayout、CollapsingToolbarLayout配合","example":"// 与 AppBarLayout 配合","color":"#FF4A6CD4","shape":"s"},
+  {"id":2049,"name":"CollapsingToolbarLayout","category":"Layout","type":"widget","description":"折叠工具栏布局。滚动时折叠/展开工具栏。","usage":"实现可折叠的顶部区域。","parameters":"title (String): 展开时的标题
+contentScrim (Drawable): 折叠后的背景
+expandedTitleGravity: 展开标题位置
+collapsedTitleGravity: 折叠标题位置
+说明: 配合CoordinatorLayout实现折叠效果","example":"collapsingToolbar.setTitle(\"详情\");","color":"#FF4A6CD4","shape":"s"},
+  {"id":2050,"name":"NestedScrollView","category":"Layout","type":"widget","description":"嵌套滚动视图。支持嵌套滚动的 ScrollView。","usage":"在 CoordinatorLayout 中使用，支持联动滚动。","parameters":"fillViewport (boolean): 是否填充视口
+说明: 支持嵌套滚动的ScrollView
+在CoordinatorLayout中替代ScrollView使用","example":"// 替代 ScrollView 用于 CoordinatorLayout","color":"#FF4A6CD4","shape":"s"},
+  {"id":2051,"name":"FloatingActionButton","category":"Layout","type":"widget","description":"浮动操作按钮(FAB)。圆形的悬浮按钮。","usage":"Material Design 主操作按钮。","parameters":"src (Drawable): 按钮图标
+size: 尺寸(normal/mini/auto)
+show(): 显示按钮
+hide(): 隐藏按钮
+事件: onClick - 点击时触发
+说明: Material Design圆形悬浮按钮","example":"fab.setOnClickListener(v -> addItem());","color":"#FF4A6CD4","shape":"s"},
+  {"id":2052,"name":"DrawerLayout","category":"Layout","type":"widget","description":"抽屉布局。从侧边滑出的导航面板。","usage":"实现侧边栏导航菜单。","parameters":"openDrawer(gravity): 打开抽屉(START=左侧)
+closeDrawer(gravity): 关闭抽屉
+isDrawerOpen(gravity): 是否已打开
+说明: 包含主内容和侧边导航面板","example":"drawerLayout.openDrawer(GravityCompat.START);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2053,"name":"NavigationView","category":"Layout","type":"widget","description":"导航视图。抽屉中的菜单列表。","usage":"配合 DrawerLayout 使用，显示导航菜单。","parameters":"menu (MenuRes): 导航菜单资源
+headerLayout (LayoutRes): 头部布局
+事件: onNavigationItemSelected - 菜单项被选中
+说明: 放在DrawerLayout中作为侧边栏","example":"navigationView.setNavigationItemSelectedListener(listener);","color":"#FF4A6CD4","shape":"s"},
+  {"id":2054,"name":"TextInputLayout","category":"Layout","type":"widget","description":"文本输入布局。为 EditText 提供浮动标签和错误提示。","usage":"Material Design 风格的输入框容器。","parameters":"hint (String): 浮动标签文字
+errorEnabled (boolean): 是否显示错误
+setError(text): 设置错误提示
+boxStrokeColor (int): 边框颜色
+counterEnabled (boolean): 是否显示字符计数","example":"textInputLayout.setError(\"不能为空\");","color":"#FF4A6CD4","shape":"s"}
+]

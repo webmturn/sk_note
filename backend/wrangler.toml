@@ -1,0 +1,13 @@
+name = "sk-note-api"
+main = "src/index.ts"
+compatibility_date = "2024-06-01"
+
+routes = [
+  { pattern = "api.wsqh.cn", custom_domain = true }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sk-note-db"
+database_id = "d45de75e-f6f9-4021-9436-e7eb9d5470a7"
+

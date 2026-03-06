@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#FF90CAF9</color>
+    <color name="on_primary">#FF003258</color>
+    <color name="primary_container">#FF004A77</color>
+    <color name="on_primary_container">#FFD1E4FF</color>
+    <color name="secondary">#FFB0BEC5</color>
+    <color name="on_secondary">#FF1B3240</color>
+    <color name="secondary_container">#FF324957</color>
+    <color name="on_secondary_container">#FFCFE5ED</color>
+
+    <color name="icon_bg_orange">#66795548</color>
+    <color name="icon_bg_green">#66388E3C</color>
+    <color name="icon_bg_purple">#667B1FA2</color>
+    <color name="icon_bg_teal">#6600796B</color>
+    <color name="icon_bg_blue">#661565C0</color>
+    <color name="icon_bg_red">#66C62828</color>
+    <color name="text_danger">#FFEF5350</color>
+    <color name="banner_text">#FFFFFFFF</color>
+    <color name="banner_text_secondary">#B3FFFFFF</color>
+
+    <color name="surface_card">#FF1E1E2E</color>
+    <color name="surface_elevated">#FF252536</color>
+    <color name="detail_section_bg">#FF1A1A2A</color>
+    <color name="code_bg">#FF161622</color>
+    <color name="accent_strip_alpha">#40FFFFFF</color>
+</resources>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_jump"
+        android:icon="@drawable/ic_list"
+        android:title="快速跳转"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_bookmark"
+        android:icon="@drawable/ic_bookmark_outline"
+        android:title="收藏"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_compare"
+        android:icon="@drawable/ic_compare"
+        android:title="对比"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_try_sw"
+        android:icon="@drawable/ic_launch"
+        android:title="在 Sketchware 中尝试"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_share"
+        android:icon="@drawable/ic_share"
+        android:title="分享"
+        app:showAsAction="ifRoom" />
+</menu>

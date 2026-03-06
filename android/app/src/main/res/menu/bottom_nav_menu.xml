@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_nav_book"
+        android:title="手册" />
+
+    <item
+        android:id="@+id/referenceFragment"
+        android:icon="@drawable/ic_nav_reference"
+        android:title="参考" />
+
+    <item
+        android:id="@+id/discussionListFragment"
+        android:icon="@drawable/ic_nav_forum"
+        android:title="讨论" />
+
+    <item
+        android:id="@+id/adminFragment"
+        android:icon="@drawable/ic_nav_person"
+        android:title="我的" />
+
+</menu>

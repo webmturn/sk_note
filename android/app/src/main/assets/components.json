@@ -1,0 +1,163 @@
+[
+  {"id":1000,"name":"SharedPreferences","category":"Storage","type":"component","description":"轻量级键值对持久化存储。","usage":"保存应用设置、用户偏好等小量数据。","parameters":"getString(key, defValue): 读取字符串值
+putString(key, value): 保存字符串值
+getInt(key, defValue): 读取整数值
+putInt(key, value): 保存整数值
+getBoolean(key, defValue): 读取布尔值
+putBoolean(key, value): 保存布尔值
+remove(key): 删除指定键
+clear(): 清除所有数据
+apply(): 异步提交更改","example":"sp.edit().putString(\"key\", value).apply();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1001,"name":"SQLite","category":"Storage","type":"component","description":"本地 SQLite 数据库组件。","usage":"存储大量结构化数据，支持 SQL 查询。","parameters":"open(dbName): 打开/创建数据库
+execSQL(sql): 执行非查询SQL(INSERT/UPDATE/DELETE/CREATE)
+rawQuery(sql): 执行SELECT查询
+close(): 关闭数据库连接
+moveToFirst(): 游标移到第一行
+moveToNext(): 游标移到下一行
+getString(columnIndex): 获取字符串列值
+getCount(): 获取结果行数
+closeCursor(): 关闭游标","example":"sqlite.execSQL(\"CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)\");","color":"#FF2CA5E2","shape":"s"},
+  {"id":1002,"name":"Intent","category":"System","type":"component","description":"意图组件。页面跳转和数据传递。","usage":"在不同 Activity 间导航和传递数据。","parameters":"setScreen(activity): 设置目标Activity
+setAction(action): 设置Intent动作(VIEW/SEND等)
+setData(uri): 设置数据URI
+putExtra(key, value): 添加附加数据
+setFlags(flags): 设置启动标志
+getStringExtra(key): 获取传入的字符串数据
+startActivity(): 启动目标Activity","example":"Intent i = new Intent(this, B.class);\ni.putExtra(\"id\", 1);\nstartActivity(i);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1003,"name":"Camera","category":"System","type":"component","description":"相机组件。调用系统相机拍照。","usage":"拍照、扫码等功能。","parameters":"startTakePicture(): 调用系统相机拍照
+结果通过onActivityResult事件回调获取
+返回拍照的图片文件路径","example":"Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1004,"name":"FilePicker","category":"System","type":"component","description":"文件选择器。选择本地文件。","usage":"选择图片、文档等文件。","parameters":"type (String): 文件MIME类型过滤
+常用类型: image/* (图片), video/* (视频), audio/* (音频), */* (所有文件)
+结果通过onActivityResult事件回调获取
+返回选中的文件URI","example":"Intent i = new Intent(Intent.ACTION_GET_CONTENT);\ni.setType(\"image/*\");","color":"#FF2CA5E2","shape":"s"},
+  {"id":1005,"name":"Vibrator","category":"System","type":"component","description":"振动器。控制设备振动。","usage":"用于触觉反馈。","parameters":"vibrate(duration): 振动指定毫秒数
+duration (long): 振动持续时间(毫秒)
+需要VIBRATE权限","example":"vibrator.vibrate(200);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1006,"name":"BluetoothConnect","category":"System","type":"component","description":"蓝牙连接组件。连接蓝牙设备。","usage":"用于蓝牙数据传输。","parameters":"activateBluetooth(): 请求开启蓝牙
+getPairedDevices(list): 获取已配对设备列表
+readyConnection(uuid): 准备服务端连接
+startConnection(address, uuid): 连接到设备
+stopConnection(): 断开连接
+sendData(data): 发送数据
+isBluetoothEnabled(): 是否已开启
+getRandomUuid(): 生成随机UUID","example":"bluetooth.connect(deviceAddress);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1007,"name":"LocationManager","category":"System","type":"component","description":"位置管理器。获取设备地理位置。","usage":"用于定位、导航。","parameters":"requestLocationUpdates(): 开始位置更新
+removeUpdates(): 停止位置更新
+回调参数: latitude (纬度), longitude (经度)
+需要ACCESS_FINE_LOCATION权限","example":"locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 10, listener);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1008,"name":"Notification","category":"System","type":"component","description":"通知组件。发送系统通知。","usage":"向用户推送提醒消息。","parameters":"setTitle(title): 设置通知标题
+setContent(content): 设置通知正文
+setSmallIcon(resource): 设置小图标
+setAutoCancel(boolean): 点击后是否自动消失
+setChannel(channelId): 设置通知渠道(Android 8.0+)
+createChannel(id, name, importance): 创建渠道
+show(notifId): 发送通知
+cancel(notifId): 取消通知","example":"notification.setTitle(\"新消息\");\nnotification.show(1);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1010,"name":"Timer","category":"Utility","type":"component","description":"定时器。按间隔重复执行任务。","usage":"用于倒计时、定时刷新等。","parameters":"after(delay): 延迟指定毫秒后执行一次
+every(period, delay): 按固定间隔重复执行
+cancel(): 取消定时器
+delay (long): 延迟毫秒数
+period (long): 重复间隔毫秒数","example":"timer.schedule(task, 0, 1000);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1011,"name":"Calendar","category":"Utility","type":"component","description":"日历组件。获取和操作日期时间。","usage":"用于获取当前时间、格式化日期。","parameters":"getNow(): 获取当前系统时间
+getTime(): 获取毫秒时间戳
+Format(pattern): 格式化时间(如yyyy-MM-dd HH:mm:ss)
+add(field, value): 在指定字段上增减时间
+set(field, value): 设置指定字段值
+setTime(ms): 设置为指定毫秒时间戳
+Difference(cal2): 计算两个时间差(毫秒)
+field: YEAR/MONTH/DAY/HOUR/MINUTE/SECOND","example":"calendar.getNow();\nString date = calendar.format(\"yyyy-MM-dd\");","color":"#FF2CA5E2","shape":"s"},
+  {"id":1013,"name":"Dialog","category":"UI","type":"component","description":"对话框。显示模态对话框。","usage":"用于确认、输入、选择等交互。","parameters":"setTitle(title): 设置对话框标题
+setMessage(message): 设置消息内容
+OK Button Clicked: 设置确认按钮
+Cancel Button Clicked: 设置取消按钮
+Neutral Button Clicked: 设置中性按钮
+show(): 显示对话框
+dismiss(): 关闭对话框
+按钮点击通过对应事件回调处理","example":"dialog.setTitle(\"提示\");\ndialog.setMessage(\"确定删除?\");\ndialog.show();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1014,"name":"ProgressDialog","category":"UI","type":"component","description":"进度对话框。显示加载中状态。","usage":"用于耗时操作时的等待提示。","parameters":"setTitle(title): 设置标题
+setMessage(message): 设置加载提示文本
+show(): 显示进度对话框
+dismiss(): 关闭进度对话框
+说明: 通常在耗时操作开始时show，完成后dismiss","example":"progressDialog.setMessage(\"加载中...\");\nprogressDialog.show();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1015,"name":"TimePickerDialog","category":"UI","type":"component","description":"时间选择对话框。","usage":"让用户选择时间。","parameters":"show(): 显示时间选择对话框
+结果通过onTimeSet事件回调
+回调参数: hourOfDay (时), minute (分)","example":"timePickerDialog.show();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1020,"name":"MediaPlayer","category":"Media","type":"component","description":"媒体播放器。播放音频文件。","usage":"播放背景音乐、音效。","parameters":"create(resource): 创建播放器并加载音频资源
+start(): 开始/恢复播放
+pause(): 暂停播放
+release(): 释放资源(使用后必须调用)
+reset(): 重置到初始状态
+seekTo(ms): 跳转到指定毫秒位置
+setLooping(boolean): 是否循环播放
+isPlaying(): 是否正在播放
+getDuration(): 获取音频总时长(毫秒)
+getCurrentPosition(): 获取当前播放位置(毫秒)","example":"mediaPlayer.create(R.raw.bgm);\nmediaPlayer.start();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1021,"name":"SoundPool","category":"Media","type":"component","description":"音效池。同时播放多个短音效。","usage":"适合游戏音效、按钮音效。","parameters":"create(maxStreams): 创建音效池，指定最大同时播放数
+load(resource): 加载音效资源，返回SoundID
+play(soundId, times): 播放指定音效
+stop(streamId): 停止指定流
+适合短音效(如按钮音、游戏音效)，不适合长音频","example":"soundPool.play(soundId, 1, 1, 1, 0, 1);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1022,"name":"TextToSpeech","category":"Media","type":"component","description":"文字转语音组件。将文本朗读出来。","usage":"用于语音播报。","parameters":"speak(text): 朗读文本内容
+stop(): 停止朗读
+shutdown(): 释放TTS资源
+setPitch(pitch): 设置音调(1.0正常)
+setSpeechRate(rate): 设置语速(1.0正常)
+isSpeaking(): 是否正在朗读","example":"tts.speak(\"你好\", TextToSpeech.QUEUE_FLUSH, null);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1023,"name":"SpeechToText","category":"Media","type":"component","description":"语音转文字组件。识别语音为文本。","usage":"用于语音输入。","parameters":"startListening(): 开始语音识别
+stopListening(): 停止识别
+shutdown(): 释放资源
+结果通过onSpeechResult事件回调
+回调参数: result (String) 识别的文本","example":"speechToText.startListening();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1030,"name":"RequestNetwork","category":"Network","type":"component","description":"网络请求组件。发送 HTTP 请求。","usage":"请求 API 接口获取数据。","parameters":"setParams(key, value): 设置请求参数
+setHeaders(key, value): 设置请求头
+startRequestNetwork(method, url, tag): 发起请求
+uploadFile(url, filePath, tag): 上传文件
+method: GET/POST/PUT/DELETE
+tag: 请求标签，用于区分不同请求
+结果通过onNetworkResponse/onNetworkError事件回调","example":"requestNetwork.startRequestNetwork(\"GET\", url, tag, listener);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1040,"name":"FirebaseDB","category":"Firebase","type":"component","description":"Firebase 实时数据库组件。","usage":"云端数据的实时读写和同步。","parameters":"push(value): 用随机Key推送数据
+addKeyValue(key, value): 以指定Key写入
+deleteKey(key): 删除指定Key的数据
+getChildren(): 获取所有子节点数据
+pushGetKey(): 获取新推送的Key
+startListening(): 开始实时监听数据变化
+stopListening(): 停止监听
+数据变化通过Firebase事件回调","example":"firebase.child(\"users\").push().setValue(data);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1041,"name":"FirebaseAuth","category":"Firebase","type":"component","description":"Firebase 认证组件。","usage":"用户注册、登录、登出。","parameters":"createUser(email, password): 注册新用户
+signIn(email, password): 邮箱密码登录
+signInAnonymously(): 匿名登录
+isLoggedIn(): 是否已登录
+getCurrentUser(): 获取当前用户邮箱
+getUid(): 获取当前用户UID
+resetPassword(email): 发送密码重置邮件
+signOut(): 登出","example":"firebaseAuth.signInWithEmailAndPassword(email, pass);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1042,"name":"FirebaseStorage","category":"Firebase","type":"component","description":"Firebase 云存储组件。","usage":"上传和下载文件。","parameters":"uploadFile(cloudPath, localPath): 上传文件到云端
+downloadFile(cloudPath, localPath): 下载云端文件
+delete(cloudPath): 删除云端文件
+结果通过Firebase Storage事件回调","example":"storage.child(\"images/photo.jpg\").putFile(uri);","color":"#FF2CA5E2","shape":"s"},
+  {"id":1043,"name":"InterstitialAd","category":"Firebase","type":"component","description":"插屏广告组件。","usage":"在应用中展示全屏插页广告。","parameters":"create(adUnitId): 用广告单元ID创建插屏广告
+loadAd(): 加载广告
+show(): 显示已加载的广告
+说明: 必须先load再show，加载需要时间","example":"interstitialAd.loadAd();\ninterstitialAd.show();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1044,"name":"RewardedVideoAd","category":"Firebase","type":"component","description":"激励视频广告组件。","usage":"用户观看视频广告后获得奖励。","parameters":"create(adUnitId): 用广告单元ID创建激励广告
+loadAd(): 加载广告
+show(): 显示广告
+说明: 用户观看完整视频后触发奖励回调","example":"rewardedVideoAd.loadAd();\nrewardedVideoAd.show();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1050,"name":"ObjectAnimator","category":"Animation","type":"component","description":"属性动画组件。对控件属性做动画。","usage":"实现平移、旋转、缩放、透明度动画。","parameters":"setTarget(view): 设置动画作用的目标控件
+setProperty(property): 设置动画属性(translationX/Y, rotation, alpha, scaleX/Y)
+setFromTo(from, to): 设置起始值和结束值
+setDuration(ms): 设置动画时长(毫秒)
+setRepeatCount(count): 重复次数(-1=无限)
+setRepeatMode(mode): 重复模式(RESTART/REVERSE)
+setInterpolator(type): 插值器(线性/加速/减速/弹跳等)
+start(): 开始动画
+cancel(): 取消动画
+isRunning(): 是否正在运行","example":"ObjectAnimator.ofFloat(view, \"alpha\", 0, 1)\n  .setDuration(300).start();","color":"#FF2CA5E2","shape":"s"},
+  {"id":1060,"name":"Gyroscope","category":"Sensor","type":"component","description":"陀螺仪组件。检测设备旋转。","usage":"用于游戏控制、方向检测。","parameters":"startListen(): 开始监听陀螺仪传感器
+stopListen(): 停止监听
+回调参数:
+  x (float): X轴旋转速率
+  y (float): Y轴旋转速率
+  z (float): Z轴旋转速率","example":"gyroscope.startListen();","color":"#FF2CA5E2","shape":"s"}
+]

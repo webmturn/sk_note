@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_global_stats"
+        android:icon="@drawable/ic_analyze"
+        android:title="全局统计"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_custom_blocks"
+        android:icon="@drawable/ic_blocks"
+        android:title="自定义积木块"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_backup"
+        android:icon="@drawable/ic_backup"
+        android:title="项目备份"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_launch_sw"
+        android:icon="@drawable/ic_launch"
+        android:title="打开 Sketchware"
+        app:showAsAction="ifRoom" />
+</menu>
