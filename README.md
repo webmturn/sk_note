@@ -8,15 +8,19 @@
 sk_note/
 ├── backend/          # Cloudflare Workers + D1 (API 后端)
 │   ├── src/
-│   │   ├── index.ts              # 入口，路由挂载
-│   │   ├── middleware/auth.ts     # JWT 认证中间件
+│   │   ├── index.ts              # 入口，路由挂载 + 合并接口
+│   │   ├── middleware/
+│   │   │   ├── auth.ts           # JWT 认证中间件
+│   │   │   └── cache.ts          # 边缘缓存中间件
 │   │   └── routes/
 │   │       ├── auth.ts           # 注册/登录/用户信息/修改密码
 │   │       ├── articles.ts       # 文章 CRUD + 搜索 + 点赞
 │   │       ├── categories.ts     # 分类管理
 │   │       ├── discussions.ts    # 讨论/评论/评论点赞
 │   │       ├── references.ts     # 参考手册
-│   │       └── notifications.ts  # 通知系统
+│   │       ├── notifications.ts  # 通知系统
+│   │       ├── snippets.ts       # 代码片段 CRUD + 点赞
+│   │       └── bookmarks.ts      # 收藏 + 阅读历史
 │   ├── schema.sql                # D1 数据库表结构
 │   ├── wrangler.toml             # Cloudflare 配置
 │   └── package.json
@@ -38,6 +42,8 @@ sk_note/
 │   │   │       ├── auth/                 # 登录/注册/编辑资料
 │   │   │       ├── notification/         # 通知列表
 │   │   │       ├── reference/            # 参考手册
+│   │   │       ├── snippet/              # 代码片段列表 + 详情
+│   │   │       ├── bookmark/             # 收藏 + 阅读历史
 │   │   │       ├── search/               # 搜索
 │   │   │       └── admin/                # 管理后台
 │   │   └── res/                          # 布局 + 资源文件
@@ -117,6 +123,8 @@ UPDATE users SET role = 'admin' WHERE username = 'your_username';
 
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
+| GET | /api/home | 首页数据（分类 + 最新文章合并） | 公开 |
+| GET | /api/stats | 管理统计（通知/文章/讨论/片段/用户数） | 登录 |
 | POST | /api/auth/register | 注册 | 公开 |
 | POST | /api/auth/login | 登录 | 公开 |
 | GET | /api/auth/me | 当前用户信息 | 登录 |
@@ -134,6 +142,18 @@ UPDATE users SET role = 'admin' WHERE username = 'your_username';
 | POST | /api/discussions/:id/comments | 回复讨论（自动通知） | 登录 |
 | POST | /api/discussions/:id/comments/:cid/like | 评论点赞/取消 | 登录 |
 | DELETE | /api/discussions/:id | 删除讨论 | 作者/管理员 |
+| GET | /api/snippets | 代码片段列表（分页/分类/搜索） | 公开 |
+| GET | /api/snippets/categories | 片段分类统计 | 公开 |
+| GET | /api/snippets/:id | 代码片段详情 | 公开 |
+| POST | /api/snippets | 创建代码片段 | 登录 |
+| DELETE | /api/snippets/:id | 删除代码片段 | 作者/管理员 |
+| POST | /api/snippets/:id/like | 片段点赞/取消 | 登录 |
+| GET | /api/bookmarks | 收藏列表 | 登录 |
+| GET | /api/bookmarks/check/:articleId | 检查是否已收藏 | 登录 |
+| POST | /api/bookmarks/:articleId | 添加/取消收藏 | 登录 |
+| GET | /api/bookmarks/history | 阅读历史列表 | 登录 |
+| POST | /api/bookmarks/history/:articleId | 记录阅读历史 | 登录 |
+| DELETE | /api/bookmarks/history | 清空阅读历史 | 登录 |
 | GET | /api/notifications | 通知列表 | 登录 |
 | GET | /api/notifications/unread-count | 未读通知数 | 登录 |
 | PUT | /api/notifications/:id/read | 标记已读 | 登录 |

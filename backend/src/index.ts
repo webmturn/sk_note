@@ -8,6 +8,7 @@ import { referenceRoutes } from './routes/references';
 import { notificationRoutes } from './routes/notifications';
 import { snippetRoutes } from './routes/snippets';
 import { bookmarkRoutes } from './routes/bookmarks';
+import { appRoutes } from './routes/app';
 import { authMiddleware } from './middleware/auth';
 import { edgeCache } from './middleware/cache';
 
@@ -89,5 +90,6 @@ app.route('/api/references', referenceRoutes);
 app.route('/api/notifications', notificationRoutes);
 app.route('/api/snippets', snippetRoutes);
 app.route('/api/bookmarks', bookmarkRoutes);
+app.route('/api/app', appRoutes);
 
 export default app;

@@ -166,6 +166,19 @@ CREATE TABLE IF NOT EXISTS snippets (
 CREATE INDEX IF NOT EXISTS idx_snippets_category ON snippets(category);
 CREATE INDEX IF NOT EXISTS idx_snippets_author ON snippets(author_id);
 
+-- 应用版本发布表
+CREATE TABLE IF NOT EXISTS app_releases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version_name TEXT NOT NULL,
+    version_code INTEGER NOT NULL,
+    changelog TEXT DEFAULT '',
+    download_url TEXT DEFAULT '',
+    file_size INTEGER DEFAULT 0,
+    release_url TEXT DEFAULT '',
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- 搜索索引
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);
 CREATE INDEX IF NOT EXISTS idx_articles_author ON articles(author_id);

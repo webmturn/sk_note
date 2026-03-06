@@ -2,6 +2,9 @@
 node_modules/
 backend/node_modules/
 
+# Wrangler local state & build cache
+backend/.wrangler/
+
 # Android build
 android/.gradle/
 android/build/
@@ -10,7 +13,9 @@ android/local.properties
 
 # IDE
 android/.idea/
+.idea/
 *.iml
+.vscode/
 
 # OS
 .DS_Store
@@ -20,7 +25,9 @@ desktop.ini
 # AI conversation logs
 ai_conversations/
 
-# Secrets
+# Secrets & credentials
 *.jks
 *.keystore
 .env
+.env.*
+*.pem
