@@ -19,7 +19,7 @@ android {
         // TODO: 替换为你的 SM.MS API Token (https://sm.ms/home/apitoken)
         buildConfigField("String", "SMMS_API_TOKEN", "\"\"")
         // GitHub 仓库 (owner/repo)，用于检查更新
-        buildConfigField("String", "GITHUB_REPO", "\"niceSkyNice/sk_note\"")
+        buildConfigField("String", "GITHUB_REPO", "\"webmturn/sk_note\"")
 
     }
 
