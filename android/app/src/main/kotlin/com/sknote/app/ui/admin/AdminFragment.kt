@@ -141,6 +141,18 @@ class AdminFragment : Fragment() {
     }
 
     private fun loadStats() {
+        // 先显示本地缓存的统计值（避免闪烁"0"）
+        val prefs = requireContext().getSharedPreferences("stats_cache", android.content.Context.MODE_PRIVATE)
+        val cachedArticles = prefs.getInt("articles", -1)
+        if (cachedArticles >= 0) {
+            binding.tvStatArticles.text = "${cachedArticles}"
+            binding.tvStatDiscussions.text = "${prefs.getInt("discussions", 0)}"
+            binding.tvStatNotifications.text = "${prefs.getInt("notifications", 0)}"
+            val n = prefs.getInt("notifications", 0)
+            binding.tvNotificationDesc.text = if (n > 0) "$n 条未读" else ""
+        }
+
+        // 后台刷新真实数据
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getStats()
@@ -150,6 +162,12 @@ class AdminFragment : Fragment() {
                     binding.tvNotificationDesc.text = if (stats.unreadNotifications > 0) "${stats.unreadNotifications} 条未读" else ""
                     binding.tvStatArticles.text = "${stats.totalArticles}"
                     binding.tvStatDiscussions.text = "${stats.totalDiscussions}"
+                    // 缓存到本地
+                    prefs.edit()
+                        .putInt("articles", stats.totalArticles)
+                        .putInt("discussions", stats.totalDiscussions)
+                        .putInt("notifications", stats.unreadNotifications)
+                        .apply()
                 }
             } catch (_: Exception) { }
         }
