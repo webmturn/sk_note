@@ -10,6 +10,8 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import okhttp3.Cache
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
@@ -17,8 +19,10 @@ object ApiClient {
     @Volatile
     private var apiService: ApiService? = null
     private var tokenManager: TokenManager? = null
+    private var appContext: Context? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         tokenManager = TokenManager(context)
     }
 
@@ -54,7 +58,11 @@ object ApiClient {
             response
         }
 
+        val cacheDir = File(appContext!!.cacheDir, "http_cache")
+        val cache = Cache(cacheDir, 10L * 1024 * 1024) // 10MB
+
         val client = OkHttpClient.Builder()
+            .cache(cache)
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)

@@ -51,9 +51,12 @@ export function edgeCache(maxAgeSec: number = 300) {
       const hit = memoryCache.get(key);
 
       if (hit && hit.expiry > now) {
+        const remaining = Math.ceil((hit.expiry - now) / 1000);
+        c.header('Cache-Control', `public, max-age=${remaining}`);
         return c.json(JSON.parse(hit.data));
       }
 
+      c.header('Cache-Control', `public, max-age=${maxAgeSec}`);
       await next();
 
       if (c.res.status === 200) {
