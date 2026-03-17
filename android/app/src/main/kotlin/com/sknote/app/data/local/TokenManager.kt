@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.longPreferencesKey
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sk_note_prefs")
 
@@ -18,6 +19,7 @@ class TokenManager(private val context: Context) {
         private val TOKEN_KEY = stringPreferencesKey("auth_token")
         private val USERNAME_KEY = stringPreferencesKey("username")
         private val USER_ROLE_KEY = stringPreferencesKey("user_role")
+        private val USER_ID_KEY = longPreferencesKey("user_id")
         private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
 
@@ -29,12 +31,14 @@ class TokenManager(private val context: Context) {
     fun getToken(): Flow<String?> = context.dataStore.data.map { it[TOKEN_KEY] }
     fun getUsername(): Flow<String?> = context.dataStore.data.map { it[USERNAME_KEY] }
     fun getUserRole(): Flow<String?> = context.dataStore.data.map { it[USER_ROLE_KEY] }
+    fun getUserId(): Flow<Long?> = context.dataStore.data.map { it[USER_ID_KEY] }
 
-    suspend fun saveAuth(token: String, username: String, role: String) {
+    suspend fun saveAuth(token: String, username: String, role: String, userId: Long = 0L) {
         context.dataStore.edit { prefs ->
             prefs[TOKEN_KEY] = token
             prefs[USERNAME_KEY] = username
             prefs[USER_ROLE_KEY] = role
+            if (userId > 0) prefs[USER_ID_KEY] = userId
         }
     }
 
@@ -43,6 +47,7 @@ class TokenManager(private val context: Context) {
             prefs.remove(TOKEN_KEY)
             prefs.remove(USERNAME_KEY)
             prefs.remove(USER_ROLE_KEY)
+            prefs.remove(USER_ID_KEY)
         }
     }
 

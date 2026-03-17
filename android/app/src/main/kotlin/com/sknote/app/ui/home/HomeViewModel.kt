@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Article
 import com.sknote.app.data.model.Category
+import com.sknote.app.data.model.Share
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
 
@@ -17,6 +18,9 @@ class HomeViewModel : ViewModel() {
 
     private val _articles = MutableLiveData<List<Article>>()
     val articles: LiveData<List<Article>> = _articles
+
+    private val _latestShares = MutableLiveData<List<Share>>()
+    val latestShares: LiveData<List<Share>> = _latestShares
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
@@ -41,6 +45,7 @@ class HomeViewModel : ViewModel() {
                     val data = response.body()
                     _categories.value = data?.categories ?: emptyList()
                     _articles.value = data?.articles ?: emptyList()
+                    _latestShares.value = data?.latestShares ?: emptyList()
                     lastLoadTime = System.currentTimeMillis()
                 } else {
                     _error.value = "加载失败 (${response.code()})"

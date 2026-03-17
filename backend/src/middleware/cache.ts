@@ -1,72 +1,86 @@
 import { Context, Next } from 'hono';
 import type { Env } from '../index';
 
+// 检测是否运行在 Cloudflare Workers 环境
+const isCloudflare = typeof caches !== 'undefined' && 'default' in (caches as any);
+
+// Node.js 简易内存缓存
+const memoryCache = new Map<string, { data: string; headers: Record<string, string>; expiry: number }>();
+
 /**
- * CDN 边缘缓存中间件（适用于公开 GET 接口）
- * 
- * 工作原理：
- * 1. Worker 收到请求时先查 Cloudflare 边缘缓存
- * 2. 命中缓存 → 直接返回，Worker CPU 时间极短
- * 3. 未命中 → 执行业务逻辑，将结果写入边缘缓存
- * 
- * 注意：使用 Cache API 而非单纯 Cache-Control 头，
- * 因为带 Authorization 头的请求 Cloudflare 默认不缓存。
+ * 缓存中间件（自适应 Cloudflare 边缘缓存 / Node.js 内存缓存）
  */
 export function edgeCache(maxAgeSec: number = 300) {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
-    // 只缓存 GET 请求
     if (c.req.method !== 'GET') {
       await next();
       return;
     }
 
-    const cache = caches.default;
-    // 用不带 Authorization 的 URL 作为缓存 key
-    const cacheKey = new Request(c.req.url, {
-      method: 'GET',
-      headers: { 'Accept': c.req.header('Accept') || '*/*' },
-    });
-
-    // 检查边缘缓存
-    const cached = await cache.match(cacheKey);
-    if (cached) {
-      // 命中缓存，直接返回（Worker 调用仍计数，但 CPU 极短 + D1 零查询）
-      const response = new Response(cached.body, cached);
-      // 保留 CORS 头
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set('X-Cache', 'HIT');
-      return response;
-    }
-
-    // 未命中，执行业务逻辑
-    await next();
-
-    // 只缓存成功的响应
-    const response = c.res;
-    if (response.status === 200) {
-      const responseToCache = response.clone();
-      const headers = new Headers(responseToCache.headers);
-      headers.set('Cache-Control', `public, s-maxage=${maxAgeSec}, max-age=0`);
-      headers.set('X-Cache', 'MISS');
-
-      const cachedResponse = new Response(responseToCache.body, {
-        status: responseToCache.status,
-        headers,
+    if (isCloudflare) {
+      // Cloudflare Workers: 使用边缘缓存
+      const cache = (caches as any).default;
+      const cacheKey = new Request(c.req.url, {
+        method: 'GET',
+        headers: { 'Accept': c.req.header('Accept') || '*/*' },
       });
-      // 异步写入缓存，不阻塞响应
-      c.executionCtx.waitUntil(cache.put(cacheKey, cachedResponse));
+
+      const cached = await cache.match(cacheKey);
+      if (cached) {
+        const response = new Response(cached.body, cached);
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('X-Cache', 'HIT');
+        return response;
+      }
+
+      await next();
+
+      const response = c.res;
+      if (response.status === 200) {
+        const responseToCache = response.clone();
+        const headers = new Headers(responseToCache.headers);
+        headers.set('Cache-Control', `public, s-maxage=${maxAgeSec}, max-age=0`);
+        headers.set('X-Cache', 'MISS');
+        const cachedResponse = new Response(responseToCache.body, { status: responseToCache.status, headers });
+        c.executionCtx.waitUntil(cache.put(cacheKey, cachedResponse));
+      }
+    } else {
+      // Node.js: 简易内存缓存
+      const key = c.req.url;
+      const now = Date.now();
+      const hit = memoryCache.get(key);
+
+      if (hit && hit.expiry > now) {
+        return c.json(JSON.parse(hit.data));
+      }
+
+      await next();
+
+      if (c.res.status === 200) {
+        try {
+          const clone = c.res.clone();
+          const text = await clone.text();
+          memoryCache.set(key, { data: text, headers: {}, expiry: now + maxAgeSec * 1000 });
+        } catch (_) {}
+      }
     }
   };
 }
 
 /**
  * 缓存清除工具函数
- * 当数据变更时（POST/PUT/DELETE）调用，清除相关缓存
  */
 export async function purgeCache(urls: string[]) {
-  const cache = caches.default;
-  for (const url of urls) {
-    const key = new Request(url, { method: 'GET' });
-    await cache.delete(key);
+  if (isCloudflare) {
+    const cache = (caches as any).default;
+    for (const url of urls) {
+      const key = new Request(url, { method: 'GET' });
+      await cache.delete(key);
+    }
+  } else {
+    // Node.js: 清除内存缓存
+    for (const url of urls) {
+      memoryCache.delete(url);
+    }
   }
 }

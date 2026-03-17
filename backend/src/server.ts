@@ -1,0 +1,51 @@
+import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { setupApp, type Env } from './index';
+import { createD1Database } from './db';
+import dotenv from 'dotenv';
+import { existsSync, mkdirSync } from 'fs';
+import { dirname } from 'path';
+
+dotenv.config();
+
+const dbPath = process.env.DB_PATH || './data/sk-note.db';
+const port = parseInt(process.env.PORT || '3000');
+const jwtSecret = process.env.JWT_SECRET || '';
+
+if (!jwtSecret) {
+  console.error('❌ JWT_SECRET 未配置，请在 .env 文件中设置');
+  process.exit(1);
+}
+
+// 确保数据库目录存在
+const dbDir = dirname(dbPath);
+if (!existsSync(dbDir)) {
+  mkdirSync(dbDir, { recursive: true });
+}
+
+const db = createD1Database(dbPath);
+
+const app = new Hono<{ Bindings: Env }>();
+
+// 注入环境变量（替代 Cloudflare Workers 的 Bindings）
+app.use('*', async (c, next) => {
+  (c.env as any).DB = db;
+  (c.env as any).JWT_SECRET = jwtSecret;
+  // Polyfill Cloudflare Workers executionCtx
+  try { c.executionCtx; } catch {
+    Object.defineProperty(c, 'executionCtx', {
+      value: {
+        waitUntil: (p: Promise<any>) => { p.catch(() => {}); },
+        passThroughOnException: () => {},
+      },
+    });
+  }
+  await next();
+});
+
+// 挂载所有路由
+setupApp(app);
+
+serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
+  console.log(`🚀 Server running on http://0.0.0.0:${info.port}`);
+});

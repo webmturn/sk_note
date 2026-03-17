@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS comments (
 CREATE TABLE IF NOT EXISTS likes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    target_type TEXT NOT NULL CHECK(target_type IN ('article', 'discussion', 'comment', 'snippet')),
+    target_type TEXT NOT NULL CHECK(target_type IN ('article', 'discussion', 'comment', 'snippet', 'share')),
     target_id INTEGER NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(user_id, target_type, target_id),
@@ -178,6 +178,29 @@ CREATE TABLE IF NOT EXISTS app_releases (
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- 文件分享表（蓝奏云链接分享）
+CREATE TABLE IF NOT EXISTS shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    category TEXT NOT NULL DEFAULT 'general' CHECK(category IN ('general', 'apk', 'mod', 'resource', 'plugin', 'tool', 'other')),
+    download_url TEXT NOT NULL,
+    download_pwd TEXT DEFAULT '',
+    file_size TEXT DEFAULT '',
+    author_id INTEGER NOT NULL,
+    author_name TEXT DEFAULT '',
+    view_count INTEGER DEFAULT 0,
+    like_count INTEGER DEFAULT 0,
+    download_count INTEGER DEFAULT 0,
+    is_approved INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_shares_category ON shares(category);
+CREATE INDEX IF NOT EXISTS idx_shares_author ON shares(author_id);
 
 -- 搜索索引
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);

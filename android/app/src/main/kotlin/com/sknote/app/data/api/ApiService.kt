@@ -201,6 +201,34 @@ interface ApiService {
     @POST("api/snippets/{id}/like")
     suspend fun likeSnippet(@Path("id") id: Long): Response<LikeResponse>
 
+    // ============ 文件分享 ============
+
+    @GET("api/shares")
+    suspend fun getShares(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20,
+        @Query("category") category: String? = null,
+        @Query("search") search: String? = null
+    ): Response<SharesResponse>
+
+    @GET("api/shares/categories")
+    suspend fun getShareCategories(): Response<ShareCategoriesResponse>
+
+    @GET("api/shares/{id}")
+    suspend fun getShare(@Path("id") id: Long): Response<ShareDetailResponse>
+
+    @POST("api/shares")
+    suspend fun createShare(@Body request: CreateShareRequest): Response<MessageResponse>
+
+    @DELETE("api/shares/{id}")
+    suspend fun deleteShare(@Path("id") id: Long): Response<MessageResponse>
+
+    @POST("api/shares/{id}/like")
+    suspend fun likeShare(@Path("id") id: Long): Response<LikeResponse>
+
+    @POST("api/shares/{id}/download")
+    suspend fun recordShareDownload(@Path("id") id: Long): Response<MessageResponse>
+
     // ============ 收藏 & 阅读历史 ============
 
     @GET("api/bookmarks")

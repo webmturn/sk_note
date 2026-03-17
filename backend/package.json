@@ -7,16 +7,23 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute sk-note-db --local --file=schema.sql",
-    "db:init:remote": "wrangler d1 execute sk-note-db --remote --file=schema.sql"
+    "db:init:remote": "wrangler d1 execute sk-note-db --remote --file=schema.sql",
+    "start": "tsx src/server.ts",
+    "start:prod": "node --import tsx src/server.ts"
   },
   "dependencies": {
     "hono": "^4.4.0",
+    "@hono/node-server": "^1.12.0",
+    "better-sqlite3": "^11.0.0",
+    "dotenv": "^16.4.0",
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240620.0",
     "typescript": "^5.5.0",
     "wrangler": "^3.60.0",
-    "@types/bcryptjs": "^2.4.6"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.0",
+    "tsx": "^4.16.0"
   }
 }

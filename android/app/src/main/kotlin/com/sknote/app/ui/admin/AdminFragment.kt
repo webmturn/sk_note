@@ -82,6 +82,10 @@ class AdminFragment : Fragment() {
             findNavController().navigate(R.id.snippetManageFragment, null, navOptions)
         }
 
+        binding.cardShares.setOnClickListener {
+            findNavController().navigate(R.id.shareListFragment, null, navOptions)
+        }
+
         setupSettings()
 
         binding.btnLogout.setOnClickListener {

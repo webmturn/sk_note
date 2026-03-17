@@ -23,6 +23,7 @@ class HomeFragment : Fragment() {
 
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var articleAdapter: ArticleAdapter
+    private lateinit var latestShareAdapter: LatestShareAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -52,6 +53,14 @@ class HomeFragment : Fragment() {
 
         binding.cardAnalyzer.setOnClickListener {
             findNavController().navigate(R.id.swToolsFragment)
+        }
+
+        binding.cardShares.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_shareList)
+        }
+
+        binding.tvViewAllShares.setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_shareList)
         }
 
         binding.cardRandomLearn.setOnClickListener {
@@ -86,6 +95,15 @@ class HomeFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             adapter = articleAdapter
         }
+
+        latestShareAdapter = LatestShareAdapter { share ->
+            val bundle = Bundle().apply { putLong("share_id", share.id) }
+            findNavController().navigate(R.id.action_home_to_shareDetail, bundle)
+        }
+        binding.rvLatestShares.apply {
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+            adapter = latestShareAdapter
+        }
     }
 
     private fun observeData() {
@@ -97,6 +115,11 @@ class HomeFragment : Fragment() {
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
             articleAdapter.submitList(articles)
             binding.tvEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE
+        }
+
+        viewModel.latestShares.observe(viewLifecycleOwner) { shares ->
+            latestShareAdapter.submitList(shares)
+            binding.layoutShareSection.visibility = if (shares.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
