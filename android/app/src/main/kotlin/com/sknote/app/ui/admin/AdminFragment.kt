@@ -113,30 +113,43 @@ class AdminFragment : Fragment() {
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
                 val role = ApiClient.getTokenManager().getUserRole().first() ?: "user"
 
-                binding.cardUserProfile.visibility = View.VISIBLE
-                binding.cardGuestLogin.visibility = View.GONE
-                binding.tvFunctionHeader.visibility = View.VISIBLE
-                binding.cardFunctionGroup.visibility = View.VISIBLE
-                binding.cardLogout.visibility = View.VISIBLE
-
                 binding.tvUsername.text = username
                 binding.tvRole.text = if (role == "admin") "管理员" else "普通用户"
 
                 val isAdmin = role == "admin"
-                binding.tvAdminHeader.visibility = if (isAdmin) View.VISIBLE else View.GONE
-                binding.cardAdminGroup.visibility = if (isAdmin) View.VISIBLE else View.GONE
+                animateVisibility(binding.cardGuestLogin, false)
+                animateVisibility(binding.cardUserProfile, true)
+                animateVisibility(binding.tvFunctionHeader, true)
+                animateVisibility(binding.cardFunctionGroup, true)
+                animateVisibility(binding.cardLogout, true)
+                animateVisibility(binding.tvAdminHeader, isAdmin)
+                animateVisibility(binding.cardAdminGroup, isAdmin)
 
                 loadStats()
             } else {
-                binding.cardUserProfile.visibility = View.GONE
-                binding.cardGuestLogin.visibility = View.VISIBLE
-                binding.tvFunctionHeader.visibility = View.GONE
-                binding.cardFunctionGroup.visibility = View.GONE
-                binding.tvAdminHeader.visibility = View.GONE
-                binding.cardAdminGroup.visibility = View.GONE
-                binding.cardLogout.visibility = View.GONE
+                animateVisibility(binding.cardUserProfile, false)
+                animateVisibility(binding.tvFunctionHeader, false)
+                animateVisibility(binding.cardFunctionGroup, false)
+                animateVisibility(binding.tvAdminHeader, false)
+                animateVisibility(binding.cardAdminGroup, false)
+                animateVisibility(binding.cardLogout, false)
+                animateVisibility(binding.cardGuestLogin, true)
             }
             binding.tvVersion.text = "v${BuildConfig.VERSION_NAME}"
+        }
+    }
+
+    private fun animateVisibility(view: View, show: Boolean) {
+        val target = if (show) View.VISIBLE else View.GONE
+        if (view.visibility == target) return
+        if (show) {
+            view.alpha = 0f
+            view.visibility = View.VISIBLE
+            view.animate().alpha(1f).setDuration(200).start()
+        } else {
+            view.animate().alpha(0f).setDuration(150).withEndAction {
+                view.visibility = View.GONE
+            }.start()
         }
     }
 

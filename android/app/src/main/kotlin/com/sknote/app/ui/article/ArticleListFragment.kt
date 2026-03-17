@@ -53,14 +53,14 @@ class ArticleListFragment : Fragment() {
     private fun observeData() {
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
             adapter.submitList(articles)
-            binding.tvEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE
+            binding.layoutEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE
         }
         viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
-                binding.tvEmpty.visibility = View.GONE
+                binding.layoutEmpty.visibility = View.GONE
             } else {
                 binding.layoutError.visibility = View.GONE
             }
