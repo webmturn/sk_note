@@ -8,12 +8,21 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import androidx.datastore.preferences.core.longPreferencesKey
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sk_note_prefs")
 
 class TokenManager(private val context: Context) {
+
+    @Volatile
+    var cachedToken: String? = null
+        private set
+
+    suspend fun preloadToken() {
+        cachedToken = context.dataStore.data.map { it[TOKEN_KEY] }.first()
+    }
 
     companion object {
         private val TOKEN_KEY = stringPreferencesKey("auth_token")
@@ -34,6 +43,7 @@ class TokenManager(private val context: Context) {
     fun getUserId(): Flow<Long?> = context.dataStore.data.map { it[USER_ID_KEY] }
 
     suspend fun saveAuth(token: String, username: String, role: String, userId: Long = 0L) {
+        cachedToken = token
         context.dataStore.edit { prefs ->
             prefs[TOKEN_KEY] = token
             prefs[USERNAME_KEY] = username
@@ -43,6 +53,7 @@ class TokenManager(private val context: Context) {
     }
 
     suspend fun clearAuth() {
+        cachedToken = null
         context.dataStore.edit { prefs ->
             prefs.remove(TOKEN_KEY)
             prefs.remove(USERNAME_KEY)

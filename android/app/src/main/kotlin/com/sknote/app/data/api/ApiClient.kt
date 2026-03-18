@@ -3,8 +3,9 @@ package com.sknote.app.data.api
 import android.content.Context
 import com.sknote.app.BuildConfig
 import com.sknote.app.data.local.TokenManager
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -41,9 +42,7 @@ object ApiClient {
         }
 
         val authInterceptor = Interceptor { chain ->
-            val token = runBlocking {
-                tokenManager?.getToken()?.first()
-            }
+            val token = tokenManager?.cachedToken
             val request = if (!token.isNullOrEmpty()) {
                 chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer $token")
@@ -53,7 +52,7 @@ object ApiClient {
             }
             val response = chain.proceed(request)
             if (response.code == 401 && !token.isNullOrEmpty()) {
-                runBlocking { tokenManager?.clearAuth() }
+                CoroutineScope(Dispatchers.IO).launch { tokenManager?.clearAuth() }
             }
             response
         }

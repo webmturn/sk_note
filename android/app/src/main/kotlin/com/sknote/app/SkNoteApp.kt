@@ -15,6 +15,7 @@ class SkNoteApp : Application() {
         ApiClient.init(this)
 
         CoroutineScope(Dispatchers.Main).launch {
+            ApiClient.getTokenManager().preloadToken()
             val mode = ApiClient.getTokenManager().getThemeMode().first()
             AppCompatDelegate.setDefaultNightMode(themeModeToNightMode(mode))
         }
