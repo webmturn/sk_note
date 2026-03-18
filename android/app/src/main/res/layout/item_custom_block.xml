@@ -13,7 +13,7 @@
         android:layout_marginBottom="4dp"
         style="?attr/materialCardViewFilledStyle"
         app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-        app:cardCornerRadius="12dp">
+        app:cardCornerRadius="16dp">
 
         <LinearLayout
             android:id="@+id/background"

@@ -9,7 +9,28 @@
         <item name="colorOnSecondary">@color/on_secondary</item>
         <item name="colorSecondaryContainer">@color/secondary_container</item>
         <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
-        <item name="android:statusBarColor">@color/primary</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="bottomNavigationStyle">@style/Widget.SkNote.BottomNavigation</item>
+    </style>
+
+    <style name="Widget.SkNote.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">?attr/colorSurface</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.SkNote.BottomNavigation.ActiveIndicator</item>
+        <item name="itemIconTint">@color/bottom_nav_icon_color</item>
+        <item name="itemTextColor">@color/bottom_nav_icon_color</item>
+        <item name="labelVisibilityMode">labeled</item>
+        <item name="itemPaddingTop">8dp</item>
+        <item name="itemPaddingBottom">8dp</item>
+    </style>
+
+    <style name="Widget.SkNote.BottomNavigation.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">?attr/colorPrimaryContainer</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.SkNote.BottomNav.Indicator</item>
+    </style>
+
+    <style name="ShapeAppearance.SkNote.BottomNav.Indicator" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerSize">16dp</item>
     </style>
 </resources>

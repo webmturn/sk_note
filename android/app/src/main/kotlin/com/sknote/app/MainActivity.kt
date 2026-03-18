@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            binding.bottomNav.visibility = if (destination.id in topLevelDestinations) {
+            binding.bottomNavWrapper.visibility = if (destination.id in topLevelDestinations) {
                 View.VISIBLE
             } else {
                 View.GONE
