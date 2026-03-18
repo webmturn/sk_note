@@ -254,38 +254,50 @@
         tools:layout="@layout/fragment_admin" />
 
     <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.sknote.app.ui.profile.SettingsFragment"
+        android:label="设置"
+        tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/adminCenterFragment"
+        android:name="com.sknote.app.ui.manage.AdminCenterFragment"
+        android:label="管理中心"
+        tools:layout="@layout/fragment_admin_center" />
+
+    <fragment
         android:id="@+id/categoryManageFragment"
-        android:name="com.sknote.app.ui.admin.CategoryManageFragment"
+        android:name="com.sknote.app.ui.manage.category.CategoryManageFragment"
         android:label="分类管理"
         tools:layout="@layout/fragment_category_manage" />
 
     <fragment
         android:id="@+id/articleManageFragment"
-        android:name="com.sknote.app.ui.admin.ArticleManageFragment"
+        android:name="com.sknote.app.ui.manage.article.ArticleManageFragment"
         android:label="文章管理"
         tools:layout="@layout/fragment_article_manage" />
 
     <fragment
         android:id="@+id/discussionManageFragment"
-        android:name="com.sknote.app.ui.admin.DiscussionManageFragment"
+        android:name="com.sknote.app.ui.manage.discussion.DiscussionManageFragment"
         android:label="讨论管理"
         tools:layout="@layout/fragment_discussion_manage" />
 
     <fragment
         android:id="@+id/snippetManageFragment"
-        android:name="com.sknote.app.ui.admin.SnippetManageFragment"
+        android:name="com.sknote.app.ui.manage.snippet.SnippetManageFragment"
         android:label="代码片段管理"
         tools:layout="@layout/fragment_snippet_manage" />
 
     <fragment
         android:id="@+id/userManageFragment"
-        android:name="com.sknote.app.ui.admin.UserManageFragment"
+        android:name="com.sknote.app.ui.manage.user.UserManageFragment"
         android:label="账号管理"
         tools:layout="@layout/fragment_user_manage" />
 
     <fragment
         android:id="@+id/articleEditorFragment"
-        android:name="com.sknote.app.ui.admin.ArticleEditorFragment"
+        android:name="com.sknote.app.ui.manage.article.ArticleEditorFragment"
         android:label="编辑文章"
         tools:layout="@layout/fragment_article_editor">
 
@@ -300,6 +312,12 @@
         android:name="com.sknote.app.ui.auth.ProfileEditFragment"
         android:label="编辑资料"
         tools:layout="@layout/fragment_profile_edit" />
+
+    <fragment
+        android:id="@+id/userProfileFragment"
+        android:name="com.sknote.app.ui.profile.UserProfileFragment"
+        android:label="个人资料"
+        tools:layout="@layout/fragment_user_profile" />
 
     <fragment
         android:id="@+id/bookmarkListFragment"
