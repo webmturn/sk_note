@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
@@ -46,24 +46,24 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingVertical="4dp">
+                    android:paddingVertical="8dp">
 
                     <LinearLayout
                         android:id="@+id/rowThemeMode"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:cardCornerRadius="10dp"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="@color/icon_bg_purple"
                             android:layout_marginEnd="16dp">
@@ -73,7 +73,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_dark_mode"
                                 android:scaleType="centerInside"
-                                android:padding="8dp" />
+                                android:padding="9dp" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -81,7 +81,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="主题模式"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:id="@+id/tvThemeMode"
@@ -92,8 +93,8 @@
                             android:layout_marginEnd="8dp" />
 
                         <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
                             android:alpha="0.3" />
                     </LinearLayout>
@@ -115,7 +116,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
@@ -123,21 +124,21 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingVertical="4dp">
+                    android:paddingVertical="8dp">
 
                     <LinearLayout
                         android:id="@+id/rowShapeFilter"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:gravity="center_vertical">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:cardCornerRadius="10dp"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="@color/icon_bg_orange"
                             android:layout_marginEnd="16dp">
@@ -147,7 +148,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_sort"
                                 android:scaleType="centerInside"
-                                android:padding="8dp" />
+                                android:padding="9dp" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
@@ -193,7 +194,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
@@ -201,24 +202,24 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingVertical="4dp">
+                    android:paddingVertical="8dp">
 
                     <LinearLayout
                         android:id="@+id/rowClearCache"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:cardCornerRadius="10dp"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="@color/icon_bg_teal"
                             android:layout_marginEnd="16dp">
@@ -228,7 +229,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_delete_sweep"
                                 android:scaleType="centerInside"
-                                android:padding="8dp" />
+                                android:padding="9dp" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -236,7 +237,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="清除缓存"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:id="@+id/tvCacheSize"
@@ -247,8 +249,8 @@
                             android:layout_marginEnd="8dp" />
 
                         <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
                             android:alpha="0.3" />
                     </LinearLayout>
@@ -270,7 +272,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="24dp"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
 
@@ -278,24 +280,24 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingVertical="4dp">
+                    android:paddingVertical="8dp">
 
                     <LinearLayout
                         android:id="@+id/rowCheckUpdate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:cardCornerRadius="10dp"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="@color/icon_bg_green"
                             android:layout_marginEnd="16dp">
@@ -305,7 +307,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_system_update"
                                 android:scaleType="centerInside"
-                                android:padding="8dp" />
+                                android:padding="9dp" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
@@ -338,8 +340,8 @@
                             style="?android:attr/progressBarStyleSmall" />
 
                         <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
                             android:alpha="0.3" />
                     </LinearLayout>
@@ -349,17 +351,17 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="16dp"
                         android:gravity="center_vertical"
                         android:background="?attr/selectableItemBackground"
                         android:clickable="true"
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            app:cardCornerRadius="10dp"
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            app:cardCornerRadius="12dp"
                             app:cardElevation="0dp"
                             app:cardBackgroundColor="@color/icon_bg_blue"
                             android:layout_marginEnd="16dp">
@@ -369,7 +371,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_info"
                                 android:scaleType="centerInside"
-                                android:padding="8dp" />
+                                android:padding="9dp" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -377,7 +379,8 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="关于"
-                            android:textSize="16sp" />
+                            android:textSize="16sp"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <TextView
                             android:id="@+id/tvVersion"
@@ -389,8 +392,8 @@
                             android:layout_marginEnd="8dp" />
 
                         <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
                             android:alpha="0.3" />
                     </LinearLayout>
