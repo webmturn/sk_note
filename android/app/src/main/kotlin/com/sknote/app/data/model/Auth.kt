@@ -38,7 +38,10 @@ data class StatsResponse(
     @SerializedName("total_discussions") val totalDiscussions: Int = 0,
     @SerializedName("total_snippets") val totalSnippets: Int = 0,
     @SerializedName("total_users") val totalUsers: Int = 0,
-    @SerializedName("total_shares") val totalShares: Int = 0
+    @SerializedName("total_shares") val totalShares: Int = 0,
+    @SerializedName("my_discussions") val myDiscussions: Int = 0,
+    @SerializedName("my_snippets") val mySnippets: Int = 0,
+    @SerializedName("my_articles") val myArticles: Int = 0
 )
 
 data class UsersResponse(

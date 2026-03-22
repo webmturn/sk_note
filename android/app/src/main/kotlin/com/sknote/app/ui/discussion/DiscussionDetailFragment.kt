@@ -123,14 +123,14 @@ class DiscussionDetailFragment : Fragment() {
             clearReplyTarget()
         }
 
-        // 预加载用户信息，只请求一次
+        // 从本地缓存读取用户信息（同步，不依赖网络）
         viewLifecycleOwner.lifecycleScope.launch {
-            cachedUserId = getUserId()
+            cachedUserId = ApiClient.getTokenManager().getUserId().first() ?: -1
             cachedRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
-        }
 
-        observeData()
-        viewModel.loadDiscussion(discussionId)
+            observeData()
+            viewModel.loadDiscussion(discussionId)
+        }
     }
 
     private fun getCategoryLabel(category: String): String = when (category) {
@@ -309,14 +309,6 @@ class DiscussionDetailFragment : Fragment() {
         Snackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
     }
 
-    private suspend fun getUserId(): Long {
-        return try {
-            val response = ApiClient.getService().getMe()
-            if (response.isSuccessful) {
-                response.body()?.get("user")?.id ?: -1
-            } else -1
-        } catch (e: Exception) { -1 }
-    }
 
     override fun onDestroyView() {
         super.onDestroyView()

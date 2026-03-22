@@ -40,13 +40,16 @@ aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
   try {
     const user = c.get('user' as never) as { id: number };
 
-    const [unreadResult, articleResult, discussionResult, snippetResult, userResult, shareResult] = await c.env.DB.batch([
+    const [unreadResult, articleResult, discussionResult, snippetResult, userResult, shareResult, myDiscussionResult, mySnippetResult, myArticleResult] = await c.env.DB.batch([
       c.env.DB.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').bind(user.id),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM articles'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM discussions'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM users'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM shares'),
+      c.env.DB.prepare('SELECT COUNT(DISTINCT d.id) as count FROM discussions d LEFT JOIN comments c ON c.discussion_id = d.id WHERE d.author_id = ? OR c.author_id = ?').bind(user.id, user.id),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets WHERE author_id = ?').bind(user.id),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM articles WHERE author_id = ?').bind(user.id),
     ]);
 
     return c.json({
@@ -56,6 +59,9 @@ aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
       total_snippets: (snippetResult.results[0] as any)?.count || 0,
       total_users: (userResult.results[0] as any)?.count || 0,
       total_shares: (shareResult as any)?.results?.[0]?.count || 0,
+      my_discussions: (myDiscussionResult.results[0] as any)?.count || 0,
+      my_snippets: (mySnippetResult.results[0] as any)?.count || 0,
+      my_articles: (myArticleResult.results[0] as any)?.count || 0,
     });
   } catch (e: any) {
     return c.json({ error: '加载统计数据失败: ' + e.message }, 500);

@@ -143,20 +143,6 @@ class UserProfileFragment : Fragment() {
                 } catch (_: Exception) { }
             }
 
-            launch {
-                try {
-                    val response = ApiClient.getService().getStats()
-                    if (_binding == null) return@launch
-                    if (response.isSuccessful) {
-                        val stats = response.body() ?: return@launch
-                        binding.tvStatArticles.text = "${stats.totalArticles}"
-                        binding.tvStatDiscussions.text = "${stats.totalDiscussions}"
-                        binding.tvStatNotifications.text = "${stats.unreadNotifications}"
-                        binding.tvStatSnippets.text = "${stats.totalSnippets}"
-                    }
-                } catch (_: Exception) { }
-            }
-
             if (myId > 0) launch {
                 try {
                     val response = ApiClient.getService().getPublicProfile(myId)
@@ -165,6 +151,8 @@ class UserProfileFragment : Fragment() {
                         val pStats = response.body()?.stats ?: return@launch
                         binding.tvFollowingCount.text = "${pStats.following}"
                         binding.tvFollowersCount.text = "${pStats.followers}"
+                        binding.tvDiscussionCount.text = "${pStats.discussions}"
+                        binding.tvSnippetCount.text = "${pStats.snippets}"
                     }
                 } catch (_: Exception) { }
             }
