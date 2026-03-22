@@ -10,7 +10,9 @@ import com.sknote.app.databinding.ItemCommentBinding
 import com.sknote.app.util.TimeUtil
 
 class CommentAdapter(
-    private val onLongClick: (Comment) -> Unit = {},
+    private val onReplyClick: (Comment) -> Unit = {},
+    private val onCopyClick: (Comment) -> Unit = {},
+    private val onDeleteClick: (Comment) -> Unit = {},
     private val onLikeClick: (Comment) -> Unit = {}
 ) : ListAdapter<Comment, CommentAdapter.ViewHolder>(DiffCallback) {
 
@@ -32,9 +34,26 @@ class CommentAdapter(
         holder.binding.tvContent.text = comment.content
         holder.binding.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         holder.binding.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
+        // 显示回复目标
+        if (!comment.parentAuthorName.isNullOrEmpty()) {
+            holder.binding.tvReplyTo.text = "→ @${comment.parentAuthorName}"
+            holder.binding.tvReplyTo.visibility = android.view.View.VISIBLE
+        } else {
+            holder.binding.tvReplyTo.visibility = android.view.View.GONE
+        }
+        // 回复评论左侧缩进
+        val lp = holder.binding.root.layoutParams as? android.view.ViewGroup.MarginLayoutParams
+        if (lp != null) {
+            val density = holder.binding.root.context.resources.displayMetrics.density
+            lp.marginStart = if (comment.parentId != null) (28 * density).toInt() else 0
+            holder.binding.root.layoutParams = lp
+        }
         holder.binding.btnLike.setOnClickListener { onLikeClick(comment) }
+        holder.binding.btnReply.setOnClickListener { onReplyClick(comment) }
+        holder.binding.btnCopy.setOnClickListener { onCopyClick(comment) }
+        // 长按删除（仅作者或管理员）
         holder.binding.root.setOnLongClickListener {
-            onLongClick(comment)
+            onDeleteClick(comment)
             true
         }
     }

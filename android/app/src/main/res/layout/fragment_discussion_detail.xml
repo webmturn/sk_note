@@ -286,6 +286,47 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
+        <!-- Reply indicator banner -->
+        <LinearLayout
+            android:id="@+id/layoutReplyIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="6dp"
+            android:background="?attr/colorSecondaryContainer"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_reply"
+                app:tint="?attr/colorOnSecondaryContainer"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:id="@+id/tvReplyIndicator"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSecondaryContainer"
+                android:singleLine="true"
+                android:ellipsize="end" />
+
+            <ImageView
+                android:id="@+id/btnCancelReply"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_close"
+                android:padding="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                app:tint="?attr/colorOnSecondaryContainer" />
+        </LinearLayout>
+
         <!-- Reply bar -->
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
@@ -306,7 +347,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="6dp"
                 app:cardCornerRadius="22dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">

@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -31,6 +33,8 @@ class DiscussionDetailFragment : Fragment() {
     private var discussionId: Long = 0
     private var cachedUserId: Long = -1
     private var cachedRole: String = "user"
+    private var replyParentCommentId: Long? = null
+    private var replyTargetName: String = ""
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDiscussionDetailBinding.inflate(inflater, container, false)
@@ -49,7 +53,13 @@ class DiscussionDetailFragment : Fragment() {
         binding.toolbar.inflateMenu(R.menu.menu_discussion_detail)
 
         commentAdapter = CommentAdapter(
-            onLongClick = { comment ->
+            onReplyClick = { comment ->
+                beginReplyTo(comment)
+            },
+            onCopyClick = { comment ->
+                copyCommentContent(comment.content)
+            },
+            onDeleteClick = { comment ->
                 if (comment.authorId == cachedUserId || cachedRole == "admin") {
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle("删除评论")
@@ -98,8 +108,13 @@ class DiscussionDetailFragment : Fragment() {
                     Snackbar.make(binding.root, "请输入评论内容", Snackbar.LENGTH_SHORT).show()
                     return@launch
                 }
-                viewModel.sendComment(discussionId, content)
+                binding.btnSend.isEnabled = false
+                viewModel.sendComment(discussionId, content, replyParentCommentId)
             }
+        }
+
+        binding.btnCancelReply.setOnClickListener {
+            clearReplyTarget()
         }
 
         // 预加载用户信息，只请求一次
@@ -125,6 +140,12 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             binding.tvTitle.text = discussion.title
             binding.tvAuthor.text = discussion.authorName ?: "匿名"
+            binding.tvAuthor.setOnClickListener {
+                if (discussion.authorId > 0) {
+                    val bundle = Bundle().apply { putLong("user_id", discussion.authorId) }
+                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                }
+            }
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             binding.tvViewCount.text = "${discussion.viewCount} 浏览"
             binding.tvContent.visibility = View.VISIBLE
@@ -231,13 +252,53 @@ class DiscussionDetailFragment : Fragment() {
             viewModel.loadDiscussion(discussionId)
         }
 
+        viewModel.isSending.observe(viewLifecycleOwner) { sending ->
+            binding.btnSend.isEnabled = !sending
+        }
+
         viewModel.commentSent.observe(viewLifecycleOwner) { sent ->
             if (sent == true) {
                 viewModel.onCommentSentHandled()
                 binding.etReply.text?.clear()
+                clearReplyTarget()
+                // 隐藏键盘
+                val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.hideSoftInputFromWindow(binding.etReply.windowToken, 0)
                 Snackbar.make(binding.root, "评论成功", Snackbar.LENGTH_SHORT).show()
+                // 滚动到底部查看新评论
+                binding.rvComments.post {
+                    var v: android.view.View? = binding.rvComments
+                    while (v != null && v !is androidx.core.widget.NestedScrollView) v = v.parent as? android.view.View
+                    (v as? androidx.core.widget.NestedScrollView)?.fullScroll(View.FOCUS_DOWN)
+                }
             }
         }
+    }
+
+    private fun beginReplyTo(comment: com.sknote.app.data.model.Comment) {
+        replyParentCommentId = comment.id
+        replyTargetName = comment.authorName ?: "匿名"
+        binding.etReply.hint = "回复 @$replyTargetName"
+        binding.tvReplyIndicator.text = "正在回复 @$replyTargetName"
+        binding.layoutReplyIndicator.visibility = View.VISIBLE
+        binding.etReply.requestFocus()
+        // 弹出键盘
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(binding.etReply, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun clearReplyTarget() {
+        replyParentCommentId = null
+        replyTargetName = ""
+        binding.etReply.hint = "写评论..."
+        binding.layoutReplyIndicator.visibility = View.GONE
+    }
+
+    private fun copyCommentContent(content: String) {
+        val clipboard = requireContext().getSystemService(ClipboardManager::class.java)
+        val clip = ClipData.newPlainText("comment", content)
+        clipboard.setPrimaryClip(clip)
+        Snackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
     }
 
     private suspend fun getUserId(): Long {

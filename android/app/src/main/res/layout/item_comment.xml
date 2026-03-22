@@ -45,12 +45,21 @@
 
             <TextView
                 android:id="@+id/tvAuthor"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/tvReplyTo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvTime"
@@ -92,6 +101,34 @@
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginStart="2dp" />
+
+            <TextView
+                android:id="@+id/btnReply"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="3dp"
+                android:text="回复"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btnCopy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="3dp"
+                android:text="复制"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
 
