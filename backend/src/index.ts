@@ -46,5 +46,5 @@ export function setupApp(app: Hono<{ Bindings: Env }>) {
   return app;
 }
 
-// Cloudflare Workers 入口
+// 默认导出（兼容 Cloudflare Workers 入口）
 export default setupApp(new Hono<{ Bindings: Env }>());

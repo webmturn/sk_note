@@ -5,6 +5,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.sknote.app.R
 import com.sknote.app.data.model.Comment
 import com.sknote.app.databinding.ItemCommentBinding
 import com.sknote.app.util.TimeUtil
@@ -13,7 +15,8 @@ class CommentAdapter(
     private val onReplyClick: (Comment) -> Unit = {},
     private val onCopyClick: (Comment) -> Unit = {},
     private val onDeleteClick: (Comment) -> Unit = {},
-    private val onLikeClick: (Comment) -> Unit = {}
+    private val onLikeClick: (Comment) -> Unit = {},
+    private val onAvatarClick: (Comment) -> Unit = {}
 ) : ListAdapter<Comment, CommentAdapter.ViewHolder>(DiffCallback) {
 
     class ViewHolder(val binding: ItemCommentBinding) : RecyclerView.ViewHolder(binding.root)
@@ -31,6 +34,15 @@ class CommentAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val comment = getItem(position)
         holder.binding.tvAuthor.text = comment.authorName ?: "匿名"
+        if (!comment.authorAvatar.isNullOrEmpty()) {
+            Glide.with(holder.itemView.context)
+                .load(comment.authorAvatar)
+                .circleCrop()
+                .placeholder(R.drawable.ic_person)
+                .into(holder.binding.ivAvatar)
+        } else {
+            holder.binding.ivAvatar.setImageResource(R.drawable.ic_person)
+        }
         holder.binding.tvContent.text = comment.content
         holder.binding.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         holder.binding.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
@@ -48,6 +60,8 @@ class CommentAdapter(
             lp.marginStart = if (comment.parentId != null) (28 * density).toInt() else 0
             holder.binding.root.layoutParams = lp
         }
+        holder.binding.ivAvatar.setOnClickListener { onAvatarClick(comment) }
+        holder.binding.tvAuthor.setOnClickListener { onAvatarClick(comment) }
         holder.binding.btnLike.setOnClickListener { onLikeClick(comment) }
         holder.binding.btnReply.setOnClickListener { onReplyClick(comment) }
         holder.binding.btnCopy.setOnClickListener { onCopyClick(comment) }

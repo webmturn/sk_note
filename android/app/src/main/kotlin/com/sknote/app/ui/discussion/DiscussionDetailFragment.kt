@@ -80,6 +80,12 @@ class DiscussionDetailFragment : Fragment() {
                             .show()
                     }
                 }
+            },
+            onAvatarClick = { comment ->
+                if (comment.authorId > 0) {
+                    val bundle = Bundle().apply { putLong("user_id", comment.authorId) }
+                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                }
             }
         )
         binding.rvComments.apply {
@@ -140,12 +146,14 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             binding.tvTitle.text = discussion.title
             binding.tvAuthor.text = discussion.authorName ?: "匿名"
-            binding.tvAuthor.setOnClickListener {
+            val navigateToAuthor = View.OnClickListener {
                 if (discussion.authorId > 0) {
                     val bundle = Bundle().apply { putLong("user_id", discussion.authorId) }
                     findNavController().navigate(R.id.publicProfileFragment, bundle)
                 }
             }
+            binding.tvAuthor.setOnClickListener(navigateToAuthor)
+            binding.ivAuthorAvatar.setOnClickListener(navigateToAuthor)
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             binding.tvViewCount.text = "${discussion.viewCount} 浏览"
             binding.tvContent.visibility = View.VISIBLE

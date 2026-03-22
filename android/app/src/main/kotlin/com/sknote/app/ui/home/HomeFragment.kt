@@ -145,7 +145,9 @@ class HomeFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (isLoggedIn) {
+                val nickname = ApiClient.getTokenManager().getNickname().first() ?: ""
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
+                val displayName = nickname.ifEmpty { username }
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                 val greeting = when {
                     hour < 6 -> "夜深了"
@@ -153,7 +155,7 @@ class HomeFragment : Fragment() {
                     hour < 18 -> "下午好"
                     else -> "晚上好"
                 }
-                binding.tvGreeting.text = "$greeting, $username"
+                binding.tvGreeting.text = "$greeting, $displayName"
                 binding.tvSubtitle.text = "继续探索 Sketchware Pro"
             }
         }

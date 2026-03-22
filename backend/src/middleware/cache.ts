@@ -4,8 +4,28 @@ import type { Env } from '../index';
 // 检测是否运行在 Cloudflare Workers 环境
 const isCloudflare = typeof caches !== 'undefined' && 'default' in (caches as any);
 
-// Node.js 简易内存缓存
+// Node.js 简易内存缓存（带 LRU 淘汰）
+const MAX_CACHE_ENTRIES = 200;
 const memoryCache = new Map<string, { data: string; headers: Record<string, string>; expiry: number }>();
+
+function evictExpired() {
+  const now = Date.now();
+  for (const [key, val] of memoryCache) {
+    if (val.expiry <= now) memoryCache.delete(key);
+  }
+}
+
+function cacheSet(key: string, value: { data: string; headers: Record<string, string>; expiry: number }) {
+  if (memoryCache.has(key)) memoryCache.delete(key);
+  if (memoryCache.size >= MAX_CACHE_ENTRIES) {
+    evictExpired();
+    if (memoryCache.size >= MAX_CACHE_ENTRIES) {
+      const oldest = memoryCache.keys().next().value!;
+      memoryCache.delete(oldest);
+    }
+  }
+  memoryCache.set(key, value);
+}
 
 /**
  * 缓存中间件（自适应 Cloudflare 边缘缓存 / Node.js 内存缓存）
@@ -63,7 +83,7 @@ export function edgeCache(maxAgeSec: number = 300) {
         try {
           const clone = c.res.clone();
           const text = await clone.text();
-          memoryCache.set(key, { data: text, headers: {}, expiry: now + maxAgeSec * 1000 });
+          cacheSet(key, { data: text, headers: {}, expiry: now + maxAgeSec * 1000 });
         } catch (_) {}
       }
     }

@@ -32,10 +32,18 @@ class DiscussionListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = DiscussionAdapter { discussion ->
-            val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
-            findNavController().navigate(R.id.action_discussions_to_detail, bundle)
-        }
+        adapter = DiscussionAdapter(
+            onClick = { discussion ->
+                val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
+                findNavController().navigate(R.id.action_discussions_to_detail, bundle)
+            },
+            onAuthorClick = { discussion ->
+                if (discussion.authorId > 0) {
+                    val bundle = Bundle().apply { putLong("user_id", discussion.authorId) }
+                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                }
+            }
+        )
 
         binding.rvDiscussions.apply {
             layoutManager = LinearLayoutManager(context)

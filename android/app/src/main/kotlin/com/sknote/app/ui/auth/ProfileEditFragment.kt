@@ -7,7 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
+import com.sknote.app.R
 import com.sknote.app.databinding.FragmentProfileEditBinding
 
 class ProfileEditFragment : Fragment() {
@@ -26,9 +28,20 @@ class ProfileEditFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
-        binding.btnSaveAvatar.setOnClickListener {
-            val url = binding.etAvatarUrl.text.toString().trim()
-            viewModel.updateAvatar(url)
+        binding.btnSaveProfile.setOnClickListener {
+            val nickname = binding.etNickname.text.toString().trim()
+            val username = binding.etUsername.text.toString().trim()
+            val bio = binding.etBio.text.toString().trim()
+            val avatarUrl = binding.etAvatarUrl.text.toString().trim()
+            if (nickname.isEmpty()) {
+                Snackbar.make(binding.root, "昵称不能为空", Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (username.length < 2) {
+                Snackbar.make(binding.root, "账号至少2个字符", Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            viewModel.updateProfile(nickname, username, bio, avatarUrl)
         }
 
         binding.btnChangePassword.setOnClickListener {
@@ -57,16 +70,24 @@ class ProfileEditFragment : Fragment() {
 
     private fun observeData() {
         viewModel.user.observe(viewLifecycleOwner) { user ->
-            binding.tvUsername.text = user.username
+            binding.tvUsername.text = user.displayName
             binding.tvEmail.text = user.email ?: ""
+            binding.etNickname.setText(user.displayName)
+            binding.etUsername.setText(user.username)
+            binding.etBio.setText(user.bio)
+            binding.etAvatarUrl.setText(user.avatarUrl)
             if (user.avatarUrl.isNotEmpty()) {
-                binding.etAvatarUrl.setText(user.avatarUrl)
+                Glide.with(this)
+                    .load(user.avatarUrl)
+                    .circleCrop()
+                    .placeholder(R.drawable.ic_account_circle)
+                    .into(binding.ivAvatar)
             }
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.btnSaveAvatar.isEnabled = !isLoading
+            binding.btnSaveProfile.isEnabled = !isLoading
             binding.btnChangePassword.isEnabled = !isLoading
         }
 

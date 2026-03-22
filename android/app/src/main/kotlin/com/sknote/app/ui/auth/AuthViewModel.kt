@@ -31,7 +31,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.token != null && body.user != null) {
-                        ApiClient.getTokenManager().saveAuth(body.token, body.user.username, body.user.role, body.user.id)
+                        ApiClient.getTokenManager().saveAuth(body.token, body.user.username, body.user.role, body.user.id, body.user.displayName)
                         _authResult.value = body
                     } else {
                         _authResult.value = AuthResponse(null, null, "登录失败：服务端响应异常")
@@ -47,15 +47,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun register(username: String, email: String, password: String) {
+    fun register(username: String, email: String, password: String, nickname: String = "") {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = ApiClient.getService().register(RegisterRequest(username, email, password))
+                val response = ApiClient.getService().register(RegisterRequest(username, email, password, nickname))
                 if (response.isSuccessful) {
                     val body = response.body()
                     if (body != null && body.token != null && body.user != null) {
-                        ApiClient.getTokenManager().saveAuth(body.token, body.user.username, body.user.role, body.user.id)
+                        ApiClient.getTokenManager().saveAuth(body.token, body.user.username, body.user.role, body.user.id, body.user.displayName)
                         _authResult.value = body
                     } else {
                         _authResult.value = AuthResponse(null, null, "注册失败：服务端响应异常")

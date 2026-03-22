@@ -10,7 +10,8 @@ import com.sknote.app.databinding.ItemDiscussionBinding
 import com.sknote.app.util.TimeUtil
 
 class DiscussionAdapter(
-    private val onClick: (Discussion) -> Unit
+    private val onClick: (Discussion) -> Unit,
+    private val onAuthorClick: (Discussion) -> Unit = {}
 ) : ListAdapter<Discussion, DiscussionAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -43,6 +44,8 @@ class DiscussionAdapter(
             binding.tvViews.text = "${discussion.viewCount} 阅读"
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             binding.root.setOnClickListener { onClick(discussion) }
+            binding.tvAuthor.setOnClickListener { onAuthorClick(discussion) }
+            binding.ivAvatar.setOnClickListener { onAuthorClick(discussion) }
         }
     }
 

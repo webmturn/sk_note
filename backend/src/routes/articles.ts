@@ -14,7 +14,8 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT a.*, u.username as author_name, u.avatar_url as author_avatar, c.name as category_name
+    SELECT a.id, a.title, a.summary, a.category_id, a.author_id, a.view_count, a.like_count, a.sort_order, a.created_at, a.updated_at,
+    COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, c.name as category_name
     FROM articles a
     LEFT JOIN users u ON a.author_id = u.id
     LEFT JOIN categories c ON a.category_id = c.id
@@ -65,7 +66,7 @@ articleRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
   const article = await c.env.DB.prepare(`
-    SELECT a.*, u.username as author_name, u.avatar_url as author_avatar, c.name as category_name
+    SELECT a.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, c.name as category_name
     FROM articles a
     LEFT JOIN users u ON a.author_id = u.id
     LEFT JOIN categories c ON a.category_id = c.id

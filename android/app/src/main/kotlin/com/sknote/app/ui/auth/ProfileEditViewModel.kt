@@ -42,16 +42,29 @@ class ProfileEditViewModel : ViewModel() {
         }
     }
 
-    fun updateAvatar(avatarUrl: String) {
+    fun updateProfile(nickname: String, username: String, bio: String, avatarUrl: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = ApiClient.getService().updateProfile(mapOf("avatar_url" to avatarUrl))
+                val params = mutableMapOf<String, String>()
+                params["nickname"] = nickname
+                params["username"] = username
+                params["bio"] = bio
+                params["avatar_url"] = avatarUrl
+                val response = ApiClient.getService().updateProfile(params)
                 if (response.isSuccessful) {
-                    _message.value = "头像更新成功"
+                    _message.value = "资料更新成功"
+                    ApiClient.getTokenManager().updateUsername(username)
+                    ApiClient.getTokenManager().updateNickname(nickname)
                     loadProfile()
                 } else {
-                    _error.value = "更新失败: ${response.code()}"
+                    val code = response.code()
+                    val errorMsg = when (code) {
+                        409 -> "账号已被占用"
+                        400 -> "输入不符合要求"
+                        else -> "更新失败: $code"
+                    }
+                    _error.value = errorMsg
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)

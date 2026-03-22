@@ -5,10 +5,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.databinding.FragmentCacheManageBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class CacheManageFragment : Fragment() {
@@ -62,29 +67,45 @@ class CacheManageFragment : Fragment() {
             .show()
     }
 
+    private val IMAGE_CACHE_DIRS = setOf("image_manager_disk_cache", "com.bumptech.glide")
+    private val NETWORK_CACHE_DIRS = setOf("http_cache")
+
     private fun refreshCacheSizes() {
         val cacheDir = requireContext().cacheDir
 
-        val imageDir = File(cacheDir, "image_cache")
-        val networkDir = File(cacheDir, "http-cache")
-
-        val imageSize = getDirSize(imageDir)
-        val networkSize = getDirSize(networkDir)
+        var imageSize = 0L
+        var networkSize = 0L
         val totalSize = getDirSize(cacheDir)
-        val otherSize = totalSize - imageSize - networkSize
+
+        cacheDir.listFiles()?.forEach { sub ->
+            val name = sub.name.lowercase()
+            when {
+                IMAGE_CACHE_DIRS.any { name.contains(it) } -> imageSize += getDirSize(sub)
+                NETWORK_CACHE_DIRS.any { name.contains(it) } -> networkSize += getDirSize(sub)
+            }
+        }
+
+        val otherSize = (totalSize - imageSize - networkSize).coerceAtLeast(0)
 
         binding.tvTotalCache.text = formatSize(totalSize)
         binding.tvImageCache.text = formatSize(imageSize)
         binding.tvNetworkCache.text = formatSize(networkSize)
-        binding.tvOtherCache.text = formatSize(otherSize.coerceAtLeast(0))
+        binding.tvOtherCache.text = formatSize(otherSize)
     }
 
     private fun clearImageCache() {
-        File(requireContext().cacheDir, "image_cache").deleteRecursively()
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                Glide.get(ctx).clearDiskCache()
+            }
+            IMAGE_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
+            refreshCacheSizes()
+        }
     }
 
     private fun clearNetworkCache() {
-        File(requireContext().cacheDir, "http-cache").deleteRecursively()
+        NETWORK_CACHE_DIRS.forEach { File(requireContext().cacheDir, it).deleteRecursively() }
     }
 
     private fun getDirSize(dir: File): Long {

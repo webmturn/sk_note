@@ -12,10 +12,13 @@ bookmarkRoutes.get('/', authMiddleware(), async (c) => {
   const offset = (page - 1) * limit;
 
   const result = await c.env.DB.prepare(
-    `SELECT b.id, b.created_at as bookmarked_at, a.id as article_id, a.title, a.summary, 
-     a.author_name, a.category_name, a.view_count, a.like_count, a.created_at
+    `SELECT b.id, b.created_at as bookmarked_at, a.id as article_id, a.title, a.summary,
+     COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
+     a.view_count, a.like_count, a.created_at
      FROM bookmarks b
      JOIN articles a ON b.article_id = a.id
+     LEFT JOIN users u ON a.author_id = u.id
+     LEFT JOIN categories c ON a.category_id = c.id
      WHERE b.user_id = ?
      ORDER BY b.created_at DESC
      LIMIT ? OFFSET ?`
@@ -78,9 +81,12 @@ bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
 
   const result = await c.env.DB.prepare(
     `SELECT rh.id, rh.read_at, a.id as article_id, a.title, a.summary,
-     a.author_name, a.category_name, a.view_count, a.created_at
+     COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
+     a.view_count, a.created_at
      FROM reading_history rh
      JOIN articles a ON rh.article_id = a.id
+     LEFT JOIN users u ON a.author_id = u.id
+     LEFT JOIN categories c ON a.category_id = c.id
      WHERE rh.user_id = ?
      ORDER BY rh.read_at DESC
      LIMIT ? OFFSET ?`

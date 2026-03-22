@@ -13,7 +13,7 @@ snippetRoutes.get('/', edgeCache(120), async (c) => {
   const search = c.req.query('search');
   const offset = (page - 1) * limit;
 
-  let query = 'SELECT * FROM snippets WHERE is_approved = 1';
+  let query = 'SELECT id, title, description, language, category, tags, author_id, author_name, view_count, like_count, created_at, updated_at FROM snippets WHERE is_approved = 1';
   const params: any[] = [];
 
   if (category) {
@@ -79,6 +79,9 @@ snippetRoutes.post('/', authMiddleware(), async (c) => {
     return c.json({ error: '标题和代码不能为空' }, 400);
   }
 
+  const userInfo = await c.env.DB.prepare('SELECT nickname, username FROM users WHERE id = ?').bind(user.id).first<{ nickname: string; username: string }>();
+  const displayName = (userInfo?.nickname || '').trim() || userInfo?.username || user.username || '';
+
   const result = await c.env.DB.prepare(
     `INSERT INTO snippets (title, description, code, language, category, tags, author_id, author_name)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -90,7 +93,7 @@ snippetRoutes.post('/', authMiddleware(), async (c) => {
     category || 'general',
     tags || '',
     user.id,
-    user.username || ''
+    displayName
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;

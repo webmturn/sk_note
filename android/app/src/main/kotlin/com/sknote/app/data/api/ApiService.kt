@@ -173,6 +173,9 @@ interface ApiService {
     @PUT("api/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<MessageResponse>
 
+    @DELETE("api/notifications/all")
+    suspend fun deleteAllNotifications(): Response<MessageResponse>
+
     @DELETE("api/notifications/{id}")
     suspend fun deleteNotification(@Path("id") id: Long): Response<MessageResponse>
 

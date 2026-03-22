@@ -42,13 +42,14 @@ class LoginFragment : Fragment() {
 
         binding.btnRegister.setOnClickListener {
             val username = binding.etUsername.text.toString().trim()
+            val nickname = binding.etNickname.text.toString().trim()
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
             if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                Snackbar.make(binding.root, "请填写所有字段", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "请填写账号、邮箱和密码", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            viewModel.register(username, email, password)
+            viewModel.register(username, email, password, nickname)
         }
 
         binding.btnLogout.setOnClickListener {
@@ -57,6 +58,7 @@ class LoginFragment : Fragment() {
 
         binding.tvToggleMode.setOnClickListener {
             val isLogin = binding.layoutEmail.visibility == View.GONE
+            binding.layoutNickname.visibility = if (isLogin) View.VISIBLE else View.GONE
             binding.layoutEmail.visibility = if (isLogin) View.VISIBLE else View.GONE
             binding.btnLogin.visibility = if (isLogin) View.GONE else View.VISIBLE
             binding.btnRegister.visibility = if (isLogin) View.VISIBLE else View.GONE

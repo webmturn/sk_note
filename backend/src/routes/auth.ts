@@ -15,10 +15,10 @@ async function hashPassword(password: string): Promise<string> {
 // 注册
 authRoutes.post('/register', async (c) => {
   try {
-    const { username, email, password } = await c.req.json();
+    const { username, email, password, nickname } = await c.req.json();
 
     if (!username || !email || !password) {
-      return c.json({ error: '用户名、邮箱和密码不能为空' }, 400);
+      return c.json({ error: '账号、邮箱和密码不能为空' }, 400);
     }
     if (password.length < 6) {
       return c.json({ error: '密码至少6位' }, 400);
@@ -29,13 +29,14 @@ authRoutes.post('/register', async (c) => {
     ).bind(username, email).first();
 
     if (existing) {
-      return c.json({ error: '用户名或邮箱已被注册' }, 409);
+      return c.json({ error: '账号或邮箱已被注册' }, 409);
     }
 
+    const displayName = (nickname || '').trim() || username;
     const passwordHash = await hashPassword(password);
     const result = await c.env.DB.prepare(
-      'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)'
-    ).bind(username, email, passwordHash).run();
+      'INSERT INTO users (username, email, password_hash, nickname) VALUES (?, ?, ?, ?)'
+    ).bind(username, email, passwordHash, displayName).run();
 
     const userId = result.meta.last_row_id;
     const token = await createToken(
@@ -45,7 +46,7 @@ authRoutes.post('/register', async (c) => {
 
     return c.json({
       token,
-      user: { id: userId, username, email, role: 'user' }
+      user: { id: userId, username, nickname: displayName, email, role: 'user' }
     }, 201);
   } catch (e: any) {
     return c.json({ error: '注册失败: ' + e.message }, 500);
@@ -62,10 +63,10 @@ authRoutes.post('/login', async (c) => {
     }
 
     const user = await c.env.DB.prepare(
-      'SELECT id, username, email, password_hash, role, avatar_url FROM users WHERE username = ? OR email = ?'
+      'SELECT id, username, nickname, email, password_hash, role, avatar_url, bio FROM users WHERE username = ? OR email = ?'
     ).bind(username, username).first<{
-      id: number; username: string; email: string;
-      password_hash: string; role: string; avatar_url: string;
+      id: number; username: string; nickname: string; email: string;
+      password_hash: string; role: string; avatar_url: string; bio: string;
     }>();
 
     if (!user) {
@@ -87,9 +88,11 @@ authRoutes.post('/login', async (c) => {
       user: {
         id: user.id,
         username: user.username,
+        nickname: user.nickname || user.username,
         email: user.email,
         role: user.role,
         avatar_url: user.avatar_url,
+        bio: user.bio || '',
       }
     });
   } catch (e: any) {
@@ -101,7 +104,7 @@ authRoutes.post('/login', async (c) => {
 authRoutes.get('/me', authMiddleware(), async (c) => {
   const payload = c.get('user' as never) as { id: number };
   const user = await c.env.DB.prepare(
-    'SELECT id, username, email, role, avatar_url, created_at FROM users WHERE id = ?'
+    'SELECT id, username, nickname, email, role, avatar_url, bio, created_at FROM users WHERE id = ?'
   ).bind(payload.id).first();
 
   if (!user) return c.json({ error: '用户不存在' }, 404);
@@ -111,11 +114,55 @@ authRoutes.get('/me', authMiddleware(), async (c) => {
 // 更新个人信息
 authRoutes.put('/me', authMiddleware(), async (c) => {
   const payload = c.get('user' as never) as { id: number };
-  const { avatar_url } = await c.req.json();
+  const body = await c.req.json();
+
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (body.avatar_url !== undefined) {
+    fields.push('avatar_url = ?');
+    values.push(body.avatar_url || '');
+  }
+  if (body.bio !== undefined) {
+    fields.push('bio = ?');
+    values.push(body.bio || '');
+  }
+  if (body.nickname !== undefined) {
+    const newNickname = (body.nickname || '').trim();
+    if (newNickname.length < 1) {
+      return c.json({ error: '昵称不能为空' }, 400);
+    }
+    if (newNickname.length > 20) {
+      return c.json({ error: '昵称最长20个字符' }, 400);
+    }
+    fields.push('nickname = ?');
+    values.push(newNickname);
+  }
+  if (body.username !== undefined) {
+    const newUsername = (body.username || '').trim();
+    if (newUsername.length < 2) {
+      return c.json({ error: '用户名至少2个字符' }, 400);
+    }
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE username = ? AND id != ?'
+    ).bind(newUsername, payload.id).first();
+    if (existing) {
+      return c.json({ error: '用户名已被占用' }, 409);
+    }
+    fields.push('username = ?');
+    values.push(newUsername);
+  }
+
+  if (fields.length === 0) {
+    return c.json({ error: '没有要更新的字段' }, 400);
+  }
+
+  fields.push("updated_at = datetime('now')");
+  values.push(payload.id);
 
   await c.env.DB.prepare(
-    'UPDATE users SET avatar_url = ?, updated_at = datetime("now") WHERE id = ?'
-  ).bind(avatar_url || '', payload.id).run();
+    `UPDATE users SET ${fields.join(', ')} WHERE id = ?`
+  ).bind(...values).run();
 
   return c.json({ message: '更新成功' });
 });
@@ -131,7 +178,7 @@ authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
     const offset = (page - 1) * limit;
 
     let countQuery = 'SELECT COUNT(*) as total FROM users';
-    let dataQuery = 'SELECT id, username, email, role, avatar_url, created_at FROM users';
+    let dataQuery = 'SELECT id, username, nickname, email, role, avatar_url, bio, created_at FROM users';
     const bindings: any[] = [];
 
     if (search) {

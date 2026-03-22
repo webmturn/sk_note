@@ -86,6 +86,9 @@ shareRoutes.post('/', authMiddleware(), async (c) => {
     return c.json({ error: '标题和下载链接不能为空' }, 400);
   }
 
+  const userInfo = await c.env.DB.prepare('SELECT nickname, username FROM users WHERE id = ?').bind(user.id).first<{ nickname: string; username: string }>();
+  const displayName = (userInfo?.nickname || '').trim() || userInfo?.username || user.username || '';
+
   const result = await c.env.DB.prepare(
     `INSERT INTO shares (title, description, category, download_url, download_pwd, file_size, author_id, author_name)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -97,7 +100,7 @@ shareRoutes.post('/', authMiddleware(), async (c) => {
     download_pwd || '',
     file_size || '',
     user.id,
-    user.username || ''
+    displayName
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;

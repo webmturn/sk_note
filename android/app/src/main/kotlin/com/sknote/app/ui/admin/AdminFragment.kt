@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
@@ -26,6 +27,7 @@ class AdminFragment : Fragment() {
 
     private var _binding: FragmentAdminBinding? = null
     private val binding get() = _binding!!
+    private var isInitialLoad = true
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAdminBinding.inflate(inflater, container, false)
@@ -96,16 +98,27 @@ class AdminFragment : Fragment() {
         refreshLoginState()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (isInitialLoad) {
+            isInitialLoad = false
+            return
+        }
+        refreshLoginState()
+    }
+
     private fun refreshLoginState() {
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (isLoggedIn) {
+                val nickname = ApiClient.getTokenManager().getNickname().first() ?: ""
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
                 val role = ApiClient.getTokenManager().getUserRole().first() ?: "user"
 
-                binding.tvUsername.text = username
+                binding.tvUsername.text = nickname.ifEmpty { username }
                 binding.tvRole.text = if (role == "admin") "管理员" else "普通用户"
 
+                // 先立即显示所有卡片（不等网络）
                 val isAdmin = role == "admin"
                 animateVisibility(binding.cardGuestLogin, false)
                 animateVisibility(binding.cardUserProfile, true)
@@ -116,6 +129,28 @@ class AdminFragment : Fragment() {
                 animateVisibility(binding.cardAdminGroup, isAdmin)
 
                 loadStats()
+
+                // 异步加载头像和最新用户名（不阻塞UI）
+                launch {
+                    try {
+                        val response = ApiClient.getService().getMe()
+                        if (response.isSuccessful && _binding != null) {
+                            val user = response.body()?.get("user")
+                            if (user != null) {
+                                binding.tvUsername.text = user.displayName
+                                ApiClient.getTokenManager().updateNickname(user.displayName)
+                                binding.tvRole.text = if (user.role == "admin") "管理员" else "普通用户"
+                                if (user.avatarUrl.isNotEmpty()) {
+                                    Glide.with(this@AdminFragment)
+                                        .load(user.avatarUrl)
+                                        .circleCrop()
+                                        .placeholder(R.drawable.ic_account_circle)
+                                        .into(binding.ivAvatar)
+                                }
+                            }
+                        }
+                    } catch (_: Exception) { }
+                }
             } else {
                 animateVisibility(binding.cardUserProfile, false)
                 animateVisibility(binding.tvFunctionHeader, false)

@@ -35,7 +35,7 @@ class FollowUserAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val user = getItem(position)
-        holder.binding.tvUsername.text = user.username
+        holder.binding.tvUsername.text = user.displayName
         holder.binding.tvRole.text = when (user.role) {
             "admin" -> "管理员"
             "editor" -> "编辑"

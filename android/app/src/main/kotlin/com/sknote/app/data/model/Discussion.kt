@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName
 data class Discussion(
     val id: Long,
     val title: String,
-    val content: String,
+    val content: String = "",
     @SerializedName("author_id") val authorId: Long,
     @SerializedName("author_name") val authorName: String? = null,
     @SerializedName("author_avatar") val authorAvatar: String? = null,

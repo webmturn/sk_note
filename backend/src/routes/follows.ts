@@ -73,7 +73,7 @@ followRoutes.get('/:userId/following', async (c) => {
     const total = countResult?.total || 0;
 
     const results = await c.env.DB.prepare(
-      `SELECT u.id, u.username, u.avatar_url, u.role, f.created_at as followed_at
+      `SELECT u.id, u.username, COALESCE(NULLIF(u.nickname,''), u.username) as nickname, u.avatar_url, u.role, f.created_at as followed_at
        FROM follows f JOIN users u ON f.following_id = u.id
        WHERE f.follower_id = ? ORDER BY f.created_at DESC LIMIT ? OFFSET ?`
     ).bind(userId, limit, offset).all();
@@ -102,7 +102,7 @@ followRoutes.get('/:userId/followers', async (c) => {
     const total = countResult?.total || 0;
 
     const results = await c.env.DB.prepare(
-      `SELECT u.id, u.username, u.avatar_url, u.role, f.created_at as followed_at
+      `SELECT u.id, u.username, COALESCE(NULLIF(u.nickname,''), u.username) as nickname, u.avatar_url, u.role, f.created_at as followed_at
        FROM follows f JOIN users u ON f.follower_id = u.id
        WHERE f.following_id = ? ORDER BY f.created_at DESC LIMIT ? OFFSET ?`
     ).bind(userId, limit, offset).all();
@@ -123,7 +123,7 @@ followRoutes.get('/profile/:userId', async (c) => {
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
 
     const user = await c.env.DB.prepare(
-      'SELECT id, username, avatar_url, role, created_at FROM users WHERE id = ?'
+      'SELECT id, username, nickname, avatar_url, bio, role, created_at FROM users WHERE id = ?'
     ).bind(userId).first();
     if (!user) return c.json({ error: '用户不存在' }, 404);
 
@@ -177,7 +177,7 @@ followRoutes.get('/profile/:userId/discussions', async (c) => {
     const total = countResult?.total || 0;
 
     const results = await c.env.DB.prepare(
-      `SELECT d.*, u.username as author_name
+      `SELECT d.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name
        FROM discussions d JOIN users u ON d.author_id = u.id
        WHERE d.author_id = ? ORDER BY d.created_at DESC LIMIT ? OFFSET ?`
     ).bind(userId, limit, offset).all();

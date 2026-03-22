@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    nickname TEXT DEFAULT '',
     avatar_url TEXT DEFAULT '',
+    bio TEXT DEFAULT '',
     role TEXT DEFAULT 'user' CHECK(role IN ('user', 'admin', 'editor')),
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))

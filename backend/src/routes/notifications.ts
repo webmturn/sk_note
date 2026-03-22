@@ -83,6 +83,13 @@ notificationRoutes.put('/read-all', authMiddleware(), async (c) => {
   return c.json({ message: '全部已读' });
 });
 
+// 删除全部通知
+notificationRoutes.delete('/all', authMiddleware(), async (c) => {
+  const user = c.get('user' as never) as { id: number };
+  await c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(user.id).run();
+  return c.json({ message: '已清空全部通知' });
+});
+
 // 删除通知
 notificationRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');

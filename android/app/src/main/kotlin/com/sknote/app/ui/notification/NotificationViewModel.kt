@@ -66,6 +66,17 @@ class NotificationViewModel : ViewModel() {
         }
     }
 
+    fun deleteAllNotifications() {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.getService().deleteAllNotifications()
+                if (response.isSuccessful) {
+                    loadNotifications()
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
     fun deleteNotification(notificationId: Long) {
         viewModelScope.launch {
             try {

@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.sknote.app.R
@@ -96,14 +97,29 @@ class PublicProfileFragment : Fragment() {
                 if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val data = response.body() ?: return@launch
-                    binding.tvUsername.text = data.user.username
+                    binding.tvUsername.text = data.user.displayName
                     binding.tvHandle.text = "@${data.user.username}"
                     binding.chipRole.text = when (data.user.role) {
                         "admin" -> "管理员"
                         "editor" -> "编辑"
                         else -> "用户"
                     }
-                    binding.toolbar.title = data.user.username
+                    binding.toolbar.title = data.user.displayName
+
+                    if (data.user.bio.isNotEmpty()) {
+                        binding.tvBio.text = data.user.bio
+                        binding.tvBio.visibility = View.VISIBLE
+                    } else {
+                        binding.tvBio.visibility = View.GONE
+                    }
+
+                    if (data.user.avatarUrl.isNotEmpty()) {
+                        Glide.with(this@PublicProfileFragment)
+                            .load(data.user.avatarUrl)
+                            .circleCrop()
+                            .placeholder(R.drawable.ic_account_circle)
+                            .into(binding.ivAvatar)
+                    }
 
                     data.user.createdAt?.let {
                         binding.tvJoinDate.text = "注册于 ${TimeUtil.formatRelative(it)}"

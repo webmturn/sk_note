@@ -16,7 +16,8 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT d.*, u.username as author_name, u.avatar_url as author_avatar
+    SELECT d.id, d.title, d.content, d.author_id, d.article_id, d.category, d.is_pinned, d.is_closed, d.view_count, d.reply_count, d.created_at, d.updated_at,
+    COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
     FROM discussions d
     LEFT JOIN users u ON d.author_id = u.id
     WHERE 1=1
@@ -66,7 +67,7 @@ discussionRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
   const discussion = await c.env.DB.prepare(`
-    SELECT d.*, u.username as author_name, u.avatar_url as author_avatar
+    SELECT d.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
     FROM discussions d
     LEFT JOIN users u ON d.author_id = u.id
     WHERE d.id = ?
@@ -81,7 +82,7 @@ discussionRoutes.get('/:id', async (c) => {
 
   // 获取评论
   const comments = await c.env.DB.prepare(`
-    SELECT cm.*, u.username as author_name, u.avatar_url as author_avatar, pu.username as parent_author_name
+    SELECT cm.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, COALESCE(NULLIF(pu.nickname,''), pu.username) as parent_author_name
     FROM comments cm
     LEFT JOIN users u ON cm.author_id = u.id
     LEFT JOIN comments pcm ON cm.parent_id = pcm.id
@@ -165,10 +166,10 @@ discussionRoutes.post('/:id/comments', authMiddleware(), async (c) => {
     ).bind(discussionIdNum).first<{ author_id: number; title: string }>();
 
     const commenter = await c.env.DB.prepare(
-      'SELECT username FROM users WHERE id = ?'
-    ).bind(user.id).first<{ username: string }>();
+      'SELECT username, nickname FROM users WHERE id = ?'
+    ).bind(user.id).first<{ username: string; nickname: string }>();
 
-    const commenterName = commenter?.username || '有人';
+    const commenterName = commenter?.nickname || commenter?.username || '有人';
 
     if (discussion && discussion.author_id !== user.id) {
       await createNotification(

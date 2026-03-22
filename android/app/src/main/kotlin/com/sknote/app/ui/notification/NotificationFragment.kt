@@ -37,6 +37,18 @@ class NotificationFragment : Fragment() {
                     Snackbar.make(binding.root, "已全部标为已读", Snackbar.LENGTH_SHORT).show()
                     true
                 }
+                R.id.action_delete_all -> {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("删除全部通知")
+                        .setMessage("确定删除所有通知吗？此操作不可恢复。")
+                        .setPositiveButton("删除") { _, _ ->
+                            viewModel.deleteAllNotifications()
+                            Snackbar.make(binding.root, "已删除全部通知", Snackbar.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("取消", null)
+                        .show()
+                    true
+                }
                 else -> false
             }
         }
