@@ -5,16 +5,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.BuildConfig
+import com.sknote.app.R
 import com.sknote.app.SkNoteApp
 import com.sknote.app.data.api.ApiClient
-import com.sknote.app.data.local.TokenManager
 import com.sknote.app.databinding.FragmentSettingsBinding
 import com.sknote.app.util.AppUpdateManager
 import kotlinx.coroutines.flow.first
@@ -38,52 +37,39 @@ class SettingsFragment : Fragment() {
 
         binding.tvVersion.text = "v${BuildConfig.VERSION_NAME}"
 
-        // Theme mode
+        val navOptions = androidx.navigation.NavOptions.Builder()
+            .setEnterAnim(R.anim.slide_in_right)
+            .setExitAnim(R.anim.slide_out_left)
+            .setPopEnterAnim(R.anim.slide_in_left)
+            .setPopExitAnim(R.anim.slide_out_right)
+            .build()
+
+        // Theme mode -> navigate to theme selection page
         viewLifecycleOwner.lifecycleScope.launch {
             val mode = ApiClient.getTokenManager().getThemeMode().first()
             binding.tvThemeMode.text = SkNoteApp.themeModeLabel(mode)
         }
-        binding.rowThemeMode.setOnClickListener { showThemeModeDialog() }
-
-        // Shape filter
-        val appPrefs = requireContext().getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
-        binding.switchShapeFilter.isChecked = appPrefs.getBoolean("shape_filter_enabled", false)
-        binding.switchShapeFilter.setOnCheckedChangeListener { _, isChecked ->
-            appPrefs.edit().putBoolean("shape_filter_enabled", isChecked).apply()
+        binding.rowThemeMode.setOnClickListener {
+            findNavController().navigate(R.id.themeSelectionFragment, null, navOptions)
         }
 
-        // Cache
+        // Cache -> navigate to cache manage page
         binding.tvCacheSize.text = getCacheSize()
-        binding.rowClearCache.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("清除缓存")
-                .setMessage("确定要清除所有缓存数据吗？")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("清除") { _, _ ->
-                    requireContext().cacheDir.deleteRecursively()
-                    binding.tvCacheSize.text = getCacheSize()
-                    Snackbar.make(binding.root, "缓存已清除", Snackbar.LENGTH_SHORT).show()
-                }
-                .show()
+        binding.rowCacheManage.setOnClickListener {
+            findNavController().navigate(R.id.cacheManageFragment, null, navOptions)
+        }
+
+        // Feedback -> navigate to feedback page
+        binding.rowFeedback.setOnClickListener {
+            findNavController().navigate(R.id.feedbackFragment, null, navOptions)
         }
 
         // Update
         binding.rowCheckUpdate.setOnClickListener { checkUpdate(manual = true) }
 
-        // About
+        // About -> navigate to about page
         binding.rowAbout.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("关于 SkNote")
-                .setMessage(
-                    "版本：${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n\n" +
-                    "Sketchware Pro 手册\n" +
-                    "学习、探索、交流\n\n" +
-                    "基于 Material Design 3 构建\n" +
-                    "后端：Cloudflare Workers + D1\n" +
-                    "前端：Android Kotlin + Jetpack"
-                )
-                .setPositiveButton("确定", null)
-                .show()
+            findNavController().navigate(R.id.aboutFragment, null, navOptions)
         }
     }
 
@@ -166,30 +152,6 @@ class SettingsFragment : Fragment() {
         Snackbar.make(binding.root, "正在后台下载更新...", Snackbar.LENGTH_LONG).show()
     }
 
-    private fun showThemeModeDialog() {
-        val modes = arrayOf(TokenManager.THEME_SYSTEM, TokenManager.THEME_LIGHT, TokenManager.THEME_DARK)
-        val labels = arrayOf("跟随系统", "浅色模式", "深色模式")
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            val current = ApiClient.getTokenManager().getThemeMode().first()
-            val checkedIndex = modes.indexOf(current).coerceAtLeast(0)
-
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("主题模式")
-                .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
-                    val selected = modes[which]
-                    AppCompatDelegate.setDefaultNightMode(SkNoteApp.themeModeToNightMode(selected))
-                    binding.tvThemeMode.text = labels[which]
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        ApiClient.getTokenManager().setThemeMode(selected)
-                    }
-                    dialog.dismiss()
-                }
-                .setNegativeButton("取消", null)
-                .show()
-        }
-    }
-
     private fun getCacheSize(): String {
         val size = getDirSize(requireContext().cacheDir)
         return when {
@@ -207,6 +169,16 @@ class SettingsFragment : Fragment() {
             size = dir.length()
         }
         return size
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh theme label and cache size when returning from sub-pages
+        viewLifecycleOwner.lifecycleScope.launch {
+            val mode = ApiClient.getTokenManager().getThemeMode().first()
+            binding.tvThemeMode.text = SkNoteApp.themeModeLabel(mode)
+        }
+        binding.tvCacheSize.text = getCacheSize()
     }
 
     override fun onDestroyView() {
