@@ -92,6 +92,7 @@ class LoginFragment : Fragment() {
 
     private fun observeData() {
         viewModel.authResult.observe(viewLifecycleOwner) { result ->
+            result ?: return@observe
             if (result.token != null && result.user != null) {
                 Snackbar.make(binding.root, "登录成功", Snackbar.LENGTH_SHORT).show()
                 findNavController().popBackStack()

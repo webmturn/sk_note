@@ -50,6 +50,7 @@ class ArticleDetailFragment : Fragment() {
         viewModel.loadArticle(articleId)
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
+            article ?: return@observe
             currentArticleTitle = article.title
             currentArticleSummary = article.summary
             currentArticleContent = article.content

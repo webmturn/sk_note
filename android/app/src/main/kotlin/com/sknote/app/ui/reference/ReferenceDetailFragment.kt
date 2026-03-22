@@ -231,6 +231,7 @@ class ReferenceDetailFragment : Fragment() {
 
     private fun observeData() {
         viewModel.reference.observe(viewLifecycleOwner) { ref ->
+            ref ?: return@observe
             currentRef = ref
 
             // 重置可选区域（prev/next 切换时需要）

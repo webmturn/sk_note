@@ -14,8 +14,8 @@ import kotlinx.coroutines.launch
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _authResult = MutableLiveData<AuthResponse>()
-    val authResult: LiveData<AuthResponse> = _authResult
+    private val _authResult = MutableLiveData<AuthResponse?>()
+    val authResult: LiveData<AuthResponse?> = _authResult
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading

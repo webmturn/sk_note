@@ -11,8 +11,8 @@ import kotlinx.coroutines.launch
 
 class ArticleDetailViewModel : ViewModel() {
 
-    private val _article = MutableLiveData<Article>()
-    val article: LiveData<Article> = _article
+    private val _article = MutableLiveData<Article?>()
+    val article: LiveData<Article?> = _article
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading

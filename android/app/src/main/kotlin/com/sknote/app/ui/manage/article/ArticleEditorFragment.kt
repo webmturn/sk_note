@@ -80,6 +80,7 @@ class ArticleEditorFragment : Fragment() {
         }
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
+            article ?: return@observe
             binding.etTitle.setText(article.title)
             binding.etSummary.setText(article.summary)
             binding.etContent.setText(article.content)

@@ -7,8 +7,8 @@ import com.sknote.app.data.model.ReferenceItem
 
 class ReferenceDetailViewModel : ViewModel() {
 
-    private val _reference = MutableLiveData<ReferenceItem>()
-    val reference: LiveData<ReferenceItem> = _reference
+    private val _reference = MutableLiveData<ReferenceItem?>()
+    val reference: LiveData<ReferenceItem?> = _reference
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
