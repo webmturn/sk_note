@@ -32,7 +32,7 @@ class AboutFragment : Fragment() {
         binding.tvVersionInfo.text = "版本 ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 
         binding.rowGithub.setOnClickListener {
-            openUrl("https://github.com/nichuanfang/sk_note")
+            openUrl("https://github.com/webmturn/sk_note")
         }
 
         binding.rowFeedback.setOnClickListener {
