@@ -413,4 +413,54 @@
             android:defaultValue="-1" />
     </fragment>
 
+    <fragment
+        android:id="@+id/feedbackFragment"
+        android:name="com.sknote.app.ui.profile.FeedbackFragment"
+        android:label="反馈与建议"
+        tools:layout="@layout/fragment_feedback" />
+
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.sknote.app.ui.profile.AboutFragment"
+        android:label="关于"
+        tools:layout="@layout/fragment_about" />
+
+    <fragment
+        android:id="@+id/cacheManageFragment"
+        android:name="com.sknote.app.ui.profile.CacheManageFragment"
+        android:label="缓存管理"
+        tools:layout="@layout/fragment_cache_manage" />
+
+    <fragment
+        android:id="@+id/themeSelectionFragment"
+        android:name="com.sknote.app.ui.profile.ThemeSelectionFragment"
+        android:label="主题与外观"
+        tools:layout="@layout/fragment_theme_selection" />
+
+    <fragment
+        android:id="@+id/publicProfileFragment"
+        android:name="com.sknote.app.ui.profile.PublicProfileFragment"
+        android:label="用户主页"
+        tools:layout="@layout/fragment_public_profile">
+
+        <argument
+            android:name="user_id"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/followListFragment"
+        android:name="com.sknote.app.ui.profile.FollowListFragment"
+        android:label="关注与粉丝"
+        tools:layout="@layout/fragment_follow_list">
+
+        <argument
+            android:name="user_id"
+            app:argType="long" />
+        <argument
+            android:name="tab"
+            app:argType="integer"
+            android:defaultValue="0" />
+    </fragment>
+
 </navigation>

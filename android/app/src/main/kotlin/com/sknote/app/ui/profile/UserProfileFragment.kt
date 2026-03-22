@@ -46,8 +46,31 @@ class UserProfileFragment : Fragment() {
             findNavController().navigate(R.id.profileEditFragment, null, navOptions)
         }
 
+        binding.layoutFollowing.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val myId = ApiClient.getTokenManager().getUserId().first() ?: return@launch
+                val bundle = Bundle().apply {
+                    putLong("user_id", myId)
+                    putInt("tab", 0)
+                }
+                findNavController().navigate(R.id.followListFragment, bundle, navOptions)
+            }
+        }
+
+        binding.layoutFollowers.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val myId = ApiClient.getTokenManager().getUserId().first() ?: return@launch
+                val bundle = Bundle().apply {
+                    putLong("user_id", myId)
+                    putInt("tab", 1)
+                }
+                findNavController().navigate(R.id.followListFragment, bundle, navOptions)
+            }
+        }
+
         loadProfile()
         loadStats()
+        loadFollowCounts()
     }
 
     private fun loadProfile() {
@@ -86,6 +109,20 @@ class UserProfileFragment : Fragment() {
                     binding.tvStatDiscussions.text = "${stats.totalDiscussions}"
                     binding.tvStatNotifications.text = "${stats.unreadNotifications}"
                     binding.tvStatSnippets.text = "${stats.totalSnippets}"
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun loadFollowCounts() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val myId = ApiClient.getTokenManager().getUserId().first() ?: return@launch
+                val response = ApiClient.getService().getPublicProfile(myId)
+                if (response.isSuccessful) {
+                    val stats = response.body()?.stats ?: return@launch
+                    binding.tvFollowingCount.text = "${stats.following}"
+                    binding.tvFollowersCount.text = "${stats.followers}"
                 }
             } catch (_: Exception) { }
         }
