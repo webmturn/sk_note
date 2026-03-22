@@ -29,6 +29,7 @@ data class Comment(
     @SerializedName("author_avatar") val authorAvatar: String? = null,
     @SerializedName("discussion_id") val discussionId: Long,
     @SerializedName("parent_id") val parentId: Long? = null,
+    @SerializedName("parent_author_name") val parentAuthorName: String? = null,
     @SerializedName("like_count") val likeCount: Int = 0,
     @SerializedName("created_at") val createdAt: String? = null
 )

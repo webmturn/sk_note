@@ -254,4 +254,52 @@ interface ApiService {
 
     @DELETE("api/bookmarks/history")
     suspend fun clearHistory(): Response<MessageResponse>
+
+    // ============ 关注 ============
+
+    @POST("api/follows/{userId}")
+    suspend fun toggleFollow(@Path("userId") userId: Long): Response<FollowToggleResponse>
+
+    @GET("api/follows/check/{userId}")
+    suspend fun checkFollow(@Path("userId") userId: Long): Response<FollowCheckResponse>
+
+    @GET("api/follows/{userId}/following")
+    suspend fun getFollowing(
+        @Path("userId") userId: Long,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<FollowListResponse>
+
+    @GET("api/follows/{userId}/followers")
+    suspend fun getFollowers(
+        @Path("userId") userId: Long,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<FollowListResponse>
+
+    // ============ 公开资料 ============
+
+    @GET("api/follows/profile/{userId}")
+    suspend fun getPublicProfile(@Path("userId") userId: Long): Response<PublicProfileResponse>
+
+    @GET("api/follows/profile/{userId}/discussions")
+    suspend fun getUserDiscussions(
+        @Path("userId") userId: Long,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<DiscussionsResponse>
+
+    @GET("api/follows/profile/{userId}/snippets")
+    suspend fun getUserSnippets(
+        @Path("userId") userId: Long,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<SnippetsResponse>
+
+    @GET("api/follows/profile/{userId}/shares")
+    suspend fun getUserShares(
+        @Path("userId") userId: Long,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): Response<SharesResponse>
 }
