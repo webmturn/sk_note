@@ -26,7 +26,7 @@ class ArticleAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(article: Article) {
             binding.tvTitle.text = article.title
-            binding.tvSummary.text = article.summary.ifEmpty { article.content.take(100) }
+            binding.tvSummary.text = article.summary.orEmpty().ifEmpty { article.content.orEmpty().take(100) }
             binding.tvAuthor.text = article.authorName ?: "Unknown"
             binding.tvCategory.text = article.categoryName ?: ""
             binding.tvViews.text = "${article.viewCount} 阅读"

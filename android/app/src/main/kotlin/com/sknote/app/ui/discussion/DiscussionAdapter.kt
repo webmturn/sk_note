@@ -28,18 +28,18 @@ class DiscussionAdapter(
         fun bind(discussion: Discussion) {
             binding.tvTitle.text = if (discussion.isPinned == 1) "📌 ${discussion.title}" else discussion.title
             // Show clean preview without block/palette data
-            val preview = if (BlockShareHelper.containsAnyShare(discussion.content)) {
-                val clean = BlockShareHelper.getCleanContent(discussion.content).take(120)
+            val preview = if (BlockShareHelper.containsAnyShare(discussion.content.orEmpty())) {
+                val clean = BlockShareHelper.getCleanContent(discussion.content.orEmpty()).take(120)
                 clean.ifEmpty {
                     if (BlockShareHelper.containsPalette(discussion.content)) "🎨 调色板分享，点击查看详情"
                     else "🧩 积木块分享，点击查看详情"
                 }
             } else {
-                discussion.content.take(120)
+                discussion.content.orEmpty().take(120)
             }
             binding.tvPreview.text = preview
             binding.tvAuthor.text = discussion.authorName ?: "Anonymous"
-            binding.tvCategory.text = getCategoryLabel(discussion.category)
+            binding.tvCategory.text = getCategoryLabel(discussion.category.orEmpty())
             binding.tvReplies.text = "${discussion.replyCount} 回复"
             binding.tvViews.text = "${discussion.viewCount} 阅读"
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)

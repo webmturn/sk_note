@@ -74,24 +74,24 @@ class SnippetDetailFragment : Fragment() {
                 val response = ApiClient.getService().getSnippet(snippetId)
                 if (response.isSuccessful) {
                     val snippet = response.body()?.snippet ?: return@launch
-                    codeText = snippet.code
+                    codeText = snippet.code.orEmpty()
 
                     binding.tvTitle.text = snippet.title
-                    if (snippet.description.isNotEmpty()) {
+                    if (snippet.description.orEmpty().isNotEmpty()) {
                         binding.tvDescription.text = snippet.description
                         binding.tvDescription.visibility = View.VISIBLE
                     } else {
                         binding.tvDescription.visibility = View.GONE
                     }
                     val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                    binding.tvCode.text = SyntaxHighlightUtil.highlight(snippet.code, snippet.language, isDark)
-                    binding.tvLanguage.text = snippet.language.uppercase()
-                    binding.tvCategory.text = SnippetCategories.getLabel(snippet.category)
-                    binding.tvAuthor.text = snippet.authorName.ifEmpty { "系统" }
+                    binding.tvCode.text = SyntaxHighlightUtil.highlight(snippet.code.orEmpty(), snippet.language.orEmpty(), isDark)
+                    binding.tvLanguage.text = snippet.language.orEmpty().uppercase()
+                    binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())
+                    binding.tvAuthor.text = snippet.authorName.orEmpty().ifEmpty { "系统" }
                     binding.tvTime.text = TimeUtil.formatRelative(snippet.createdAt)
                     binding.tvViews.text = "${snippet.viewCount} 浏览"
                     binding.btnLike.text = "点赞 (${snippet.likeCount})"
-                    bindTags(snippet.tags)
+                    bindTags(snippet.tags.orEmpty())
 
                     binding.toolbar.title = snippet.title
                 } else {

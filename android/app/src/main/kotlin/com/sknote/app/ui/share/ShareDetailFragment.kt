@@ -132,10 +132,10 @@ class ShareDetailFragment : Fragment() {
                     currentShare = share
 
                     binding.tvTitle.text = share.title
-                    binding.tvDescription.text = share.description.ifEmpty { "暂无描述" }
-                    binding.tvCategory.text = ShareCategories.getLabel(share.category)
-                    binding.tvFileSize.text = share.fileSize.ifEmpty { "未知大小" }
-                    binding.tvAuthor.text = share.authorName.ifEmpty { "匿名" }
+                    binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
+                    binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
+                    binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
+                    binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
                     binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
                     binding.tvViews.text = "${share.viewCount} 浏览"
                     binding.tvDownloadUrl.text = share.downloadUrl

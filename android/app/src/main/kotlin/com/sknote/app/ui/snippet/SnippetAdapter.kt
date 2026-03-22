@@ -34,10 +34,10 @@ class SnippetAdapter(
         fun bind(snippet: Snippet) {
             binding.tvTitle.text = snippet.title
             binding.tvDescription.text = snippet.description
-            binding.tvCodePreview.text = snippet.code.take(200)
-            binding.tvLanguage.text = snippet.language.uppercase()
-            binding.tvCategory.text = SnippetCategories.getLabel(snippet.category)
-            binding.tvAuthor.text = snippet.authorName.ifEmpty { "系统" }
+            binding.tvCodePreview.text = snippet.code.orEmpty().take(200)
+            binding.tvLanguage.text = snippet.language.orEmpty().uppercase()
+            binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())
+            binding.tvAuthor.text = snippet.authorName.orEmpty().ifEmpty { "系统" }
             binding.tvLikes.text = "${snippet.likeCount}"
             binding.root.setOnClickListener { onClick(snippet) }
         }

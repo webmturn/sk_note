@@ -32,12 +32,12 @@ class ShareAdapter(
     inner class ViewHolder(private val binding: ItemShareBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(share: Share) {
             binding.tvTitle.text = share.title
-            binding.tvDescription.text = share.description.ifEmpty { "暂无描述" }
-            binding.tvCategory.text = ShareCategories.getLabel(share.category)
-            binding.tvAuthor.text = share.authorName.ifEmpty { "匿名" }
+            binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
+            binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
+            binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
             binding.tvLikes.text = "${share.likeCount}"
             binding.tvDownloads.text = "${share.downloadCount}"
-            binding.tvFileSize.text = share.fileSize.ifEmpty { "未知大小" }
+            binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
             binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
             binding.root.setOnClickListener { onClick(share) }
         }

@@ -204,7 +204,7 @@ class DiscussionDetailFragment : Fragment() {
             binding.toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.action_share -> {
-                        val shareText = "${discussion.title}\n\n${discussion.content.take(200)}"
+                        val shareText = "${discussion.title}\n\n${discussion.content.orEmpty().take(200)}"
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_SUBJECT, discussion.title)
