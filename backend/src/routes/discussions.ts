@@ -81,9 +81,11 @@ discussionRoutes.get('/:id', async (c) => {
 
   // 获取评论
   const comments = await c.env.DB.prepare(`
-    SELECT cm.*, u.username as author_name, u.avatar_url as author_avatar
+    SELECT cm.*, u.username as author_name, u.avatar_url as author_avatar, pu.username as parent_author_name
     FROM comments cm
     LEFT JOIN users u ON cm.author_id = u.id
+    LEFT JOIN comments pcm ON cm.parent_id = pcm.id
+    LEFT JOIN users pu ON pcm.author_id = pu.id
     WHERE cm.discussion_id = ?
     ORDER BY cm.created_at ASC
   `).bind(id).all();
@@ -113,27 +115,54 @@ discussionRoutes.post('/', authMiddleware(), async (c) => {
 // 回复讨论
 discussionRoutes.post('/:id/comments', authMiddleware(), async (c) => {
   const discussionId = c.req.param('id');
+  const discussionIdNum = Number.parseInt(discussionId, 10);
   const user = c.get('user' as never) as { id: number };
   const { content, parent_id } = await c.req.json();
 
+  if (!Number.isInteger(discussionIdNum) || discussionIdNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
   if (!content) return c.json({ error: '回复内容不能为空' }, 400);
+
+  let parentIdForInsert: number | null = null;
+  let parentCommentAuthorId: number | null = null;
+  if (parent_id !== undefined && parent_id !== null) {
+    const parentIdNum = Number.parseInt(String(parent_id), 10);
+    if (!Number.isInteger(parentIdNum) || parentIdNum <= 0) {
+      return c.json({ error: '无效的父评论ID' }, 400);
+    }
+
+    const parentComment = await c.env.DB.prepare(
+      'SELECT discussion_id, author_id FROM comments WHERE id = ?'
+    ).bind(parentIdNum).first<{ discussion_id: number; author_id: number }>();
+
+    if (!parentComment) {
+      return c.json({ error: '父评论不存在' }, 400);
+    }
+    if (parentComment.discussion_id !== discussionIdNum) {
+      return c.json({ error: '不能跨讨论回复' }, 400);
+    }
+
+    parentIdForInsert = parentIdNum;
+    parentCommentAuthorId = parentComment.author_id;
+  }
 
   const result = await c.env.DB.prepare(`
     INSERT INTO comments (content, author_id, discussion_id, parent_id)
     VALUES (?, ?, ?, ?)
-  `).bind(content, user.id, discussionId, parent_id || null).run();
+  `).bind(content, user.id, discussionIdNum, parentIdForInsert).run();
 
   // 更新回复数和更新时间
   await c.env.DB.prepare(`
     UPDATE discussions SET reply_count = reply_count + 1, updated_at = datetime('now')
     WHERE id = ?
-  `).bind(discussionId).run();
+  `).bind(discussionIdNum).run();
 
   // 发送通知给讨论作者（如果不是自己回复自己的）
   try {
     const discussion = await c.env.DB.prepare(
       'SELECT author_id, title FROM discussions WHERE id = ?'
-    ).bind(discussionId).first<{ author_id: number; title: string }>();
+    ).bind(discussionIdNum).first<{ author_id: number; title: string }>();
 
     const commenter = await c.env.DB.prepare(
       'SELECT username FROM users WHERE id = ?'
@@ -149,27 +178,21 @@ discussionRoutes.post('/:id/comments', authMiddleware(), async (c) => {
         `${commenterName} 回复了你的讨论`,
         content.substring(0, 100),
         'discussion',
-        parseInt(discussionId)
+        discussionIdNum
       );
     }
 
     // 如果是回复某条评论，也通知被回复的人
-    if (parent_id) {
-      const parentComment = await c.env.DB.prepare(
-        'SELECT author_id FROM comments WHERE id = ?'
-      ).bind(parent_id).first<{ author_id: number }>();
-
-      if (parentComment && parentComment.author_id !== user.id && parentComment.author_id !== discussion?.author_id) {
+    if (parentCommentAuthorId && parentCommentAuthorId !== user.id && parentCommentAuthorId !== discussion?.author_id) {
         await createNotification(
           c.env.DB,
-          parentComment.author_id,
+          parentCommentAuthorId,
           'reply',
           `${commenterName} 回复了你的评论`,
           content.substring(0, 100),
           'discussion',
-          parseInt(discussionId)
+          discussionIdNum
         );
-      }
     }
   } catch (e) {
     // 通知发送失败不影响评论功能

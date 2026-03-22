@@ -11,6 +11,7 @@ import { bookmarkRoutes } from './routes/bookmarks';
 import { shareRoutes } from './routes/shares';
 import { appRoutes } from './routes/app';
 import { aggregatedRoutes } from './routes/aggregated';
+import { followRoutes } from './routes/follows';
 
 export interface Env {
   DB: D1Database;
@@ -40,6 +41,7 @@ export function setupApp(app: Hono<{ Bindings: Env }>) {
   app.route('/api/bookmarks', bookmarkRoutes);
   app.route('/api/shares', shareRoutes);
   app.route('/api/app', appRoutes);
+  app.route('/api/follows', followRoutes);
 
   return app;
 }

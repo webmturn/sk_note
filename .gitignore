@@ -4,6 +4,8 @@ backend/node_modules/
 
 # Wrangler local state & build cache
 backend/.wrangler/
+backend/tmp/
+backend/release_body.json
 
 # Android build
 android/.gradle/
