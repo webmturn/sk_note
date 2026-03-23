@@ -324,9 +324,10 @@
                             <ImageView
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:src="@drawable/ic_comment"
+                                android:src="@drawable/ic_feedback"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:tint="@color/on_primary" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
