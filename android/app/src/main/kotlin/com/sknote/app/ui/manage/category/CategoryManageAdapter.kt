@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.sknote.app.data.model.Category
 import com.sknote.app.databinding.ItemCategoryManageBinding
+import com.sknote.app.util.CategoryIconResolver
+import com.sknote.app.util.IconViewBinder
 
 class CategoryManageAdapter(
     private val onEdit: (Category) -> Unit,
@@ -28,8 +30,10 @@ class CategoryManageAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val category = getItem(position)
         holder.binding.tvName.text = category.name
-        holder.binding.tvDescription.text = category.description.ifEmpty { "无描述" }
-        holder.binding.tvIcon.text = category.icon.ifEmpty { "📁" }
+        holder.binding.tvDescription.text = category.description.orEmpty().ifEmpty { "无描述" }
+        val iconSpec = CategoryIconResolver.resolve(category.icon, category.name)
+        IconViewBinder.bind(iconSpec, holder.binding.ivIcon, holder.binding.tvIcon)
+        holder.binding.root.setOnClickListener { onEdit(category) }
         holder.binding.btnEdit.setOnClickListener { onEdit(category) }
         holder.binding.btnDelete.setOnClickListener { onDelete(category) }
     }

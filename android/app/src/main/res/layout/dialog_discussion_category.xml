@@ -27,6 +27,20 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
+            android:hint="Slug（英文唯一标识）">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSlug"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:hint="描述（可选）">
 
             <com.google.android.material.textfield.TextInputEditText
