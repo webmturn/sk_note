@@ -284,6 +284,48 @@
         tools:layout="@layout/fragment_discussion_manage" />
 
     <fragment
+        android:id="@+id/discussionCategoryManageFragment"
+        android:name="com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageFragment"
+        android:label="讨论分类管理"
+        tools:layout="@layout/fragment_category_manage" />
+
+    <fragment
+        android:id="@+id/categoryEditorFragment"
+        android:name="com.sknote.app.ui.manage.category.CategoryEditorFragment"
+        android:label="编辑分类"
+        tools:layout="@layout/fragment_category_editor">
+
+        <argument
+            android:name="category_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/discussionCategoryEditorFragment"
+        android:name="com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryEditorFragment"
+        android:label="编辑讨论分类"
+        tools:layout="@layout/fragment_category_editor">
+
+        <argument
+            android:name="category_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/categoryIconPickerFragment"
+        android:name="com.sknote.app.ui.manage.iconpicker.CategoryIconPickerFragment"
+        android:label="选择图标"
+        tools:layout="@layout/fragment_category_icon_picker">
+
+        <argument
+            android:name="selected_key"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
         android:id="@+id/snippetManageFragment"
         android:name="com.sknote.app.ui.manage.snippet.SnippetManageFragment"
         android:label="代码片段管理"

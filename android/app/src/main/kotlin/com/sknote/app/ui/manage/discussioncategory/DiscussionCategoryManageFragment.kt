@@ -1,4 +1,4 @@
-package com.sknote.app.ui.manage.category
+package com.sknote.app.ui.manage.discussioncategory
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -12,15 +12,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
-import com.sknote.app.data.model.Category
+import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentCategoryManageBinding
 
-class CategoryManageFragment : Fragment() {
+class DiscussionCategoryManageFragment : Fragment() {
 
     private var _binding: FragmentCategoryManageBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: CategoryManageViewModel by viewModels()
-    private lateinit var adapter: CategoryManageAdapter
+    private val viewModel: DiscussionCategoryManageViewModel by viewModels()
+    private lateinit var adapter: DiscussionCategoryManageAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCategoryManageBinding.inflate(inflater, container, false)
@@ -30,13 +30,13 @@ class CategoryManageFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.title = "分类管理"
-        binding.tvEmpty.text = "还没有分类\n点击右下角按钮开始添加"
+        binding.toolbar.title = "讨论分类管理"
+        binding.tvEmpty.text = "还没有讨论分类\n点击右下角按钮开始添加"
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
-        adapter = CategoryManageAdapter(
+        adapter = DiscussionCategoryManageAdapter(
             onEdit = { category -> openEditor(category.id) },
-            onDelete = { category -> showDeleteConfirm(category) }
+            onDelete = { category -> showDeleteConfirm(category) },
         )
         binding.rvCategories.layoutManager = LinearLayoutManager(context)
         binding.rvCategories.adapter = adapter
@@ -49,26 +49,26 @@ class CategoryManageFragment : Fragment() {
 
     private fun observeData() {
         findNavController().currentBackStackEntry?.savedStateHandle
-            ?.getLiveData<Boolean>(CategoryEditorFragment.RESULT_REFRESH_KEY)
+            ?.getLiveData<Boolean>(DiscussionCategoryEditorFragment.RESULT_REFRESH_KEY)
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.loadCategories()
-                    findNavController().currentBackStackEntry?.savedStateHandle?.remove<Boolean>(CategoryEditorFragment.RESULT_REFRESH_KEY)
+                    findNavController().currentBackStackEntry?.savedStateHandle?.remove<Boolean>(DiscussionCategoryEditorFragment.RESULT_REFRESH_KEY)
                 }
             }
 
         findNavController().currentBackStackEntry?.savedStateHandle
-            ?.getLiveData<String>(CategoryEditorFragment.RESULT_MESSAGE_KEY)
+            ?.getLiveData<String>(DiscussionCategoryEditorFragment.RESULT_MESSAGE_KEY)
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
                     Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
-                    findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>(CategoryEditorFragment.RESULT_MESSAGE_KEY)
+                    findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>(DiscussionCategoryEditorFragment.RESULT_MESSAGE_KEY)
                 }
             }
 
         viewModel.categories.observe(viewLifecycleOwner) { categories ->
             adapter.submitList(categories)
-            binding.toolbar.subtitle = "共 ${categories.size} 个分类"
+            binding.toolbar.subtitle = "共 ${categories.size} 个讨论分类"
             binding.tvEmpty.visibility = if (categories.isEmpty()) View.VISIBLE else View.GONE
             binding.rvCategories.visibility = if (categories.isEmpty()) View.GONE else View.VISIBLE
         }
@@ -83,15 +83,15 @@ class CategoryManageFragment : Fragment() {
 
     private fun openEditor(categoryId: Long = 0L) {
         findNavController().navigate(
-            R.id.categoryEditorFragment,
-            bundleOf(CategoryEditorFragment.ARG_CATEGORY_ID to categoryId)
+            R.id.discussionCategoryEditorFragment,
+            bundleOf(DiscussionCategoryEditorFragment.ARG_CATEGORY_ID to categoryId)
         )
     }
 
-    private fun showDeleteConfirm(category: Category) {
+    private fun showDeleteConfirm(category: DiscussionCategory) {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("删除分类")
-            .setMessage("确定删除分类「${category.name}」吗？此操作不可撤销。")
+            .setTitle("删除讨论分类")
+            .setMessage("确定删除讨论分类「${category.name}」吗？此操作不可撤销。")
             .setPositiveButton("删除") { _, _ -> viewModel.deleteCategory(category.id) }
             .setNegativeButton("取消", null)
             .show()
