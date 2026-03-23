@@ -10,9 +10,11 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import androidx.core.os.bundleOf
 import com.sknote.app.R
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.FragmentDiscussionManageBinding
+import com.sknote.app.ui.manage.category.CategoryManageFragment
 
 class DiscussionManageFragment : Fragment() {
 
@@ -30,6 +32,12 @@ class DiscussionManageFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        binding.btnManageDiscussionCategories.setOnClickListener {
+            findNavController().navigate(
+                R.id.categoryManageFragment,
+                bundleOf(CategoryManageFragment.ARG_INITIAL_TAB to 1)
+            )
+        }
 
         adapter = DiscussionManageAdapter(
             onView = { discussion ->

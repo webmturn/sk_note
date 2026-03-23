@@ -269,7 +269,13 @@
         android:id="@+id/categoryManageFragment"
         android:name="com.sknote.app.ui.manage.category.CategoryManageFragment"
         android:label="分类管理"
-        tools:layout="@layout/fragment_category_manage" />
+        tools:layout="@layout/fragment_category_manage">
+
+        <argument
+            android:name="initial_tab"
+            app:argType="integer"
+            android:defaultValue="0" />
+    </fragment>
 
     <fragment
         android:id="@+id/articleManageFragment"
@@ -282,12 +288,6 @@
         android:name="com.sknote.app.ui.manage.discussion.DiscussionManageFragment"
         android:label="讨论管理"
         tools:layout="@layout/fragment_discussion_manage" />
-
-    <fragment
-        android:id="@+id/discussionCategoryManageFragment"
-        android:name="com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageFragment"
-        android:label="讨论分类管理"
-        tools:layout="@layout/fragment_category_manage" />
 
     <fragment
         android:id="@+id/categoryEditorFragment"
