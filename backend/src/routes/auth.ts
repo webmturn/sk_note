@@ -4,12 +4,34 @@ import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
-// 简单的密码哈希（Cloudflare Workers 兼容）
-async function hashPassword(password: string): Promise<string> {
+// 密码哈希（加盐 SHA-256，Cloudflare Workers 兼容）
+function generateSalt(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password: string, salt?: string): Promise<string> {
+  const s = salt || generateSalt();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(s + password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const hashStr = btoa(String.fromCharCode(...new Uint8Array(hash)));
+  return `${s}:${hashStr}`;
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  if (storedHash.includes(':')) {
+    // 新格式: salt:hash
+    const [salt] = storedHash.split(':');
+    const computed = await hashPassword(password, salt);
+    return computed === storedHash;
+  }
+  // 旧格式: 无盐 SHA-256（向后兼容）
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   const hash = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(hash)));
+  const legacyHash = btoa(String.fromCharCode(...new Uint8Array(hash)));
+  return legacyHash === storedHash;
 }
 
 // 注册
@@ -73,9 +95,17 @@ authRoutes.post('/login', async (c) => {
       return c.json({ error: '用户不存在' }, 404);
     }
 
-    const passwordHash = await hashPassword(password);
-    if (passwordHash !== user.password_hash) {
+    const passwordMatch = await verifyPassword(password, user.password_hash);
+    if (!passwordMatch) {
       return c.json({ error: '密码错误' }, 401);
+    }
+
+    // 自动升级旧格式（无盐）为新格式（加盐）
+    if (!user.password_hash.includes(':')) {
+      const upgradedHash = await hashPassword(password);
+      await c.env.DB.prepare(
+        'UPDATE users SET password_hash = ? WHERE id = ?'
+      ).bind(upgradedHash, user.id).run();
     }
 
     const token = await createToken(
@@ -172,8 +202,8 @@ authRoutes.put('/me', authMiddleware(), async (c) => {
 // 获取用户列表（管理员）
 authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
   try {
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '50');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
     const search = c.req.query('search') || '';
     const offset = (page - 1) * limit;
 
@@ -213,6 +243,7 @@ authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
 authRoutes.put('/users/:id/role', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const userId = parseInt(c.req.param('id'));
+    if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
     const { role } = await c.req.json();
     const currentUser = c.get('user' as never) as { id: number };
 
@@ -242,6 +273,7 @@ authRoutes.put('/users/:id/role', authMiddleware(), adminMiddleware(), async (c)
 authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const userId = parseInt(c.req.param('id'));
+    if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
     const currentUser = c.get('user' as never) as { id: number };
 
     if (userId === currentUser.id) {
@@ -257,9 +289,12 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
 
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM comments WHERE author_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM discussions WHERE author_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM snippets WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM shares WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM follows WHERE follower_id = ? OR following_id = ?').bind(userId, userId),
       c.env.DB.prepare('DELETE FROM bookmarks WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM reading_history WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
@@ -275,6 +310,7 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
 authRoutes.put('/users/:id/password', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const userId = parseInt(c.req.param('id'));
+    if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
     const { new_password } = await c.req.json();
 
     if (!new_password || new_password.length < 6) {
@@ -314,8 +350,8 @@ authRoutes.put('/password', authMiddleware(), async (c) => {
 
   if (!user) return c.json({ error: '用户不存在' }, 404);
 
-  const oldHash = await hashPassword(old_password);
-  if (oldHash !== user.password_hash) {
+  const oldMatch = await verifyPassword(old_password, user.password_hash);
+  if (!oldMatch) {
     return c.json({ error: '旧密码错误' }, 401);
   }
 

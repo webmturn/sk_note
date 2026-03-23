@@ -7,8 +7,8 @@ export const articleRoutes = new Hono<{ Bindings: Env }>();
 
 // 获取文章列表（支持分页和分类筛选）
 articleRoutes.get('/', edgeCache(120), async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const categoryId = c.req.query('category_id');
   const search = c.req.query('search');
   const offset = (page - 1) * limit;
@@ -75,10 +75,17 @@ articleRoutes.get('/:id', async (c) => {
 
   if (!article) return c.json({ error: '文章不存在' }, 404);
 
-  // 增加阅读量
-  await c.env.DB.prepare(
-    'UPDATE articles SET view_count = view_count + 1 WHERE id = ?'
-  ).bind(id).run();
+  // 增加阅读量（去重）
+  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    || c.req.header('x-real-ip') || 'anonymous';
+  const viewResult = await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+  ).bind(viewerKey, 'article', id).run();
+  if (viewResult.meta.changes > 0) {
+    await c.env.DB.prepare(
+      'UPDATE articles SET view_count = view_count + 1 WHERE id = ?'
+    ).bind(id).run();
+  }
 
   return c.json({ article });
 });

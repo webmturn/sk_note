@@ -8,7 +8,7 @@ export const aggregatedRoutes = new Hono<{ Bindings: Env }>();
 // 首页数据：分类 + 最新文章（合并 2 次调用为 1 次）
 aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
   try {
-    const limit = parseInt(c.req.query('limit') || '10');
+    const limit = Math.min(50, Math.max(1, parseInt(c.req.query('limit') || '10') || 10));
 
     const [catResult, artResult, shareResult] = await c.env.DB.batch([
       c.env.DB.prepare('SELECT * FROM categories ORDER BY sort_order ASC, id ASC'),

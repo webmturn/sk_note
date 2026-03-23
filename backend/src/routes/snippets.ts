@@ -7,8 +7,8 @@ export const snippetRoutes = new Hono<{ Bindings: Env }>();
 
 // 获取代码片段列表（支持分页、分类、搜索）
 snippetRoutes.get('/', edgeCache(120), async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const category = c.req.query('category');
   const search = c.req.query('search');
   const offset = (page - 1) * limit;
@@ -64,7 +64,14 @@ snippetRoutes.get('/categories', edgeCache(300), async (c) => {
 // 获取单个代码片段
 snippetRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('UPDATE snippets SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
+  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    || c.req.header('x-real-ip') || 'anonymous';
+  const viewResult = await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+  ).bind(viewerKey, 'snippet', id).run();
+  if (viewResult.meta.changes > 0) {
+    await c.env.DB.prepare('UPDATE snippets SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
+  }
   const snippet = await c.env.DB.prepare('SELECT * FROM snippets WHERE id = ?').bind(id).first();
   if (!snippet) return c.json({ error: '未找到' }, 404);
   return c.json({ snippet });
@@ -123,19 +130,26 @@ snippetRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user' as never) as { id: number };
 
-  const existing = await c.env.DB.prepare(
-    'SELECT id FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
-  ).bind(user.id, 'snippet', id).first();
+  try {
+    await c.env.DB.prepare(
+      'INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
+    ).bind(user.id, 'snippet', id).run();
 
-  if (existing) {
-    await c.env.DB.prepare('DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?')
-      .bind(user.id, 'snippet', id).run();
-    await c.env.DB.prepare('UPDATE snippets SET like_count = like_count - 1 WHERE id = ?').bind(id).run();
-    return c.json({ message: '取消点赞', liked: false });
-  } else {
-    await c.env.DB.prepare('INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)')
-      .bind(user.id, 'snippet', id).run();
-    await c.env.DB.prepare('UPDATE snippets SET like_count = like_count + 1 WHERE id = ?').bind(id).run();
+    await c.env.DB.prepare(
+      'UPDATE snippets SET like_count = like_count + 1 WHERE id = ?'
+    ).bind(id).run();
+
     return c.json({ message: '已点赞', liked: true });
+  } catch {
+    // UNIQUE 约束冲突 = 已点赞，执行取消
+    await c.env.DB.prepare(
+      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
+    ).bind(user.id, 'snippet', id).run();
+
+    await c.env.DB.prepare(
+      'UPDATE snippets SET like_count = MAX(0, like_count - 1) WHERE id = ?'
+    ).bind(id).run();
+
+    return c.json({ message: '取消点赞', liked: false });
   }
 });

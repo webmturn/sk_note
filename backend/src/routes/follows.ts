@@ -63,8 +63,8 @@ followRoutes.get('/:userId/following', async (c) => {
   try {
     const userId = parsePositiveInt(c.req.param('userId'));
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
@@ -92,8 +92,8 @@ followRoutes.get('/:userId/followers', async (c) => {
   try {
     const userId = parsePositiveInt(c.req.param('userId'));
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
@@ -167,8 +167,8 @@ followRoutes.get('/profile/:userId/discussions', async (c) => {
   try {
     const userId = parsePositiveInt(c.req.param('userId'));
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
@@ -196,8 +196,8 @@ followRoutes.get('/profile/:userId/snippets', async (c) => {
   try {
     const userId = parsePositiveInt(c.req.param('userId'));
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
@@ -223,8 +223,8 @@ followRoutes.get('/profile/:userId/shares', async (c) => {
   try {
     const userId = parsePositiveInt(c.req.param('userId'));
     if (!userId) return c.json({ error: '无效的用户ID' }, 400);
-    const page = parseInt(c.req.query('page') || '1');
-    const limit = parseInt(c.req.query('limit') || '20');
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(

@@ -7,8 +7,8 @@ export const bookmarkRoutes = new Hono<{ Bindings: Env }>();
 // 获取收藏列表
 bookmarkRoutes.get('/', authMiddleware(), async (c) => {
   const user = c.get('user' as never) as { id: number };
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
 
   const result = await c.env.DB.prepare(
@@ -75,8 +75,8 @@ bookmarkRoutes.post('/:articleId', authMiddleware(), async (c) => {
 // 阅读历史列表
 bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
   const user = c.get('user' as never) as { id: number };
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
 
   const result = await c.env.DB.prepare(

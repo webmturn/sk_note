@@ -7,8 +7,8 @@ export const notificationRoutes = new Hono<{ Bindings: Env }>();
 // 获取通知列表
 notificationRoutes.get('/', authMiddleware(), async (c) => {
   const user = c.get('user' as never) as { id: number };
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const unreadOnly = c.req.query('unread') === '1';
   const offset = (page - 1) * limit;
 

@@ -7,8 +7,8 @@ export const referenceRoutes = new Hono<{ Bindings: Env }>();
 
 // 获取参考列表（支持类型/分类/搜索筛选）
 referenceRoutes.get('/', edgeCache(600), async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '50');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(200, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
   const type = c.req.query('type');
   const category = c.req.query('category');
   const search = c.req.query('search');
@@ -67,13 +67,13 @@ referenceRoutes.get('/:id', edgeCache(600), async (c) => {
 
 // 创建参考条目（管理员）
 referenceRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
-  const { name, category, type, description, usage, parameters, example, icon, related_ids } = await c.req.json();
+  const { name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids } = await c.req.json();
   if (!name || !type) return c.json({ error: '名称和类型不能为空' }, 400);
 
   const result = await c.env.DB.prepare(`
-    INSERT INTO references_doc (name, category, type, description, usage, parameters, example, icon, related_ids)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', related_ids || '').run();
+    INSERT INTO references_doc (name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', color || '', shape || 's', spec || '', code || '', related_ids || '').run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`]));
@@ -83,13 +83,14 @@ referenceRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
 // 更新参考条目（管理员）
 referenceRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const { name, category, type, description, usage, parameters, example, icon, related_ids } = await c.req.json();
+  const { name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids } = await c.req.json();
 
   await c.env.DB.prepare(`
     UPDATE references_doc SET name = ?, category = ?, type = ?, description = ?,
-    usage = ?, parameters = ?, example = ?, icon = ?, related_ids = ?, updated_at = datetime('now')
+    usage = ?, parameters = ?, example = ?, icon = ?, color = ?, shape = ?, spec = ?, code = ?,
+    related_ids = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', related_ids || '', id).run();
+  `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', color || '', shape || 's', spec || '', code || '', related_ids || '', id).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]));
