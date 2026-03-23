@@ -44,6 +44,24 @@ interface ApiService {
     @DELETE("api/categories/{id}")
     suspend fun deleteCategory(@Path("id") id: Long): Response<MessageResponse>
 
+    @GET("api/discussion-categories")
+    suspend fun getDiscussionCategories(): Response<DiscussionCategoriesResponse>
+
+    @GET("api/discussion-categories/{id}")
+    suspend fun getDiscussionCategory(@Path("id") id: Long): Response<DiscussionCategoryResponse>
+
+    @POST("api/discussion-categories")
+    suspend fun createDiscussionCategory(@Body request: CreateDiscussionCategoryRequest): Response<MessageResponse>
+
+    @PUT("api/discussion-categories/{id}")
+    suspend fun updateDiscussionCategory(
+        @Path("id") id: Long,
+        @Body request: CreateDiscussionCategoryRequest
+    ): Response<MessageResponse>
+
+    @DELETE("api/discussion-categories/{id}")
+    suspend fun deleteDiscussionCategory(@Path("id") id: Long): Response<MessageResponse>
+
     // ============ 文章 ============
 
     @GET("api/articles")

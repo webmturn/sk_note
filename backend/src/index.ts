@@ -4,6 +4,7 @@ import { authRoutes } from './routes/auth';
 import { articleRoutes } from './routes/articles';
 import { discussionRoutes } from './routes/discussions';
 import { categoryRoutes } from './routes/categories';
+import { discussionCategoryRoutes } from './routes/discussionCategories';
 import { referenceRoutes } from './routes/references';
 import { notificationRoutes } from './routes/notifications';
 import { snippetRoutes } from './routes/snippets';
@@ -21,7 +22,7 @@ export interface Env {
 export function setupApp(app: Hono<{ Bindings: Env }>) {
   // CORS 配置
   app.use('*', cors({
-    origin: '*',
+    origin: ['https://api.wsqh.cn', 'http://localhost:3000'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowHeaders: ['Content-Type', 'Authorization'],
   }));
@@ -35,6 +36,7 @@ export function setupApp(app: Hono<{ Bindings: Env }>) {
   app.route('/api/articles', articleRoutes);
   app.route('/api/discussions', discussionRoutes);
   app.route('/api/categories', categoryRoutes);
+  app.route('/api/discussion-categories', discussionCategoryRoutes);
   app.route('/api/references', referenceRoutes);
   app.route('/api/notifications', notificationRoutes);
   app.route('/api/snippets', snippetRoutes);

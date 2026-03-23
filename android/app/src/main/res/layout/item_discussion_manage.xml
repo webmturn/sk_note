@@ -47,7 +47,7 @@
                     android:id="@+id/tvBadgePinned"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📌 置顶"
+                    android:text="置顶"
                     android:textSize="10sp"
                     android:textColor="?attr/colorPrimary"
                     android:visibility="gone"
@@ -57,7 +57,7 @@
                     android:id="@+id/tvBadgeClosed"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🔒 已关闭"
+                    android:text="已关闭"
                     android:textSize="10sp"
                     android:textColor="?attr/colorError"
                     android:visibility="gone" />

@@ -42,6 +42,25 @@ CREATE TABLE IF NOT EXISTS articles (
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS discussion_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    icon TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+INSERT OR IGNORE INTO discussion_categories (slug, name, description, icon, sort_order)
+VALUES
+    ('general', '综合', '通用讨论', 'default', 0),
+    ('question', '提问', '问题求助与答疑', 'question', 10),
+    ('feedback', '反馈', '体验反馈与意见', 'feedback', 20),
+    ('bug', 'Bug', '缺陷和异常问题', 'bug', 30),
+    ('feature', '功能建议', '新功能和改进建议', 'feature', 40);
+
 -- 讨论帖表
 CREATE TABLE IF NOT EXISTS discussions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +68,7 @@ CREATE TABLE IF NOT EXISTS discussions (
     content TEXT NOT NULL,
     author_id INTEGER NOT NULL,
     article_id INTEGER DEFAULT NULL,
-    category TEXT DEFAULT 'general' CHECK(category IN ('general', 'question', 'feedback', 'bug', 'feature')),
+    category TEXT NOT NULL DEFAULT 'general',
     is_pinned INTEGER DEFAULT 0,
     is_closed INTEGER DEFAULT 0,
     view_count INTEGER DEFAULT 0,
@@ -57,7 +76,8 @@ CREATE TABLE IF NOT EXISTS discussions (
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL,
+    FOREIGN KEY (category) REFERENCES discussion_categories(slug) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- 评论/回复表
@@ -97,6 +117,10 @@ CREATE TABLE IF NOT EXISTS references_doc (
     parameters TEXT DEFAULT '',
     example TEXT DEFAULT '',
     icon TEXT DEFAULT '',
+    color TEXT DEFAULT '',
+    shape TEXT DEFAULT 's',
+    spec TEXT DEFAULT '',
+    code TEXT DEFAULT '',
     related_ids TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -104,6 +128,7 @@ CREATE TABLE IF NOT EXISTS references_doc (
 
 CREATE INDEX IF NOT EXISTS idx_references_type ON references_doc(type);
 CREATE INDEX IF NOT EXISTS idx_references_category ON references_doc(category);
+CREATE INDEX IF NOT EXISTS idx_discussion_categories_slug ON discussion_categories(slug);
 
 -- 通知表
 CREATE TABLE IF NOT EXISTS notifications (
@@ -218,9 +243,22 @@ CREATE TABLE IF NOT EXISTS follows (
 CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 
+-- 阅读去重表（防止同一用户/IP重复计数）
+CREATE TABLE IF NOT EXISTS content_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    viewer_key TEXT NOT NULL,
+    target_type TEXT NOT NULL CHECK(target_type IN ('article', 'discussion', 'snippet', 'share')),
+    target_id INTEGER NOT NULL,
+    viewed_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(viewer_key, target_type, target_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_content_views_target ON content_views(target_type, target_id);
+
 -- 搜索索引
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);
 CREATE INDEX IF NOT EXISTS idx_articles_author ON articles(author_id);
+CREATE INDEX IF NOT EXISTS idx_discussions_category ON discussions(category);
 CREATE INDEX IF NOT EXISTS idx_discussions_author ON discussions(author_id);
 CREATE INDEX IF NOT EXISTS idx_discussions_article ON discussions(article_id);
 CREATE INDEX IF NOT EXISTS idx_comments_discussion ON comments(discussion_id);

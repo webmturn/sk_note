@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.SmmsUploader
+import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentCreateDiscussionBinding
 import com.sknote.app.ui.reference.BlockShapeView
 import kotlinx.coroutines.Dispatchers
@@ -32,8 +33,7 @@ class CreateDiscussionFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: CreateDiscussionViewModel by viewModels()
 
-    private val categoryKeys = listOf("general", "question", "feedback", "bug", "feature")
-    private val categoryLabels = listOf("综合", "提问", "反馈", "Bug", "功能建议")
+    private var discussionCategories: List<DiscussionCategory> = emptyList()
     private var selectedCategory = "general"
     private var blockJson: JSONObject? = null
     private var paletteJson: JSONObject? = null
@@ -56,11 +56,8 @@ class CreateDiscussionFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, categoryLabels)
-        binding.spinnerCategory.setAdapter(adapter)
-        binding.spinnerCategory.setText(categoryLabels[0], false)
         binding.spinnerCategory.setOnItemClickListener { _, _, position, _ ->
-            selectedCategory = categoryKeys[position]
+            selectedCategory = discussionCategories.getOrNull(position)?.slug ?: selectedCategory
         }
 
         setupImagePicker()
@@ -70,6 +67,19 @@ class CreateDiscussionFragment : Fragment() {
         binding.btnSubmit.setOnClickListener { submitDiscussion() }
 
         observeData()
+        viewModel.loadCategories()
+    }
+
+    private fun bindCategories(categories: List<DiscussionCategory>) {
+        discussionCategories = categories
+        val labels = categories.map { it.name }
+        binding.spinnerCategory.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, labels))
+
+        val selected = categories.firstOrNull { it.slug == selectedCategory } ?: categories.firstOrNull()
+        selected?.let {
+            selectedCategory = it.slug
+            binding.spinnerCategory.setText(it.name, false)
+        }
     }
 
     private fun setupBlockShare() {
@@ -84,11 +94,13 @@ class CreateDiscussionFragment : Fragment() {
 
         // Pre-fill UI
         binding.toolbar.title = "分享积木块"
-        binding.etTitle.setText("🧩 ${bj.optString("name", "自定义积木块")}")
+        binding.etTitle.setText(bj.optString("name", "自定义积木块"))
 
         // Use 'general' category for block shares
         selectedCategory = "general"
-        binding.spinnerCategory.setText(categoryLabels[0], false)
+        discussionCategories.firstOrNull { it.slug == selectedCategory }?.let {
+            binding.spinnerCategory.setText(it.name, false)
+        }
 
         // Show block preview card
         val previewView = BlockShareHelper.createPreviewView(requireContext(), binding.blockPreviewContainer, bj, showActions = false)
@@ -107,10 +119,12 @@ class CreateDiscussionFragment : Fragment() {
         val pj = paletteJson ?: return
 
         binding.toolbar.title = "分享调色板"
-        binding.etTitle.setText("🎨 ${pj.optString("palette_name", "自定义调色板")}")
+        binding.etTitle.setText(pj.optString("palette_name", "自定义调色板"))
 
         selectedCategory = "general"
-        binding.spinnerCategory.setText(categoryLabels[0], false)
+        discussionCategories.firstOrNull { it.slug == selectedCategory }?.let {
+            binding.spinnerCategory.setText(it.name, false)
+        }
 
         val previewView = BlockShareHelper.createPalettePreviewView(requireContext(), binding.blockPreviewContainer, pj, showActions = false)
         binding.blockPreviewContainer.addView(previewView)
@@ -246,6 +260,8 @@ class CreateDiscussionFragment : Fragment() {
     }
 
     private fun observeData() {
+        viewModel.categories.observe(viewLifecycleOwner) { bindCategories(it) }
+
         viewModel.success.observe(viewLifecycleOwner) { success ->
             if (success) {
                 Snackbar.make(binding.root, "发布成功", Snackbar.LENGTH_SHORT).show()

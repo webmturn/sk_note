@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Discussion
+import com.sknote.app.data.model.DiscussionCategory
+import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
 
@@ -13,6 +15,9 @@ class DiscussionListViewModel : ViewModel() {
 
     private val _discussions = MutableLiveData<List<Discussion>>()
     val discussions: LiveData<List<Discussion>> = _discussions
+
+    private val _categories = MutableLiveData<List<DiscussionCategory>>()
+    val categories: LiveData<List<DiscussionCategory>> = _categories
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
@@ -26,6 +31,18 @@ class DiscussionListViewModel : ViewModel() {
 
     fun invalidateCache() {
         lastLoadTime = 0L
+    }
+
+    fun loadCategories() {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.getService().getDiscussionCategories()
+                val remoteCategories = if (response.isSuccessful) response.body()?.categories.orEmpty() else emptyList()
+                _categories.value = if (remoteCategories.isNotEmpty()) remoteCategories else DiscussionCategoryDefaults.categories
+            } catch (_: Exception) {
+                _categories.value = DiscussionCategoryDefaults.categories
+            }
+        }
     }
 
     fun loadDiscussions(category: String? = null, force: Boolean = false) {

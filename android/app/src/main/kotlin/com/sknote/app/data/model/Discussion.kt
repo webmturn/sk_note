@@ -7,12 +7,14 @@ import com.google.gson.annotations.SerializedName
 data class Discussion(
     val id: Long,
     val title: String,
-    val content: String = "",
+    val content: String? = "",
     @SerializedName("author_id") val authorId: Long,
     @SerializedName("author_name") val authorName: String? = null,
     @SerializedName("author_avatar") val authorAvatar: String? = null,
     @SerializedName("article_id") val articleId: Long? = null,
-    val category: String = "general",
+    val category: String? = "general",
+    @SerializedName("category_name") val categoryName: String? = null,
+    @SerializedName("category_icon") val categoryIcon: String? = null,
     @SerializedName("is_pinned") val isPinned: Int = 0,
     @SerializedName("is_closed") val isClosed: Int = 0,
     @SerializedName("view_count") val viewCount: Int = 0,
@@ -23,7 +25,7 @@ data class Discussion(
 
 data class Comment(
     val id: Long,
-    val content: String,
+    val content: String? = "",
     @SerializedName("author_id") val authorId: Long,
     @SerializedName("author_name") val authorName: String? = null,
     @SerializedName("author_avatar") val authorAvatar: String? = null,
@@ -42,6 +44,26 @@ data class DiscussionsResponse(
 data class DiscussionDetailResponse(
     val discussion: Discussion,
     val comments: List<Comment>
+)
+
+data class DiscussionCategory(
+    val id: Long,
+    val slug: String,
+    val name: String,
+    val description: String? = "",
+    val icon: String? = "",
+    @SerializedName("sort_order") val sortOrder: Int = 0,
+)
+
+data class DiscussionCategoriesResponse(val categories: List<DiscussionCategory>)
+data class DiscussionCategoryResponse(val category: DiscussionCategory)
+
+data class CreateDiscussionCategoryRequest(
+    val slug: String,
+    val name: String,
+    val description: String = "",
+    val icon: String = "",
+    @SerializedName("sort_order") val sortOrder: Int = 0,
 )
 
 data class CreateDiscussionRequest(

@@ -8,18 +8,21 @@ export const discussionRoutes = new Hono<{ Bindings: Env }>();
 
 // 获取讨论列表
 discussionRoutes.get('/', edgeCache(120), async (c) => {
-  const page = parseInt(c.req.query('page') || '1');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const category = c.req.query('category');
   const articleId = c.req.query('article_id');
   const search = c.req.query('search');
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT d.id, d.title, d.content, d.author_id, d.article_id, d.category, d.is_pinned, d.is_closed, d.view_count, d.reply_count, d.created_at, d.updated_at,
+    SELECT d.id, d.title, d.content, d.author_id, d.article_id, d.category,
+    COALESCE(dc.name, d.category) as category_name, COALESCE(dc.icon, '') as category_icon,
+    d.is_pinned, d.is_closed, d.view_count, d.reply_count, d.created_at, d.updated_at,
     COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
     FROM discussions d
     LEFT JOIN users u ON d.author_id = u.id
+    LEFT JOIN discussion_categories dc ON d.category = dc.slug
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -67,18 +70,27 @@ discussionRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
   const discussion = await c.env.DB.prepare(`
-    SELECT d.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
+    SELECT d.*, COALESCE(dc.name, d.category) as category_name, COALESCE(dc.icon, '') as category_icon,
+    COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
     FROM discussions d
     LEFT JOIN users u ON d.author_id = u.id
+    LEFT JOIN discussion_categories dc ON d.category = dc.slug
     WHERE d.id = ?
   `).bind(id).first();
 
   if (!discussion) return c.json({ error: '讨论不存在' }, 404);
 
-  // 增加阅读量
-  await c.env.DB.prepare(
-    'UPDATE discussions SET view_count = view_count + 1 WHERE id = ?'
-  ).bind(id).run();
+  // 增加阅读量（去重）
+  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    || c.req.header('x-real-ip') || 'anonymous';
+  const viewResult = await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+  ).bind(viewerKey, 'discussion', id).run();
+  if (viewResult.meta.changes > 0) {
+    await c.env.DB.prepare(
+      'UPDATE discussions SET view_count = view_count + 1 WHERE id = ?'
+    ).bind(id).run();
+  }
 
   // 获取评论
   const comments = await c.env.DB.prepare(`
@@ -103,10 +115,30 @@ discussionRoutes.post('/', authMiddleware(), async (c) => {
     return c.json({ error: '标题和内容不能为空' }, 400);
   }
 
+  let resolvedCategory = typeof category === 'string' && category.trim().length > 0
+    ? category.trim()
+    : '';
+
+  if (resolvedCategory) {
+    const existingCategory = await c.env.DB.prepare(
+      'SELECT slug FROM discussion_categories WHERE slug = ?'
+    ).bind(resolvedCategory).first<{ slug: string }>();
+
+    if (!existingCategory) {
+      return c.json({ error: '讨论分类不存在' }, 400);
+    }
+  } else {
+    const defaultCategory = await c.env.DB.prepare(
+      'SELECT slug FROM discussion_categories ORDER BY sort_order ASC, id ASC LIMIT 1'
+    ).first<{ slug: string }>();
+
+    resolvedCategory = defaultCategory?.slug || 'general';
+  }
+
   const result = await c.env.DB.prepare(`
     INSERT INTO discussions (title, content, author_id, category, article_id)
     VALUES (?, ?, ?, ?, ?)
-  `).bind(title, content, user.id, category || 'general', article_id || null).run();
+  `).bind(title, content, user.id, resolvedCategory, article_id || null).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]));
@@ -238,10 +270,21 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
     return c.json({ error: '无权删除' }, 403);
   }
 
+  // 统计该评论及所有子孙评论数量（ON DELETE CASCADE 会级联删除）
+  const countResult = await c.env.DB.prepare(`
+    WITH RECURSIVE descendants(id) AS (
+      SELECT id FROM comments WHERE id = ?
+      UNION ALL
+      SELECT c.id FROM comments c JOIN descendants d ON c.parent_id = d.id
+    )
+    SELECT COUNT(*) as total FROM descendants
+  `).bind(commentId).first<{ total: number }>();
+  const deleteCount = countResult?.total || 1;
+
   await c.env.DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run();
   await c.env.DB.prepare(
-    'UPDATE discussions SET reply_count = MAX(0, reply_count - 1) WHERE id = ?'
-  ).bind(discussionId).run();
+    'UPDATE discussions SET reply_count = MAX(0, reply_count - ?) WHERE id = ?'
+  ).bind(deleteCount, discussionId).run();
 
   return c.json({ message: '删除成功' });
 });

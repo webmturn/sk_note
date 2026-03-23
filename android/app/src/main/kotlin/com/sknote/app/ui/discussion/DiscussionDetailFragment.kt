@@ -16,7 +16,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
+import com.sknote.app.data.model.Comment
+import com.sknote.app.data.model.CreateCommentRequest
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
+import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.TimeUtil
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
@@ -57,7 +60,7 @@ class DiscussionDetailFragment : Fragment() {
                 beginReplyTo(comment)
             },
             onCopyClick = { comment ->
-                copyCommentContent(comment.content)
+                copyCommentContent(comment.content.orEmpty())
             },
             onDeleteClick = { comment ->
                 if (comment.authorId == cachedUserId || cachedRole == "admin") {
@@ -133,15 +136,6 @@ class DiscussionDetailFragment : Fragment() {
         }
     }
 
-    private fun getCategoryLabel(category: String): String = when (category) {
-        "general" -> "综合"
-        "question" -> "提问"
-        "feedback" -> "反馈"
-        "bug" -> "Bug"
-        "feature" -> "功能建议"
-        else -> category
-    }
-
     private fun observeData() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             binding.tvTitle.text = discussion.title
@@ -157,19 +151,21 @@ class DiscussionDetailFragment : Fragment() {
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             binding.tvViewCount.text = "${discussion.viewCount} 浏览"
             binding.tvContent.visibility = View.VISIBLE
-            binding.chipCategory.text = getCategoryLabel(discussion.category)
+            binding.chipCategory.text = discussion.categoryName.orEmpty().ifEmpty {
+                DiscussionCategoryDefaults.label(discussion.category)
+            }
 
             // Handle block/palette share preview
             binding.blockPreviewContainer.removeAllViews()
-            if (BlockShareHelper.containsAnyShare(discussion.content)) {
-                val cleanContent = BlockShareHelper.getCleanContent(discussion.content)
+            if (BlockShareHelper.containsAnyShare(discussion.content.orEmpty())) {
+                val cleanContent = BlockShareHelper.getCleanContent(discussion.content.orEmpty())
                 if (cleanContent.isNotEmpty()) {
                     markwon.setMarkdown(binding.tvContent, cleanContent)
                 } else {
                     binding.tvContent.visibility = android.view.View.GONE
                 }
 
-                val blockJson = BlockShareHelper.extractBlockJson(discussion.content)
+                val blockJson = BlockShareHelper.extractBlockJson(discussion.content.orEmpty())
                 if (blockJson != null) {
                     val preview = BlockShareHelper.createPreviewView(
                         requireContext(), binding.blockPreviewContainer, blockJson, showActions = true
@@ -177,7 +173,7 @@ class DiscussionDetailFragment : Fragment() {
                     binding.blockPreviewContainer.addView(preview)
                 }
 
-                val paletteJson = BlockShareHelper.extractPaletteJson(discussion.content)
+                val paletteJson = BlockShareHelper.extractPaletteJson(discussion.content.orEmpty())
                 if (paletteJson != null) {
                     val preview = BlockShareHelper.createPalettePreviewView(
                         requireContext(), binding.blockPreviewContainer, paletteJson, showActions = true
@@ -194,7 +190,7 @@ class DiscussionDetailFragment : Fragment() {
                     binding.blockPreviewContainer.visibility = android.view.View.VISIBLE
                 }
             } else {
-                markwon.setMarkdown(binding.tvContent, discussion.content)
+                markwon.setMarkdown(binding.tvContent, discussion.content.orEmpty())
                 binding.blockPreviewContainer.visibility = android.view.View.GONE
             }
 

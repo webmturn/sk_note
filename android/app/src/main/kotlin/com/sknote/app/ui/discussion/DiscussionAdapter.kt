@@ -1,13 +1,16 @@
 package com.sknote.app.ui.discussion
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.ItemDiscussionBinding
+import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.DiscussionIconResolver
 
 class DiscussionAdapter(
     private val onClick: (Discussion) -> Unit,
@@ -26,20 +29,40 @@ class DiscussionAdapter(
     inner class ViewHolder(private val binding: ItemDiscussionBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(discussion: Discussion) {
-            binding.tvTitle.text = if (discussion.isPinned == 1) "📌 ${discussion.title}" else discussion.title
+            binding.tvTitle.text = discussion.title
+            if (discussion.isPinned == 1) {
+                binding.ivPinned.visibility = View.VISIBLE
+                binding.ivPinned.setImageResource(DiscussionIconResolver.pinned())
+            } else {
+                binding.ivPinned.visibility = View.GONE
+            }
             // Show clean preview without block/palette data
-            val preview = if (BlockShareHelper.containsAnyShare(discussion.content.orEmpty())) {
+            val hasShare = BlockShareHelper.containsAnyShare(discussion.content.orEmpty())
+            val preview = if (hasShare) {
                 val clean = BlockShareHelper.getCleanContent(discussion.content.orEmpty()).take(120)
+                val isPalette = BlockShareHelper.containsPalette(discussion.content.orEmpty())
                 clean.ifEmpty {
-                    if (BlockShareHelper.containsPalette(discussion.content)) "🎨 调色板分享，点击查看详情"
-                    else "🧩 积木块分享，点击查看详情"
+                    if (isPalette) "调色板分享，点击查看详情"
+                    else "积木块分享，点击查看详情"
                 }
             } else {
                 discussion.content.orEmpty().take(120)
             }
+            if (hasShare) {
+                binding.ivPreviewType.visibility = View.VISIBLE
+                binding.ivPreviewType.setImageResource(
+                    DiscussionIconResolver.sharePreview(
+                        isPalette = BlockShareHelper.containsPalette(discussion.content.orEmpty())
+                    )
+                )
+            } else {
+                binding.ivPreviewType.visibility = View.GONE
+            }
             binding.tvPreview.text = preview
             binding.tvAuthor.text = discussion.authorName ?: "Anonymous"
-            binding.tvCategory.text = getCategoryLabel(discussion.category.orEmpty())
+            binding.tvCategory.text = discussion.categoryName.orEmpty().ifEmpty {
+                DiscussionCategoryDefaults.label(discussion.category)
+            }
             binding.tvReplies.text = "${discussion.replyCount} 回复"
             binding.tvViews.text = "${discussion.viewCount} 阅读"
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
@@ -47,15 +70,6 @@ class DiscussionAdapter(
             binding.tvAuthor.setOnClickListener { onAuthorClick(discussion) }
             binding.ivAvatar.setOnClickListener { onAuthorClick(discussion) }
         }
-    }
-
-    private fun getCategoryLabel(category: String): String = when (category) {
-        "general" -> "综合"
-        "question" -> "提问"
-        "feedback" -> "反馈"
-        "bug" -> "Bug"
-        "feature" -> "功能建议"
-        else -> category
     }
 
     companion object DiffCallback : DiffUtil.ItemCallback<Discussion>() {

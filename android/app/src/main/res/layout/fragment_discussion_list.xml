@@ -66,52 +66,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:singleSelection="true"
-                    app:chipSpacingHorizontal="6dp">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAll"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="全部"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:checked="true" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipGeneral"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="综合"
-                        style="@style/Widget.Material3.Chip.Filter" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipQuestion"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="💡 提问"
-                        style="@style/Widget.Material3.Chip.Filter" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFeedback"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="反馈"
-                        style="@style/Widget.Material3.Chip.Filter" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipBug"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🐛 Bug"
-                        style="@style/Widget.Material3.Chip.Filter" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFeature"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="功能建议"
-                        style="@style/Widget.Material3.Chip.Filter" />
-
-                </com.google.android.material.chip.ChipGroup>
+                    app:chipSpacingHorizontal="6dp" />
             </HorizontalScrollView>
 
             <androidx.recyclerview.widget.RecyclerView
