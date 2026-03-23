@@ -54,7 +54,8 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
         view.findViewById<View>(R.id.btnCloseCompare).setOnClickListener { dismiss() }
 
         // Show block A shape
-        setupBlockShape(view.findViewById(R.id.blockShapeA), view.findViewById(R.id.tvNameA), blockA!!)
+        val a = blockA ?: return
+        setupBlockShape(view.findViewById(R.id.blockShapeA), view.findViewById(R.id.tvNameA), a)
 
         // Show search panel
         val layoutSelect = view.findViewById<LinearLayout>(R.id.layoutSelectBlock)
@@ -70,14 +71,14 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
             blockB = selectedBlock
             layoutSelect.visibility = View.GONE
             view.findViewById<View>(R.id.scrollCompare).visibility = View.VISIBLE
-            setupBlockShape(view.findViewById(R.id.blockShapeB), view.findViewById(R.id.tvNameB), blockB!!)
+            setupBlockShape(view.findViewById(R.id.blockShapeB), view.findViewById(R.id.tvNameB), selectedBlock)
             buildComparison(view)
         }
         rv.adapter = resultAdapter
 
         // Pre-populate with similar blocks (same category)
         val similar = ReferenceData.getByType("block")
-            .filter { it.id != blockAId && it.category == blockA!!.category }
+            .filter { it.id != blockAId && it.category == a.category }
             .take(20)
         resultAdapter.submitList(similar)
 
@@ -100,7 +101,7 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
 
     private fun setupBlockShape(shapeView: BlockShapeView, nameView: TextView, item: ReferenceItem) {
         try {
-            shapeView.blockColor = if (item.color.isNotEmpty()) Color.parseColor(item.color) else 0xFFE1A92A.toInt()
+            shapeView.blockColor = if (item.color.orEmpty().isNotEmpty()) Color.parseColor(item.color.orEmpty()) else 0xFFE1A92A.toInt()
         } catch (_: Exception) { shapeView.blockColor = 0xFFE1A92A.toInt() }
         shapeView.blockShape = item.shape?.ifEmpty { "s" } ?: "s"
         val spec = item.spec ?: ""
@@ -223,11 +224,11 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
 
         // Compare rows
         addRow("分类", a.category, b.category)
-        addRow("形状", ReferenceData.shapeLabels[a.shape] ?: a.shape, ReferenceData.shapeLabels[b.shape] ?: b.shape)
-        addRow("描述", a.description, b.description)
-        addRow("参数", a.parameters, b.parameters)
+        addRow("形状", ReferenceData.shapeLabels[a.shape] ?: a.shape.orEmpty(), ReferenceData.shapeLabels[b.shape] ?: b.shape.orEmpty())
+        addRow("描述", a.description.orEmpty(), b.description.orEmpty())
+        addRow("参数", a.parameters.orEmpty(), b.parameters.orEmpty())
         addCodeRow("Java 代码", a.code.orEmpty(), b.code.orEmpty())
-        addRow("示例", a.example, b.example)
+        addRow("示例", a.example.orEmpty(), b.example.orEmpty())
     }
 
     private fun createCompareCard(text: String, same: Boolean, isLeft: Boolean): MaterialCardView {

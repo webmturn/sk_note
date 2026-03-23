@@ -30,7 +30,7 @@ class NotificationAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         holder.binding.tvTitle.text = item.title
-        holder.binding.tvContent.text = item.content
+        holder.binding.tvContent.text = item.content.orEmpty()
         holder.binding.tvTime.text = TimeUtil.formatRelative(item.createdAt)
         holder.binding.dotUnread.visibility = if (item.isRead == 0) View.VISIBLE else View.GONE
 

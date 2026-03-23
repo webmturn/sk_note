@@ -106,16 +106,16 @@ class PublicProfileFragment : Fragment() {
                     }
                     binding.toolbar.title = data.user.displayName
 
-                    if (data.user.bio.isNotEmpty()) {
-                        binding.tvBio.text = data.user.bio
+                    if (!data.user.bio.isNullOrEmpty()) {
+                        binding.tvBio.text = data.user.bio.orEmpty()
                         binding.tvBio.visibility = View.VISIBLE
                     } else {
                         binding.tvBio.visibility = View.GONE
                     }
 
-                    if (data.user.avatarUrl.isNotEmpty()) {
+                    if (!data.user.avatarUrl.isNullOrEmpty()) {
                         Glide.with(this@PublicProfileFragment)
-                            .load(data.user.avatarUrl)
+                            .load(data.user.avatarUrl.orEmpty())
                             .circleCrop()
                             .placeholder(R.drawable.ic_account_circle)
                             .into(binding.ivAvatar)

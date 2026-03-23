@@ -7,12 +7,12 @@ import com.google.gson.annotations.SerializedName
 data class FollowUser(
     val id: Long,
     val username: String,
-    val nickname: String = "",
-    @SerializedName("avatar_url") val avatarUrl: String = "",
+    val nickname: String? = "",
+    @SerializedName("avatar_url") val avatarUrl: String? = "",
     val role: String = "user",
     @SerializedName("followed_at") val followedAt: String? = null
 ) {
-    val displayName: String get() = nickname.ifEmpty { username }
+    val displayName: String get() = nickname.orEmpty().ifEmpty { username }
 }
 
 data class FollowListResponse(

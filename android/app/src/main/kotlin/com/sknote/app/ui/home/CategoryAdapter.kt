@@ -7,6 +7,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.sknote.app.data.model.Category
 import com.sknote.app.databinding.ItemCategoryBinding
+import com.sknote.app.util.CategoryIconResolver
+import com.sknote.app.util.IconViewBinder
 
 class CategoryAdapter(
     private val onClick: (Category) -> Unit
@@ -24,9 +26,10 @@ class CategoryAdapter(
     inner class ViewHolder(private val binding: ItemCategoryBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(category: Category) {
-            binding.tvIcon.text = category.icon.ifEmpty { "📁" }
+            val iconSpec = CategoryIconResolver.resolve(category.icon, category.name)
+            IconViewBinder.bind(iconSpec, binding.ivIcon, binding.tvIcon)
             binding.tvCategoryName.text = category.name
-            binding.tvCategoryDesc.text = category.description.ifEmpty { "" }
+            binding.tvCategoryDesc.text = category.description.orEmpty().ifEmpty { "" }
             binding.root.setOnClickListener { onClick(category) }
         }
     }

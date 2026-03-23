@@ -7,14 +7,14 @@ import com.google.gson.annotations.SerializedName
 data class User(
     val id: Long,
     val username: String,
-    val nickname: String = "",
+    val nickname: String? = "",
     val email: String? = null,
     val role: String = "user",
-    @SerializedName("avatar_url") val avatarUrl: String = "",
-    val bio: String = "",
+    @SerializedName("avatar_url") val avatarUrl: String? = "",
+    val bio: String? = "",
     @SerializedName("created_at") val createdAt: String? = null
 ) {
-    val displayName: String get() = nickname.ifEmpty { username }
+    val displayName: String get() = nickname.orEmpty().ifEmpty { username }
 }
 
 data class AuthResponse(

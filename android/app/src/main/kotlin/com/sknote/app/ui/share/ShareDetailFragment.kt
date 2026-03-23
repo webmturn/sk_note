@@ -57,7 +57,7 @@ class ShareDetailFragment : Fragment() {
                 }
                 R.id.action_open_browser -> {
                     currentShare?.let {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.downloadUrl)))
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.downloadUrl.orEmpty())))
                     }
                     true
                 }
@@ -72,7 +72,7 @@ class ShareDetailFragment : Fragment() {
         binding.btnCopyUrl.setOnClickListener {
             currentShare?.let { share ->
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("url", share.downloadUrl))
+                clipboard.setPrimaryClip(ClipData.newPlainText("url", share.downloadUrl.orEmpty()))
                 Snackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -80,7 +80,7 @@ class ShareDetailFragment : Fragment() {
         binding.btnCopyPassword.setOnClickListener {
             currentShare?.let { share ->
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("password", share.downloadPwd))
+                clipboard.setPrimaryClip(ClipData.newPlainText("password", share.downloadPwd.orEmpty()))
                 Snackbar.make(binding.root, "密码已复制", Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -138,13 +138,13 @@ class ShareDetailFragment : Fragment() {
                     binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
                     binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
                     binding.tvViews.text = "${share.viewCount} 浏览"
-                    binding.tvDownloadUrl.text = share.downloadUrl
+                    binding.tvDownloadUrl.text = share.downloadUrl.orEmpty()
                     binding.tvDownloadCount.text = "${share.downloadCount}"
                     binding.btnLike.text = "点赞 (${share.likeCount})"
 
-                    if (share.downloadPwd.isNotEmpty()) {
+                    if (!share.downloadPwd.isNullOrEmpty()) {
                         binding.layoutPassword.visibility = View.VISIBLE
-                        binding.tvPassword.text = share.downloadPwd
+                        binding.tvPassword.text = share.downloadPwd.orEmpty()
                     } else {
                         binding.layoutPassword.visibility = View.GONE
                     }
@@ -165,7 +165,7 @@ class ShareDetailFragment : Fragment() {
     }
 
     private fun startDownload(share: Share) {
-        if (LanzouParser.isLanzouUrl(share.downloadUrl)) {
+        if (LanzouParser.isLanzouUrl(share.downloadUrl.orEmpty())) {
             // 蓝奏云链接：尝试解析直链
             binding.btnDownload.isEnabled = false
             binding.btnDownload.text = "解析中..."
@@ -175,7 +175,7 @@ class ShareDetailFragment : Fragment() {
                     // 记录下载次数
                     try { ApiClient.getService().recordShareDownload(shareId) } catch (_: Exception) {}
 
-                    val result = LanzouParser.parse(share.downloadUrl, share.downloadPwd)
+                    val result = LanzouParser.parse(share.downloadUrl.orEmpty(), share.downloadPwd.orEmpty())
                     if (result.success) {
                         // 用浏览器打开真实下载链接
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.downloadUrl))
@@ -196,26 +196,26 @@ class ShareDetailFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 try { ApiClient.getService().recordShareDownload(shareId) } catch (_: Exception) {}
             }
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl))
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl.orEmpty()))
             startActivity(intent)
         }
     }
 
     private fun showDownloadFallbackDialog(share: Share, error: String) {
-        val pwd = if (share.downloadPwd.isNotEmpty()) "\n密码：${share.downloadPwd}" else ""
+        val pwd = if (!share.downloadPwd.isNullOrEmpty()) "\n密码：${share.downloadPwd}" else ""
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("自动解析失败")
             .setMessage("原因：$error\n\n你可以手动在浏览器中打开链接下载。$pwd")
             .setPositiveButton("在浏览器中打开") { _, _ ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl.orEmpty()))
                 startActivity(intent)
             }
             .setNeutralButton("复制链接") { _, _ ->
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val text = if (share.downloadPwd.isNotEmpty()) {
-                    "${share.downloadUrl} 密码：${share.downloadPwd}"
+                val text = if (!share.downloadPwd.isNullOrEmpty()) {
+                    "${share.downloadUrl.orEmpty()} 密码：${share.downloadPwd}"
                 } else {
-                    share.downloadUrl
+                    share.downloadUrl.orEmpty()
                 }
                 clipboard.setPrimaryClip(ClipData.newPlainText("download_url", text))
                 Snackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
@@ -226,10 +226,10 @@ class ShareDetailFragment : Fragment() {
 
     private fun copyShareLink(share: Share) {
         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = if (share.downloadPwd.isNotEmpty()) {
-            "${share.downloadUrl} 密码：${share.downloadPwd}"
+        val text = if (!share.downloadPwd.isNullOrEmpty()) {
+            "${share.downloadUrl.orEmpty()} 密码：${share.downloadPwd}"
         } else {
-            share.downloadUrl
+            share.downloadUrl.orEmpty()
         }
         clipboard.setPrimaryClip(ClipData.newPlainText("share_url", text))
         Snackbar.make(binding.root, "链接已复制到剪贴板", Snackbar.LENGTH_SHORT).show()

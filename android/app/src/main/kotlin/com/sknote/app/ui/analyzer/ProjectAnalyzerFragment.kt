@@ -33,6 +33,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentProjectAnalyzerBinding
 import com.sknote.app.ui.reference.ReferenceData
+import com.sknote.app.util.AppIcons
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -265,16 +266,16 @@ class ProjectAnalyzerFragment : Fragment() {
             setPadding(dp(8), dp(16), dp(8), dp(16))
             gravity = android.view.Gravity.CENTER
         }
-        statsLayout.addView(createStatItem("🧱", "积木块", "$totalBlockCount", resolveColor(com.google.android.material.R.attr.colorPrimary)))
-        statsLayout.addView(createStatItem("📋", "种类", "${usedBlocks.size}", resolveColor(com.google.android.material.R.attr.colorTertiary)))
-        statsLayout.addView(createStatItem("⚙\ufe0f", "组件", "${usedComponents.size}", resolveColor(com.google.android.material.R.attr.colorSecondary)))
-        statsLayout.addView(createStatItem("⚡", "事件", "${usedEvents.size}", resolveColor(com.google.android.material.R.attr.colorError)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Blocks, "积木块", "$totalBlockCount", resolveColor(com.google.android.material.R.attr.colorPrimary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Categories, "种类", "${usedBlocks.size}", resolveColor(com.google.android.material.R.attr.colorTertiary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Components, "组件", "${usedComponents.size}", resolveColor(com.google.android.material.R.attr.colorSecondary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Events, "事件", "${usedEvents.size}", resolveColor(com.google.android.material.R.attr.colorError)))
         statsCard.addView(statsLayout)
         container.addView(statsCard, marginParams(dp(0), dp(0), dp(0), dp(12)))
 
         // Top used blocks
         if (usedBlocks.isNotEmpty()) {
-            container.addView(createSectionTitle("📊 使用最多的积木块"))
+            container.addView(createSectionTitle("使用最多的积木块"))
             val topBlocks = usedBlocks.entries.sortedByDescending { it.value }.take(15)
             val maxCount = topBlocks.first().value.toFloat()
             val topCard = createCard()
@@ -358,7 +359,7 @@ class ProjectAnalyzerFragment : Fragment() {
 
         // Used components
         if (usedComponents.isNotEmpty()) {
-            container.addView(createSectionTitle("⚙\ufe0f 使用的组件"))
+            container.addView(createSectionTitle("使用的组件"))
             val compCard = createCard()
             val chipGroup = ChipGroup(ctx).apply { setPadding(dp(12), dp(8), dp(12), dp(8)) }
             usedComponents.sorted().forEach { comp ->
@@ -382,7 +383,7 @@ class ProjectAnalyzerFragment : Fragment() {
 
         // Used events
         if (usedEvents.isNotEmpty()) {
-            container.addView(createSectionTitle("⚡ 事件 (${usedEvents.size})"))
+            container.addView(createSectionTitle("事件 (${usedEvents.size})"))
             val eventCard = createCard()
             val chipGroup = ChipGroup(ctx).apply { setPadding(dp(12), dp(8), dp(12), dp(8)) }
             usedEvents.sorted().forEach { event ->
@@ -517,7 +518,7 @@ class ProjectAnalyzerFragment : Fragment() {
         }
 
         // Suggestions
-        container.addView(createSectionTitle("💡 建议"))
+        container.addView(createSectionTitle("建议"))
         val sugCard = createCard()
         val sugLayout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -536,14 +537,14 @@ class ProjectAnalyzerFragment : Fragment() {
         val suggestions = generateSuggestions(usedBlocks, usedComponents, usedEvents, usedListeners, analysisData, totalBlockCount)
         if (suggestions.isEmpty()) {
             sugLayout.addView(TextView(ctx).apply {
-                text = "✅ 项目结构良好，暂无建议"
+                text = "项目结构良好，暂无建议"
                 textSize = 14f
                 setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(0, dp(4), 0, dp(4))
             })
         } else {
             suggestions.forEach { sug ->
-                val isWarning = sug.startsWith("⚠") || sug.startsWith("🚫")
+                val isWarning = sug.contains("风险") || sug.contains("ANR") || sug.contains("未处理")
                 val isIndent = sug.startsWith("   ")
                 val bgColor = when {
                     isIndent -> 0x00000000
@@ -719,7 +720,7 @@ class ProjectAnalyzerFragment : Fragment() {
         }.toSet()
         for (compName in extra.declaredComponentNames) {
             if (compName !in sectionTargets) {
-                suggestions.add("🚫 声明了组件 '$compName' 但未在任何事件中引用，考虑移除")
+                suggestions.add("声明了组件 '$compName' 但未在任何事件中引用，考虑移除")
             }
         }
 
@@ -728,16 +729,16 @@ class ProjectAnalyzerFragment : Fragment() {
         if (emptyHandlers.isNotEmpty()) {
             val count = emptyHandlers.size
             val examples = emptyHandlers.take(3).map { it.removePrefix("@").substringAfter(".java_") }
-            suggestions.add("📭 $count 个空事件处理器: ${examples.joinToString(", ")}${if (count > 3) " ..." else ""}")
+            suggestions.add("$count 个空事件处理器: ${examples.joinToString(", ")}${if (count > 3) " ..." else ""}")
         }
 
         // ── 4. addSourceDirectly 详细分析 ──
         val addSrcCount = blocks["addSourceDirectly"] ?: 0
         if (addSrcCount > 0) {
             if (addSrcCount > 20) {
-                suggestions.add("🔧 大量使用 addSourceDirectly (${addSrcCount}次)，项目可维护性降低")
+                suggestions.add("大量使用 addSourceDirectly (${addSrcCount}次)，项目可维护性降低")
             } else if (addSrcCount > 5) {
-                suggestions.add("🔧 使用 addSourceDirectly ${addSrcCount}次，建议部分替换为内置积木块")
+                suggestions.add("使用 addSourceDirectly ${addSrcCount}次，建议部分替换为内置积木块")
             }
             if (extra.addSourceSections.isNotEmpty()) {
                 val locs = extra.addSourceSections.take(5).joinToString(", ")
@@ -748,36 +749,36 @@ class ProjectAnalyzerFragment : Fragment() {
         // ── 5. 重复积木块模式 ──
         for ((opCode, maxRun) in extra.duplicatePatterns) {
             if (maxRun >= 5) {
-                suggestions.add("🔁 '$opCode' 连续重复 ${maxRun}+ 次，考虑使用循环代替")
+                suggestions.add("'$opCode' 连续重复 ${maxRun}+ 次，考虑使用循环代替")
             }
         }
 
         // ── 6. 项目复杂度 ──
         if (blocks.size > 80) {
-            suggestions.add("📊 项目使用了 ${blocks.size} 种积木块，复杂度很高，建议拆分 Activity")
+            suggestions.add("项目使用了 ${blocks.size} 种积木块，复杂度很高，建议拆分 Activity")
         } else if (blocks.size > 50) {
-            suggestions.add("📊 项目使用了 ${blocks.size} 种积木块，复杂度较高")
+            suggestions.add("项目使用了 ${blocks.size} 种积木块，复杂度较高")
         }
 
         if (totalBlockCount > 500) {
-            suggestions.add("📊 项目共 $totalBlockCount 个积木块，规模较大")
+            suggestions.add("项目共 $totalBlockCount 个积木块，规模较大")
         }
 
         // ── 7. 无事件 ──
         if (events.isEmpty()) {
-            suggestions.add("💡 项目未使用任何事件，考虑添加用户交互")
+            suggestions.add("项目未使用任何事件，考虑添加用户交互")
         }
 
         // ── 8. 错误处理检查 ──
         if (components.contains("RequestNetwork")) {
             if (events.contains("onResponse") && !events.contains("onErrorResponse")) {
-                suggestions.add("⚠ RequestNetwork 只处理了成功回调，未处理 onErrorResponse 错误回调")
+                suggestions.add("RequestNetwork 只处理了成功回调，未处理 onErrorResponse 错误回调")
             }
         }
         if (blocks.containsKey("filePutFile") || blocks.containsKey("writeFile")) {
             val hasIsExist = blocks.containsKey("isExist") || blocks.containsKey("isDirectory")
             if (!hasIsExist) {
-                suggestions.add("💡 使用了文件写入但未检查路径是否存在 (isExist/isDirectory)")
+                suggestions.add("使用了文件写入但未检查路径是否存在 (isExist/isDirectory)")
             }
         }
 
@@ -785,63 +786,63 @@ class ProjectAnalyzerFragment : Fragment() {
         val hasListView = extra.viewWidgetTypes.values.any { it == "ListView" || it == "RecyclerView" || it == "GridView" }
         if (hasListView && !blocks.containsKey("setListCustomViewData") && !blocks.containsKey("recyclerBindCustomView")) {
             if (!events.contains("onBindCustomView")) {
-                suggestions.add("💡 使用了列表控件但未设置自定义列表项")
+                suggestions.add("使用了列表控件但未设置自定义列表项")
             }
         }
 
         val hasWebView = extra.viewWidgetTypes.values.any { it == "WebView" }
         if (hasWebView && !blocks.containsKey("webViewLoadUrl")) {
-            suggestions.add("💡 添加了 WebView 但未使用 webViewLoadUrl 加载内容")
+            suggestions.add("添加了 WebView 但未使用 webViewLoadUrl 加载内容")
         }
 
         val hasEditText = extra.viewWidgetTypes.values.any { it == "EditText" }
         if (hasEditText && !events.contains("onTextChanged")) {
             // Only suggest if there's substantial logic
             if (totalBlockCount > 20) {
-                suggestions.add("💡 使用了 EditText 但未监听 onTextChanged 事件")
+                suggestions.add("使用了 EditText 但未监听 onTextChanged 事件")
             }
         }
 
         // ── 10. Activity 生命周期检查 ──
         if (totalBlockCount > 50 && !events.contains("onBackPressed")) {
-            suggestions.add("💡 较大项目建议处理 onBackPressed 事件以控制退出行为")
+            suggestions.add("较大项目建议处理 onBackPressed 事件以控制退出行为")
         }
         if (components.contains("MediaPlayer") || components.contains("SoundPool")) {
             if (!events.contains("onPause") && !events.contains("onDestroy") && !events.contains("onStop")) {
-                suggestions.add("⚠ 使用了媒体播放器但未在 onPause/onStop 中停止，可能导致后台继续播放")
+                suggestions.add("使用了媒体播放器但未在 onPause/onStop 中停止，可能导致后台继续播放")
             }
         }
         if (components.contains("LocationManager")) {
             if (!events.contains("onPause") && !events.contains("onStop")) {
-                suggestions.add("⚠ 使用了 LocationManager 但未在 onPause/onStop 中停止定位，浪费电量")
+                suggestions.add("使用了 LocationManager 但未在 onPause/onStop 中停止定位，浪费电量")
             }
         }
 
         // ── 11. 安全建议 ──
         if (blocks.containsKey("intentSetAction") && !blocks.containsKey("intentSetPackage")) {
-            suggestions.add("🔒 使用了隐式 Intent 但未设置 Package，可能有安全风险")
+            suggestions.add("使用了隐式 Intent 但未设置 Package，可能有安全风险")
         }
 
         // ── 12. 性能建议 ──
         val foreverCount = blocks["forever"] ?: 0
         if (foreverCount > 0 && !blocks.containsKey("wait")) {
-            suggestions.add("⚠ 使用了 forever 循环但未配合 wait 延时，可能导致 ANR")
+            suggestions.add("使用了 forever 循环但未配合 wait 延时，可能导致 ANR")
         }
 
         val timerCount = blocks.entries.filter { it.key.contains("Timer", ignoreCase = true) }.sumOf { it.value }
         if (components.count { it == "Timer" } == 0 && timerCount > 10) {
-            suggestions.add("💡 大量使用 Timer 相关积木块，确保合理管理计时器生命周期")
+            suggestions.add("大量使用 Timer 相关积木块，确保合理管理计时器生命周期")
         }
 
         // ── 13. 代码质量 ──
         val setVarCount = (blocks["setVarInt"] ?: 0) + (blocks["setVarString"] ?: 0) + (blocks["setVarBoolean"] ?: 0)
         if (setVarCount > 100) {
-            suggestions.add("📊 变量赋值操作 $setVarCount 次，项目逻辑可能过于冗长")
+            suggestions.add("变量赋值操作 $setVarCount 次，项目逻辑可能过于冗长")
         }
 
         val toastCount = blocks["toast"] ?: 0
         if (toastCount > 15) {
-            suggestions.add("💡 Toast 使用 $toastCount 次过多，考虑使用 Snackbar 或 Dialog 替代部分提示")
+            suggestions.add("Toast 使用 $toastCount 次过多，考虑使用 Snackbar 或 Dialog 替代部分提示")
         }
 
         return suggestions
@@ -877,16 +878,16 @@ class ProjectAnalyzerFragment : Fragment() {
         }
     }
 
-    private fun createStatItem(icon: String, label: String, value: String, color: Int): LinearLayout {
+    private fun createStatItem(iconRes: Int, label: String, value: String, color: Int): LinearLayout {
         val dp = { v: Int -> (v * resources.displayMetrics.density).toInt() }
         return LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            addView(TextView(context).apply {
-                text = icon
-                textSize = 18f
-                gravity = android.view.Gravity.CENTER
+            addView(android.widget.ImageView(context).apply {
+                setImageResource(iconRes)
+                imageTintList = android.content.res.ColorStateList.valueOf(color)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
                 setPadding(0, 0, 0, dp(4))
             })
             addView(TextView(context).apply {
@@ -1460,10 +1461,10 @@ class ProjectAnalyzerFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(12), dp(14), dp(12), dp(14))
         }
-        statsLayout.addView(createStatItem("🧱", "总积木块", "$totalBlocks", resolveColor(com.google.android.material.R.attr.colorPrimary)))
-        statsLayout.addView(createStatItem("📋", "种类", "${globalBlocks.size}", resolveColor(com.google.android.material.R.attr.colorTertiary)))
-        statsLayout.addView(createStatItem("📁", "项目", "${allProjects.size}", resolveColor(com.google.android.material.R.attr.colorSecondary)))
-        statsLayout.addView(createStatItem("⚙\ufe0f", "组件", "${globalComponents.size}", resolveColor(com.google.android.material.R.attr.colorError)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Blocks, "总积木块", "$totalBlocks", resolveColor(com.google.android.material.R.attr.colorPrimary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Categories, "种类", "${globalBlocks.size}", resolveColor(com.google.android.material.R.attr.colorTertiary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Projects, "项目", "${allProjects.size}", resolveColor(com.google.android.material.R.attr.colorSecondary)))
+        statsLayout.addView(createStatItem(AppIcons.Analyzer.Components, "组件", "${globalComponents.size}", resolveColor(com.google.android.material.R.attr.colorError)))
         statsCard.addView(statsLayout)
         container.addView(statsCard, marginParams(dp(0), dp(0), dp(0), dp(12)))
 

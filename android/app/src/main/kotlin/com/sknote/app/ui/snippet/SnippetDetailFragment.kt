@@ -78,7 +78,7 @@ class SnippetDetailFragment : Fragment() {
 
                     binding.tvTitle.text = snippet.title
                     if (snippet.description.orEmpty().isNotEmpty()) {
-                        binding.tvDescription.text = snippet.description
+                        binding.tvDescription.text = snippet.description.orEmpty()
                         binding.tvDescription.visibility = View.VISIBLE
                     } else {
                         binding.tvDescription.visibility = View.GONE

@@ -43,7 +43,7 @@ class CommentAdapter(
         } else {
             holder.binding.ivAvatar.setImageResource(R.drawable.ic_person)
         }
-        holder.binding.tvContent.text = comment.content
+        holder.binding.tvContent.text = comment.content.orEmpty()
         holder.binding.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         holder.binding.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
         // 显示回复目标

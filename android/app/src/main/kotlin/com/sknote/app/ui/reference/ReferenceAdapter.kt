@@ -33,7 +33,7 @@ class ReferenceAdapter(
         RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ReferenceItem) {
             binding.tvName.text = item.name
-            binding.tvDescription.text = item.description.ifEmpty { "暂无描述" }
+            binding.tvDescription.text = item.description.orEmpty().ifEmpty { "暂无描述" }
             binding.tvType.text = ReferenceIcons.getTypeLabel(item.type)
             binding.tvCategory.text = item.category
 
@@ -43,7 +43,7 @@ class ReferenceAdapter(
 
             // Set accent strip color from block color
             val blockColor = try {
-                Color.parseColor(item.color)
+                Color.parseColor(item.color.orEmpty())
             } catch (_: Exception) {
                 Color.parseColor("#FF1976D2")
             }

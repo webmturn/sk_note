@@ -89,15 +89,15 @@ class ReferenceDetailFragment : Fragment() {
     private fun tryInSketchware() {
         val ref = currentRef ?: return
         val codeText = buildString {
-            appendLine("// ${ref.name} - ${ref.description}")
+            appendLine("// ${ref.name} - ${ref.description.orEmpty()}")
             if (ref.code.orEmpty().isNotEmpty()) {
                 appendLine()
-                appendLine(ref.code)
+                appendLine(ref.code.orEmpty())
             }
-            if (ref.example.isNotEmpty()) {
+            if (ref.example.orEmpty().isNotEmpty()) {
                 appendLine()
                 appendLine("// 示例:")
-                appendLine(ref.example)
+                appendLine(ref.example.orEmpty())
             }
         }
         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -146,8 +146,8 @@ class ReferenceDetailFragment : Fragment() {
         val text = buildString {
             append("[参考] ${ref.name}\n")
             append("类型: ${getTypeLabel(ref.type)} / ${ref.category}\n")
-            if (ref.description.isNotEmpty()) append("\n${ref.description}\n")
-            if (ref.example.isNotEmpty()) append("\n示例:\n${ref.example}")
+            if (ref.description.orEmpty().isNotEmpty()) append("\n${ref.description.orEmpty()}\n")
+            if (ref.example.orEmpty().isNotEmpty()) append("\n示例:\n${ref.example.orEmpty()}")
         }
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
@@ -284,7 +284,7 @@ class ReferenceDetailFragment : Fragment() {
                 binding.blockShapeDetail.visibility = View.VISIBLE
                 binding.iconCardDetail.visibility = View.GONE
                 try {
-                    val color = if (ref.color.isNotEmpty()) Color.parseColor(ref.color) else 0xFFE1A92A.toInt()
+                    val color = if (ref.color.orEmpty().isNotEmpty()) Color.parseColor(ref.color.orEmpty()) else 0xFFE1A92A.toInt()
                     binding.blockShapeDetail.blockColor = color
                 } catch (_: Exception) {
                     binding.blockShapeDetail.blockColor = 0xFFE1A92A.toInt()
@@ -304,46 +304,46 @@ class ReferenceDetailFragment : Fragment() {
                 binding.ivIconDetail.setImageResource(getIconRes(ref))
                 // Tint icon with block color
                 val iconColor = try {
-                    if (ref.color.isNotEmpty()) Color.parseColor(ref.color) else Color.parseColor("#FF1976D2")
+                    if (ref.color.orEmpty().isNotEmpty()) Color.parseColor(ref.color.orEmpty()) else Color.parseColor("#FF1976D2")
                 } catch (_: Exception) { Color.parseColor("#FF1976D2") }
                 val tintedBg = Color.argb(25, Color.red(iconColor), Color.green(iconColor), Color.blue(iconColor))
                 binding.iconCardDetail.setCardBackgroundColor(tintedBg)
                 binding.ivIconDetail.setColorFilter(iconColor)
             }
 
-            markwon.setMarkdown(binding.tvDescription, fixMarkdownBreaks(ref.description.ifEmpty { "暂无描述" }))
+            markwon.setMarkdown(binding.tvDescription, fixMarkdownBreaks(ref.description.orEmpty().ifEmpty { "暂无描述" }))
 
             // Set header accent color
             val blockColor = try {
-                if (ref.color.isNotEmpty()) Color.parseColor(ref.color) else Color.parseColor("#FF1976D2")
+                if (ref.color.orEmpty().isNotEmpty()) Color.parseColor(ref.color.orEmpty()) else Color.parseColor("#FF1976D2")
             } catch (_: Exception) { Color.parseColor("#FF1976D2") }
             binding.headerAccent.setBackgroundColor(blockColor)
 
             if (ref.code.orEmpty().isNotEmpty()) {
                 binding.labelCode.visibility = View.VISIBLE
                 binding.cardCode.visibility = View.VISIBLE
-                binding.tvCode.text = ref.code
+                binding.tvCode.text = ref.code.orEmpty()
             }
 
-            if (ref.parameters.isNotEmpty()) {
+            if (ref.parameters.orEmpty().isNotEmpty()) {
                 binding.labelParams.visibility = View.VISIBLE
                 binding.cardParams.visibility = View.VISIBLE
-                markwon.setMarkdown(binding.tvParameters, fixMarkdownBreaks(ref.parameters))
+                markwon.setMarkdown(binding.tvParameters, fixMarkdownBreaks(ref.parameters.orEmpty()))
             }
 
-            if (ref.usage.isNotEmpty()) {
+            if (ref.usage.orEmpty().isNotEmpty()) {
                 binding.labelUsage.visibility = View.VISIBLE
                 binding.tvUsage.visibility = View.VISIBLE
-                markwon.setMarkdown(binding.tvUsage, fixMarkdownBreaks(ref.usage))
+                markwon.setMarkdown(binding.tvUsage, fixMarkdownBreaks(ref.usage.orEmpty()))
             }
 
-            if (ref.example.isNotEmpty()) {
+            if (ref.example.orEmpty().isNotEmpty()) {
                 binding.labelExample.visibility = View.VISIBLE
                 binding.cardExample.visibility = View.VISIBLE
-                binding.tvExample.text = ref.example
+                binding.tvExample.text = ref.example.orEmpty()
                 binding.btnCopyCode.setOnClickListener {
                     val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(ClipData.newPlainText("示例代码", ref.example))
+                    clipboard.setPrimaryClip(ClipData.newPlainText("示例代码", ref.example.orEmpty()))
                     Snackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
                 }
             }
@@ -677,7 +677,7 @@ class ReferenceDetailFragment : Fragment() {
         }
 
         // ② Properties (from parameters)
-        if (ref.parameters.isNotEmpty()) {
+        if (ref.parameters.orEmpty().isNotEmpty()) {
             binding.layoutManual.addView(sectionTitle(nextStep(), "属性与方法"))
             val tvParams = android.widget.TextView(ctx).apply {
                 textSize = 13f
@@ -685,13 +685,13 @@ class ReferenceDetailFragment : Fragment() {
                 setPadding(dp(8), dp(2), 0, dp(2))
                 lineHeight = (textSize * 1.6).toInt()
             }
-            markwon.setMarkdown(tvParams, fixMarkdownBreaks(ref.parameters))
+            markwon.setMarkdown(tvParams, fixMarkdownBreaks(ref.parameters.orEmpty()))
             binding.layoutManual.addView(tvParams)
             binding.layoutManual.addView(divider())
         }
 
         // ③ Usage
-        if (ref.usage.isNotEmpty()) {
+        if (ref.usage.orEmpty().isNotEmpty()) {
             binding.layoutManual.addView(sectionTitle(nextStep(), "基本用法"))
             val tvUsage = android.widget.TextView(ctx).apply {
                 textSize = 13f
@@ -699,7 +699,7 @@ class ReferenceDetailFragment : Fragment() {
                 setPadding(dp(8), dp(2), 0, dp(2))
                 lineHeight = (textSize * 1.6).toInt()
             }
-            markwon.setMarkdown(tvUsage, fixMarkdownBreaks(ref.usage))
+            markwon.setMarkdown(tvUsage, fixMarkdownBreaks(ref.usage.orEmpty()))
             binding.layoutManual.addView(tvUsage)
             binding.layoutManual.addView(divider())
         }
@@ -742,7 +742,7 @@ class ReferenceDetailFragment : Fragment() {
                     val tvName = itemView.findViewById<android.widget.TextView>(R.id.tvRelatedName)
                     val tvDesc = itemView.findViewById<android.widget.TextView>(R.id.tvRelatedDesc)
                     try {
-                        val color = if (item.color.isNotEmpty()) Color.parseColor(item.color) else 0xFFE1A92A.toInt()
+                        val color = if (item.color.orEmpty().isNotEmpty()) Color.parseColor(item.color.orEmpty()) else 0xFFE1A92A.toInt()
                         blockShape.blockColor = color
                     } catch (_: Exception) { blockShape.blockColor = 0xFFE1A92A.toInt() }
                     blockShape.blockShape = item.shape?.ifEmpty { "s" } ?: "s"
@@ -750,7 +750,7 @@ class ReferenceDetailFragment : Fragment() {
                     if (spec.isNotEmpty()) { blockShape.blockSpec = spec; blockShape.blockLabel = "" }
                     else { blockShape.blockSpec = ""; blockShape.blockLabel = item.name ?: "" }
                     tvName.text = item.name ?: ""
-                    tvDesc.text = item.description.ifEmpty { "" }
+                    tvDesc.text = item.description.orEmpty().ifEmpty { "" }
                     itemView.setOnClickListener {
                         val bundle = Bundle().apply { putLong("reference_id", item.id) }
                         findNavController().navigate(R.id.referenceDetailFragment, bundle)
@@ -762,7 +762,7 @@ class ReferenceDetailFragment : Fragment() {
         }
 
         // ⑥ Complete Example
-        if (ref.example.isNotEmpty()) {
+        if (ref.example.orEmpty().isNotEmpty()) {
             binding.layoutManual.addView(sectionTitle(nextStep(), "完整示例"))
             val codeCard = com.google.android.material.card.MaterialCardView(ctx).apply {
                 radius = dp(12).toFloat()
@@ -771,7 +771,7 @@ class ReferenceDetailFragment : Fragment() {
             }
             val hsv = android.widget.HorizontalScrollView(ctx)
             val tvCode = android.widget.TextView(ctx).apply {
-                text = ref.example
+                text = ref.example.orEmpty()
                 textSize = 13f
                 typeface = android.graphics.Typeface.MONOSPACE
                 setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSurface))
@@ -813,7 +813,7 @@ class ReferenceDetailFragment : Fragment() {
             val tvDesc = itemView.findViewById<android.widget.TextView>(R.id.tvRelatedDesc)
 
             try {
-                val color = if (item.color.isNotEmpty()) Color.parseColor(item.color) else 0xFFE1A92A.toInt()
+                val color = if (item.color.orEmpty().isNotEmpty()) Color.parseColor(item.color.orEmpty()) else 0xFFE1A92A.toInt()
                 blockShape.blockColor = color
             } catch (_: Exception) {
                 blockShape.blockColor = 0xFFE1A92A.toInt()
@@ -829,7 +829,7 @@ class ReferenceDetailFragment : Fragment() {
             }
 
             tvName.text = item.name ?: ""
-            tvDesc.text = item.description.ifEmpty { "" }
+            tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
             itemView.setOnClickListener {
                 val bundle = Bundle().apply { putLong("reference_id", item.id) }
@@ -861,7 +861,7 @@ class ReferenceDetailFragment : Fragment() {
                 val tvDesc = itemView.findViewById<android.widget.TextView>(R.id.tvRelatedDesc)
 
                 try {
-                    val color = if (item.color.isNotEmpty()) Color.parseColor(item.color) else 0xFFE1A92A.toInt()
+                    val color = if (item.color.orEmpty().isNotEmpty()) Color.parseColor(item.color.orEmpty()) else 0xFFE1A92A.toInt()
                     blockShape.blockColor = color
                 } catch (_: Exception) {
                     blockShape.blockColor = 0xFFE1A92A.toInt()
@@ -877,7 +877,7 @@ class ReferenceDetailFragment : Fragment() {
                 }
 
                 tvName.text = item.name ?: ""
-                tvDesc.text = item.description.ifEmpty { "" }
+                tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
                 itemView.setOnClickListener {
                     val bundle = Bundle().apply { putLong("reference_id", item.id) }

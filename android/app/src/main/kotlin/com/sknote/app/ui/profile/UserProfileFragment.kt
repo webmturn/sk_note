@@ -122,15 +122,15 @@ class UserProfileFragment : Fragment() {
                         binding.tvHandle.text = "@${user.username}"
                         ApiClient.getTokenManager().updateNickname(user.displayName)
                         binding.chipRole.text = if (user.role == "admin") "管理员" else "普通用户"
-                        if (user.bio.isNotEmpty()) {
-                            binding.tvBio.text = user.bio
+                        if (!user.bio.isNullOrEmpty()) {
+                            binding.tvBio.text = user.bio.orEmpty()
                             binding.tvBio.visibility = View.VISIBLE
                         } else {
                             binding.tvBio.visibility = View.GONE
                         }
-                        if (user.avatarUrl.isNotEmpty()) {
+                        if (!user.avatarUrl.isNullOrEmpty()) {
                             Glide.with(this@UserProfileFragment)
-                                .load(user.avatarUrl)
+                                .load(user.avatarUrl.orEmpty())
                                 .circleCrop()
                                 .placeholder(R.drawable.ic_account_circle)
                                 .into(binding.ivAvatar)

@@ -9,7 +9,7 @@ data class Notification(
     @SerializedName("user_id") val userId: Long,
     val type: String,
     val title: String,
-    val content: String = "",
+    val content: String? = "",
     @SerializedName("related_type") val relatedType: String? = null,
     @SerializedName("related_id") val relatedId: Long? = null,
     @SerializedName("is_read") val isRead: Int = 0,

@@ -87,7 +87,7 @@ object ReferenceData {
     )
 
     fun getShapesForType(type: String): List<String> {
-        return getByType(type).map { it.shape }.distinct().sortedBy {
+        return getByType(type).map { it.shape.orEmpty() }.distinct().sortedBy {
             listOf("s", "d", "r", "b", "c", "e", "f", "h").indexOf(it)
         }
     }
@@ -408,7 +408,7 @@ object ReferenceData {
         val q = query.lowercase()
         return getAllItems().filter {
             it.name.lowercase().contains(q) ||
-            it.description.lowercase().contains(q) ||
+            it.description.orEmpty().lowercase().contains(q) ||
             it.category.lowercase().contains(q) ||
             it.spec.orEmpty().lowercase().contains(q) ||
             it.code.orEmpty().lowercase().contains(q)

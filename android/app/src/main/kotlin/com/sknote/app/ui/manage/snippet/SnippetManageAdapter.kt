@@ -29,7 +29,7 @@ class SnippetManageAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         holder.binding.tvTitle.text = item.title
-        holder.binding.tvMeta.text = "${item.authorName} · ${item.language} · ${item.category} · ❤ ${item.likeCount} · ${TimeUtil.formatRelative(item.createdAt)}"
+        holder.binding.tvMeta.text = "${item.authorName.orEmpty()} · ${item.language.orEmpty()} · ${item.category.orEmpty()} · ❤ ${item.likeCount} · ${TimeUtil.formatRelative(item.createdAt)}"
         holder.binding.btnView.setOnClickListener { onView(item) }
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
     }

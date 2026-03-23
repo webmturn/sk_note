@@ -74,11 +74,11 @@ class ProfileEditFragment : Fragment() {
             binding.tvEmail.text = user.email ?: ""
             binding.etNickname.setText(user.displayName)
             binding.etUsername.setText(user.username)
-            binding.etBio.setText(user.bio)
-            binding.etAvatarUrl.setText(user.avatarUrl)
-            if (user.avatarUrl.isNotEmpty()) {
+            binding.etBio.setText(user.bio.orEmpty())
+            binding.etAvatarUrl.setText(user.avatarUrl.orEmpty())
+            if (!user.avatarUrl.isNullOrEmpty()) {
                 Glide.with(this)
-                    .load(user.avatarUrl)
+                    .load(user.avatarUrl.orEmpty())
                     .circleCrop()
                     .placeholder(R.drawable.ic_account_circle)
                     .into(binding.ivAvatar)

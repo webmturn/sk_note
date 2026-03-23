@@ -731,7 +731,7 @@ class LogicVisualizerFragment : Fragment() {
         addRow("颜色", String.format("#%06X", 0xFFFFFF and block.color))
         if (refItem != null) {
             addRow("类别", refItem.category)
-            if (refItem.description.isNotEmpty()) addRow("说明", refItem.description)
+            if (refItem.description.orEmpty().isNotEmpty()) addRow("说明", refItem.description.orEmpty())
         }
 
         val builder = MaterialAlertDialogBuilder(ctx)
@@ -975,8 +975,8 @@ class LogicVisualizerFragment : Fragment() {
     private fun mapBlockType(type: String, opCode: String): String {
         // Try to find shape from ReferenceData first
         val refItem = ReferenceData.search(opCode).firstOrNull()
-        if (refItem != null && refItem.shape.isNotEmpty()) {
-            return refItem.shape
+        if (refItem != null && refItem.shape.orEmpty().isNotEmpty()) {
+            return refItem.shape.orEmpty()
         }
         // Map Sketchware type characters to BlockShapeView shapes
         return when (type.trim()) {

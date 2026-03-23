@@ -57,7 +57,8 @@ object ApiClient {
             response
         }
 
-        val cacheDir = File(appContext!!.cacheDir, "http_cache")
+        val ctx = appContext ?: throw IllegalStateException("ApiClient not initialized. Call init() first.")
+        val cacheDir = File(ctx.cacheDir, "http_cache")
         val cache = Cache(cacheDir, 10L * 1024 * 1024) // 10MB
 
         val client = OkHttpClient.Builder()

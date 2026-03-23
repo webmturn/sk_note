@@ -32,10 +32,10 @@ class LatestShareAdapter(
     inner class ViewHolder(private val binding: ItemShareCompactBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(share: Share) {
             binding.tvTitle.text = share.title
-            binding.tvCategory.text = ShareCategories.getLabel(share.category)
-            binding.tvFileSize.text = share.fileSize.ifEmpty { "未知大小" }
+            binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
+            binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
             binding.tvDownloads.text = "${share.downloadCount}"
-            binding.tvAuthor.text = share.authorName.ifEmpty { "匿名" }
+            binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
             binding.root.setOnClickListener { onClick(share) }
         }
     }

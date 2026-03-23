@@ -7,8 +7,8 @@ import com.google.gson.annotations.SerializedName
 data class Category(
     val id: Long,
     val name: String,
-    val description: String = "",
-    val icon: String = "",
+    val description: String? = "",
+    val icon: String? = "",
     @SerializedName("sort_order") val sortOrder: Int = 0,
     @SerializedName("parent_id") val parentId: Long? = null
 )

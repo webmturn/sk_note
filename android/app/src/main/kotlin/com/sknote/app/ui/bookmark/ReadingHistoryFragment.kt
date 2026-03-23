@@ -117,12 +117,12 @@ class HistoryAdapter(
     inner class VH(private val binding: ItemArticleSimpleBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: HistoryItem) {
             binding.tvTitle.text = item.title
-            binding.tvSummary.text = item.summary
+            binding.tvSummary.text = item.summary.orEmpty()
             binding.tvAuthor.text = item.authorName ?: ""
             binding.tvViews.text = "${item.viewCount} 阅读"
             binding.tvTimestamp.text = TimeUtil.formatRelative(item.readAt)
             if (!item.categoryName.isNullOrEmpty()) {
-                binding.tvCategory.text = item.categoryName
+                binding.tvCategory.text = item.categoryName.orEmpty()
                 binding.tvCategory.visibility = View.VISIBLE
             } else {
                 binding.tvCategory.visibility = View.GONE

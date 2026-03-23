@@ -140,9 +140,9 @@ class AdminFragment : Fragment() {
                                 binding.tvUsername.text = user.displayName
                                 ApiClient.getTokenManager().updateNickname(user.displayName)
                                 binding.tvRole.text = if (user.role == "admin") "管理员" else "普通用户"
-                                if (user.avatarUrl.isNotEmpty()) {
+                                if (!user.avatarUrl.isNullOrEmpty()) {
                                     Glide.with(this@AdminFragment)
-                                        .load(user.avatarUrl)
+                                        .load(user.avatarUrl.orEmpty())
                                         .circleCrop()
                                         .placeholder(R.drawable.ic_account_circle)
                                         .into(binding.ivAvatar)

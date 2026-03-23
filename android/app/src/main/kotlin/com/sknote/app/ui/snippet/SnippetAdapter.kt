@@ -33,7 +33,7 @@ class SnippetAdapter(
     inner class ViewHolder(private val binding: ItemSnippetBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(snippet: Snippet) {
             binding.tvTitle.text = snippet.title
-            binding.tvDescription.text = snippet.description
+            binding.tvDescription.text = snippet.description.orEmpty()
             binding.tvCodePreview.text = snippet.code.orEmpty().take(200)
             binding.tvLanguage.text = snippet.language.orEmpty().uppercase()
             binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())

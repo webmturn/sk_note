@@ -52,8 +52,8 @@ class ArticleDetailFragment : Fragment() {
         viewModel.article.observe(viewLifecycleOwner) { article ->
             article ?: return@observe
             currentArticleTitle = article.title
-            currentArticleSummary = article.summary
-            currentArticleContent = article.content
+            currentArticleSummary = article.summary.orEmpty()
+            currentArticleContent = article.content.orEmpty()
 
             binding.tvTitle.text = article.title
             binding.tvAuthor.text = article.authorName ?: "Unknown"
@@ -62,14 +62,14 @@ class ArticleDetailFragment : Fragment() {
             binding.toolbar.title = "文章详情"
 
             if (!article.categoryName.isNullOrEmpty()) {
-                binding.tvCategory.text = article.categoryName
+                binding.tvCategory.text = article.categoryName.orEmpty()
                 binding.tvCategory.visibility = View.VISIBLE
             }
 
             binding.tvLikeCount.text = if (article.likeCount > 0) "${article.likeCount}" else "点赞"
             binding.readingProgress.visibility = View.VISIBLE
 
-            markwon.setMarkdown(binding.tvContent, article.content)
+            markwon.setMarkdown(binding.tvContent, article.content.orEmpty())
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
