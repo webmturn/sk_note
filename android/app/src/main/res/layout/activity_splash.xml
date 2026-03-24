@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="@drawable/splash_background">
+    android:background="@color/splash_background">
 
     <ImageView
         android:id="@+id/ivLogo"

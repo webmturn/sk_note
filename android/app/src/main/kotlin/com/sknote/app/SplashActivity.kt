@@ -4,19 +4,29 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
 import android.os.Bundle
-import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sknote.app.databinding.ActivitySplashBinding
+import com.sknote.app.util.AppUpdateManager
+import com.sknote.app.util.StartupWarmupManager
 
 class SplashActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySplashBinding
+    private val launchRunnable = Runnable {
+        startActivity(Intent(this, MainActivity::class.java))
+        finish()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        @Suppress("DEPRECATION")
-        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            splashScreenView.remove()
+        }
         binding = ActivitySplashBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -34,10 +44,15 @@ class SplashActivity : AppCompatActivity() {
         set.interpolator = OvershootInterpolator(1.2f)
         set.start()
 
-        binding.root.postDelayed({
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }, 1800)
+        StartupWarmupManager.prefetchCurrentUser()
+        StartupWarmupManager.prefetchHomeData()
+        AppUpdateManager.prefetchForStartup(this)
+
+        binding.root.postDelayed(launchRunnable, 1800)
+    }
+
+    override fun onDestroy() {
+        binding.root.removeCallbacks(launchRunnable)
+        super.onDestroy()
     }
 }

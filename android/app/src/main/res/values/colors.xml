@@ -18,6 +18,7 @@
     <color name="text_danger">#D32F2F</color>
     <color name="banner_text">#FFFFFFFF</color>
     <color name="banner_text_secondary">#B3FFFFFF</color>
+    <color name="splash_background">#FF1976D2</color>
 
     <color name="surface_card">#FFFFFFFF</color>
     <color name="surface_elevated">#FFF5F5F5</color>

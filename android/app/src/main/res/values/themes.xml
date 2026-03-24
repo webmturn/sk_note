@@ -15,6 +15,20 @@
         <item name="android:windowLightNavigationBar">true</item>
     </style>
 
+    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="Theme.SkNote.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/transparent_splash_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.SkNote.Launch</item>
+    </style>
+
     <style name="Widget.SkNote.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">@color/surface_card</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.SkNote.BottomNavigation.ActiveIndicator</item>
