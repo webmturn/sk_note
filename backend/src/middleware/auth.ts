@@ -80,11 +80,22 @@ export function authMiddleware(required = true) {
   };
 }
 
+// 编辑/管理员权限中间件
+export function editorMiddleware() {
+  return async (c: Context<{ Bindings: Env }>, next: Next) => {
+    const user = c.get('user' as never) as JwtPayload | undefined;
+    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+      return c.json({ error: '权限不足' }, 403);
+    }
+    await next();
+  };
+}
+
 // 管理员权限中间件
 export function adminMiddleware() {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
     const user = c.get('user' as never) as JwtPayload | undefined;
-    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+    if (!user || user.role !== 'admin') {
       return c.json({ error: '权限不足' }, 403);
     }
     await next();
