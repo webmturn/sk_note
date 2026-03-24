@@ -55,6 +55,7 @@ configurations.all {
 dependencies {
     // AndroidX
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
@@ -96,4 +97,6 @@ dependencies {
 
     // DataStore (本地存储 Token)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }

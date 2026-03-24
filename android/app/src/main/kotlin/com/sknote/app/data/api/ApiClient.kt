@@ -7,12 +7,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.Interceptor
-import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import okhttp3.Cache
-import java.io.File
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
@@ -57,12 +55,9 @@ object ApiClient {
             response
         }
 
-        val ctx = appContext ?: throw IllegalStateException("ApiClient not initialized. Call init() first.")
-        val cacheDir = File(ctx.cacheDir, "http_cache")
-        val cache = Cache(cacheDir, 10L * 1024 * 1024) // 10MB
+        appContext ?: throw IllegalStateException("ApiClient not initialized. Call init() first.")
 
         val client = OkHttpClient.Builder()
-            .cache(cache)
             .addInterceptor(authInterceptor)
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)

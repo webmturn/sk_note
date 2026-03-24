@@ -19,6 +19,10 @@ class CreateSnippetFragment : Fragment() {
     private var _binding: FragmentCreateSnippetBinding? = null
     private val binding get() = _binding!!
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     private val categoryKeys get() = SnippetCategories.keys
     private val categoryLabels get() = SnippetCategories.labels
     private var selectedCategory = "general"
@@ -84,6 +88,7 @@ class CreateSnippetFragment : Fragment() {
                         tags = tags
                     )
                 )
+                if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     Snackbar.make(binding.root, "发布成功", Snackbar.LENGTH_SHORT).show()
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_snippets", true)
@@ -92,10 +97,11 @@ class CreateSnippetFragment : Fragment() {
                     Snackbar.make(binding.root, "发布失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                binding.btnSubmit.isEnabled = true
-                binding.btnSubmit.text = "发布代码片段"
+                _binding?.btnSubmit?.isEnabled = true
+                _binding?.btnSubmit?.text = "发布代码片段"
             }
         }
     }

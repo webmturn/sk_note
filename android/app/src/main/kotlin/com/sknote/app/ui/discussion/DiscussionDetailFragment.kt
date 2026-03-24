@@ -21,6 +21,7 @@ import com.sknote.app.data.model.CreateCommentRequest
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.requireLoggedIn
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
 import kotlinx.coroutines.flow.first
@@ -36,6 +37,7 @@ class DiscussionDetailFragment : Fragment() {
     private var discussionId: Long = 0
     private var cachedUserId: Long = -1
     private var cachedRole: String = "user"
+    private var currentDiscussionAuthorId: Long = -1
     private var replyParentCommentId: Long? = null
     private var replyTargetName: String = ""
 
@@ -74,14 +76,8 @@ class DiscussionDetailFragment : Fragment() {
             },
             onLikeClick = { comment ->
                 viewLifecycleOwner.lifecycleScope.launch {
-                    val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                    if (isLoggedIn) {
-                        viewModel.likeComment(discussionId, comment.id)
-                    } else {
-                        Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                            .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                            .show()
-                    }
+                    if (!requireLoggedIn(binding.root)) return@launch
+                    viewModel.likeComment(discussionId, comment.id)
                 }
             },
             onAvatarClick = { comment ->
@@ -105,11 +101,7 @@ class DiscussionDetailFragment : Fragment() {
 
         binding.btnSend.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                if (!isLoggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                        .show()
+                if (!requireLoggedIn(binding.root)) {
                     return@launch
                 }
                 val content = binding.etReply.text.toString().trim()
@@ -126,18 +118,46 @@ class DiscussionDetailFragment : Fragment() {
             clearReplyTarget()
         }
 
-        // 从本地缓存读取用户信息（同步，不依赖网络）
         viewLifecycleOwner.lifecycleScope.launch {
             cachedUserId = ApiClient.getTokenManager().getUserId().first() ?: -1
             cachedRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
 
             observeData()
             viewModel.loadDiscussion(discussionId)
+            refreshCurrentUserState()
+        }
+    }
+
+    private suspend fun refreshCurrentUserState() {
+        val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+        if (!isLoggedIn) {
+            cachedUserId = -1
+            cachedRole = "user"
+            if (_binding != null) {
+                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
+            }
+            return
+        }
+
+        try {
+            val response = ApiClient.getService().getMe()
+            if (!response.isSuccessful) return
+            val user = response.body()?.get("user") ?: return
+            cachedUserId = user.id
+            cachedRole = user.role
+            ApiClient.getTokenManager().updateNickname(user.displayName)
+            ApiClient.getTokenManager().updateUserRole(user.role)
+            if (_binding != null && currentDiscussionAuthorId > 0) {
+                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible =
+                    currentDiscussionAuthorId == cachedUserId || cachedRole == "admin"
+            }
+        } catch (_: Exception) {
         }
     }
 
     private fun observeData() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
+            currentDiscussionAuthorId = discussion.authorId
             binding.tvTitle.text = discussion.title
             binding.tvAuthor.text = discussion.authorName ?: "匿名"
             val navigateToAuthor = View.OnClickListener {

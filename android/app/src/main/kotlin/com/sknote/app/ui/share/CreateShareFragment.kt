@@ -21,6 +21,10 @@ class CreateShareFragment : Fragment() {
     private var _binding: FragmentCreateShareBinding? = null
     private val binding get() = _binding!!
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     private val categoryKeys get() = ShareCategories.keys
     private val categoryLabels get() = ShareCategories.labels
     private var selectedCategory = "general"
@@ -37,6 +41,7 @@ class CreateShareFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            if (!isFragmentUsable()) return@launch
             if (!isLoggedIn) {
                 Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
                     .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
@@ -87,6 +92,7 @@ class CreateShareFragment : Fragment() {
                         fileSize = fileSize
                     )
                 )
+                if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     Snackbar.make(binding.root, "分享成功", Snackbar.LENGTH_SHORT).show()
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_shares", true)
@@ -95,10 +101,11 @@ class CreateShareFragment : Fragment() {
                     Snackbar.make(binding.root, "发布失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                binding.btnSubmit.isEnabled = true
-                binding.btnSubmit.text = "发布分享"
+                _binding?.btnSubmit?.isEnabled = true
+                _binding?.btnSubmit?.text = "发布分享"
             }
         }
     }

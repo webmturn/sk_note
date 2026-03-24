@@ -106,8 +106,8 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
         shapeView.blockShape = item.shape?.ifEmpty { "s" } ?: "s"
         val spec = item.spec ?: ""
         if (spec.isNotEmpty()) { shapeView.blockSpec = spec; shapeView.blockLabel = "" }
-        else { shapeView.blockSpec = ""; shapeView.blockLabel = item.name ?: "" }
-        nameView.text = item.name ?: ""
+        else { shapeView.blockSpec = ""; shapeView.blockLabel = item.name }
+        nameView.text = item.name
     }
 
     private fun buildComparison(view: View) {

@@ -58,13 +58,16 @@ class ProfileEditViewModel : ViewModel() {
                     ApiClient.getTokenManager().updateNickname(nickname)
                     loadProfile()
                 } else {
-                    val code = response.code()
-                    val errorMsg = when (code) {
-                        409 -> "账号已被占用"
-                        400 -> "输入不符合要求"
-                        else -> "更新失败: $code"
+                    val serverMsg = try {
+                        org.json.JSONObject(response.errorBody()?.string() ?: "").optString("error", "")
+                    } catch (_: Exception) { "" }
+                    _error.value = serverMsg.ifEmpty {
+                        when (response.code()) {
+                            409 -> "账号已被占用"
+                            400 -> "输入不符合要求"
+                            else -> "更新失败: ${response.code()}"
+                        }
                     }
-                    _error.value = errorMsg
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)
@@ -84,11 +87,15 @@ class ProfileEditViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     _message.value = "密码修改成功"
                 } else {
-                    val errorBody = response.errorBody()?.string()
-                    _error.value = when (response.code()) {
-                        401 -> "旧密码错误"
-                        400 -> "新密码至少6位"
-                        else -> "修改失败: ${response.code()}"
+                    val serverMsg = try {
+                        org.json.JSONObject(response.errorBody()?.string() ?: "").optString("error", "")
+                    } catch (_: Exception) { "" }
+                    _error.value = serverMsg.ifEmpty {
+                        when (response.code()) {
+                            401 -> "旧密码错误"
+                            400 -> "新密码至少6位"
+                            else -> "修改失败: ${response.code()}"
+                        }
                     }
                 }
             } catch (e: Exception) {

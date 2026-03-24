@@ -296,7 +296,7 @@ class ReferenceDetailFragment : Fragment() {
                     binding.blockShapeDetail.blockLabel = ""
                 } else {
                     binding.blockShapeDetail.blockSpec = ""
-                    binding.blockShapeDetail.blockLabel = ref.name ?: ""
+                    binding.blockShapeDetail.blockLabel = ref.name
                 }
             } else {
                 binding.blockShapeDetail.visibility = View.GONE
@@ -748,8 +748,8 @@ class ReferenceDetailFragment : Fragment() {
                     blockShape.blockShape = item.shape?.ifEmpty { "s" } ?: "s"
                     val spec = item.spec ?: ""
                     if (spec.isNotEmpty()) { blockShape.blockSpec = spec; blockShape.blockLabel = "" }
-                    else { blockShape.blockSpec = ""; blockShape.blockLabel = item.name ?: "" }
-                    tvName.text = item.name ?: ""
+                    else { blockShape.blockSpec = ""; blockShape.blockLabel = item.name }
+                    tvName.text = item.name
                     tvDesc.text = item.description.orEmpty().ifEmpty { "" }
                     itemView.setOnClickListener {
                         val bundle = Bundle().apply { putLong("reference_id", item.id) }
@@ -825,10 +825,10 @@ class ReferenceDetailFragment : Fragment() {
                 blockShape.blockLabel = ""
             } else {
                 blockShape.blockSpec = ""
-                blockShape.blockLabel = item.name ?: ""
+                blockShape.blockLabel = item.name
             }
 
-            tvName.text = item.name ?: ""
+            tvName.text = item.name
             tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
             itemView.setOnClickListener {
@@ -840,9 +840,8 @@ class ReferenceDetailFragment : Fragment() {
     }
 
     private fun loadRelatedItems(ref: ReferenceItem) {
-        val ids = ref.relatedIds
-        val related = if (!ids.isNullOrEmpty()) {
-            ReferenceData.getByIds(ids)
+        val related = if (!ref.relatedIds.isNullOrEmpty()) {
+            ReferenceData.getByIds(ref.relatedIds)
         } else {
             ReferenceData.getByTypeAndCategory(ref.type, ref.category)
                 .filter { it.id != ref.id }
@@ -873,10 +872,10 @@ class ReferenceDetailFragment : Fragment() {
                     blockShape.blockLabel = ""
                 } else {
                     blockShape.blockSpec = ""
-                    blockShape.blockLabel = item.name ?: ""
+                    blockShape.blockLabel = item.name
                 }
 
-                tvName.text = item.name ?: ""
+                tvName.text = item.name
                 tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
                 itemView.setOnClickListener {

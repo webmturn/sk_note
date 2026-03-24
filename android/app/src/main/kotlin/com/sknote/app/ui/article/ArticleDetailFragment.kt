@@ -14,6 +14,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentArticleDetailBinding
+import com.sknote.app.util.requireLoggedIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.TimeUtil
@@ -30,6 +31,8 @@ class ArticleDetailFragment : Fragment() {
     private var currentArticleSummary: String = ""
     private var currentArticleContent: String = ""
     private var isBookmarked = false
+    private var isLiking = false
+    private var isBookmarking = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleDetailBinding.inflate(inflater, container, false)
@@ -92,14 +95,13 @@ class ArticleDetailFragment : Fragment() {
 
         binding.btnLike.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                if (!isLoggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                        .show()
+                if (isLiking) return@launch
+                if (!requireLoggedIn(binding.root)) {
                     return@launch
                 }
                 try {
+                    isLiking = true
+                    binding.btnLike.isEnabled = false
                     val response = ApiClient.getService().likeArticle(articleId)
                     if (response.isSuccessful) {
                         val liked = response.body()?.liked ?: false
@@ -108,6 +110,9 @@ class ArticleDetailFragment : Fragment() {
                     }
                 } catch (e: Exception) {
                     Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                } finally {
+                    isLiking = false
+                    _binding?.btnLike?.isEnabled = true
                 }
             }
         }
@@ -143,14 +148,13 @@ class ArticleDetailFragment : Fragment() {
 
         binding.btnBookmark.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                if (!isLoggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                        .show()
+                if (isBookmarking) return@launch
+                if (!requireLoggedIn(binding.root)) {
                     return@launch
                 }
                 try {
+                    isBookmarking = true
+                    binding.btnBookmark.isEnabled = false
                     val response = ApiClient.getService().toggleBookmark(articleId)
                     if (response.isSuccessful) {
                         isBookmarked = response.body()?.bookmarked ?: false
@@ -159,6 +163,9 @@ class ArticleDetailFragment : Fragment() {
                     }
                 } catch (_: Exception) {
                     Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                } finally {
+                    isBookmarking = false
+                    _binding?.btnBookmark?.isEnabled = true
                 }
             }
         }

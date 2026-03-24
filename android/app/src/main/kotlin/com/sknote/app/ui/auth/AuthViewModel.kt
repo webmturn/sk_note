@@ -37,7 +37,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         _authResult.value = AuthResponse(null, null, "登录失败：服务端响应异常")
                     }
                 } else {
-                    _authResult.value = AuthResponse(null, null, "登录失败")
+                    val msg = parseErrorBody(response.errorBody()?.string()) ?: "登录失败"
+                    _authResult.value = AuthResponse(null, null, msg)
                 }
             } catch (e: Exception) {
                 _authResult.value = AuthResponse(null, null, ErrorUtil.friendlyMessage(e))
@@ -61,7 +62,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         _authResult.value = AuthResponse(null, null, "注册失败：服务端响应异常")
                     }
                 } else {
-                    _authResult.value = AuthResponse(null, null, "注册失败")
+                    val msg = parseErrorBody(response.errorBody()?.string()) ?: "注册失败"
+                    _authResult.value = AuthResponse(null, null, msg)
                 }
             } catch (e: Exception) {
                 _authResult.value = AuthResponse(null, null, ErrorUtil.friendlyMessage(e))
@@ -69,6 +71,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 _isLoading.value = false
             }
         }
+    }
+
+    private fun parseErrorBody(body: String?): String? {
+        if (body.isNullOrBlank()) return null
+        return try {
+            org.json.JSONObject(body).optString("error", "").ifEmpty { null }
+        } catch (_: Exception) { null }
     }
 
     fun logout() {

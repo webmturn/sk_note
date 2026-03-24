@@ -18,6 +18,11 @@
 # SM.MS Uploader
 -keep class com.sknote.app.data.api.SmmsUploader** { *; }
 
+# AndroidX Security (EncryptedSharedPreferences)
+-keep class androidx.security.crypto.** { *; }
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
+
 # Glide
 -keep public class * implements com.bumptech.glide.module.GlideModule
 -keep class * extends com.bumptech.glide.module.AppGlideModule { <init>(...); }

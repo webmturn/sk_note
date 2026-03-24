@@ -21,6 +21,10 @@ class CacheManageFragment : Fragment() {
     private var _binding: FragmentCacheManageBinding? = null
     private val binding get() = _binding!!
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCacheManageBinding.inflate(inflater, container, false)
         return binding.root
@@ -36,24 +40,18 @@ class CacheManageFragment : Fragment() {
         binding.rowClearImageCache.setOnClickListener {
             showClearDialog("图片缓存") {
                 clearImageCache()
-                refreshCacheSizes()
-                Snackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
             }
         }
 
         binding.rowClearNetworkCache.setOnClickListener {
             showClearDialog("网络缓存") {
                 clearNetworkCache()
-                refreshCacheSizes()
-                Snackbar.make(binding.root, "网络缓存已清除", Snackbar.LENGTH_SHORT).show()
             }
         }
 
         binding.rowClearAllCache.setOnClickListener {
             showClearDialog("全部缓存") {
-                requireContext().cacheDir.deleteRecursively()
-                refreshCacheSizes()
-                Snackbar.make(binding.root, "全部缓存已清除", Snackbar.LENGTH_SHORT).show()
+                clearAllCache()
             }
         }
     }
@@ -98,14 +96,36 @@ class CacheManageFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 Glide.get(ctx).clearDiskCache()
+                IMAGE_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
             }
-            IMAGE_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
+            if (!isFragmentUsable()) return@launch
             refreshCacheSizes()
+            Snackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
 
     private fun clearNetworkCache() {
-        NETWORK_CACHE_DIRS.forEach { File(requireContext().cacheDir, it).deleteRecursively() }
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                NETWORK_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
+            }
+            if (!isFragmentUsable()) return@launch
+            refreshCacheSizes()
+            Snackbar.make(binding.root, "网络缓存已清除", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun clearAllCache() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                ctx.cacheDir.deleteRecursively()
+            }
+            if (!isFragmentUsable()) return@launch
+            refreshCacheSizes()
+            Snackbar.make(binding.root, "全部缓存已清除", Snackbar.LENGTH_SHORT).show()
+        }
     }
 
     private fun getDirSize(dir: File): Long {

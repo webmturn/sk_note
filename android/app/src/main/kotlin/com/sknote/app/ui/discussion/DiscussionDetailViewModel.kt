@@ -33,6 +33,7 @@ class DiscussionDetailViewModel : ViewModel() {
 
     private val _isSending = MutableLiveData<Boolean>(false)
     val isSending: LiveData<Boolean> = _isSending
+    private val likingCommentIds = mutableSetOf<Long>()
 
     fun onCommentSentHandled() { _commentSent.value = null }
     fun onDeletedHandled() { _deleted.value = null }
@@ -110,6 +111,7 @@ class DiscussionDetailViewModel : ViewModel() {
     }
 
     fun likeComment(discussionId: Long, commentId: Long) {
+        if (!likingCommentIds.add(commentId)) return
         viewModelScope.launch {
             try {
                 val response = ApiClient.getService().likeComment(discussionId, commentId)
@@ -120,6 +122,8 @@ class DiscussionDetailViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)
+            } finally {
+                likingCommentIds.remove(commentId)
             }
         }
     }

@@ -25,6 +25,10 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null && activity != null
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
         return binding.root
@@ -47,6 +51,7 @@ class SettingsFragment : Fragment() {
         // Theme mode -> navigate to theme selection page
         viewLifecycleOwner.lifecycleScope.launch {
             val mode = ApiClient.getTokenManager().getThemeMode().first()
+            if (!isFragmentUsable()) return@launch
             binding.tvThemeMode.text = SkNoteApp.themeModeLabel(mode)
         }
         binding.rowThemeMode.setOnClickListener {
@@ -79,7 +84,7 @@ class SettingsFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             val result = AppUpdateManager.checkForUpdate()
-            if (_binding == null) return@launch
+            if (!isFragmentUsable()) return@launch
 
             binding.progressUpdate.visibility = View.GONE
 
@@ -105,6 +110,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showUpdateDialog(info: AppUpdateManager.UpdateInfo) {
+        if (!isFragmentUsable()) return
         val sizeText = if (info.fileSize > 0) "\n安装包大小：${AppUpdateManager.formatFileSize(info.fileSize)}" else ""
         val changelogText = if (info.changelog.isNotBlank()) "\n\n更新内容：\n${info.changelog}" else ""
 
@@ -125,6 +131,7 @@ class SettingsFragment : Fragment() {
 
         builder.setNegativeButton("以后再说", null)
         builder.setNeutralButton("跳过此版本") { _, _ ->
+            if (!isFragmentUsable()) return@setNeutralButton
             AppUpdateManager.skipVersion(requireContext(), info.versionName)
             binding.tvUpdateStatus.text = "已跳过 v${info.versionName}"
         }
@@ -137,7 +144,7 @@ class SettingsFragment : Fragment() {
 
         AppUpdateManager.startDownload(requireContext(), info.downloadUrl, info.versionName) { file ->
             activity?.runOnUiThread {
-                if (_binding == null) return@runOnUiThread
+                if (!isFragmentUsable()) return@runOnUiThread
                 binding.progressUpdate.visibility = View.GONE
                 if (file != null && file.exists()) {
                     binding.tvUpdateStatus.text = "下载完成，正在安装..."
@@ -176,9 +183,12 @@ class SettingsFragment : Fragment() {
         // Refresh theme label and cache size when returning from sub-pages
         viewLifecycleOwner.lifecycleScope.launch {
             val mode = ApiClient.getTokenManager().getThemeMode().first()
+            if (!isFragmentUsable()) return@launch
             binding.tvThemeMode.text = SkNoteApp.themeModeLabel(mode)
         }
-        binding.tvCacheSize.text = getCacheSize()
+        if (isFragmentUsable()) {
+            binding.tvCacheSize.text = getCacheSize()
+        }
     }
 
     override fun onDestroyView() {

@@ -38,5 +38,7 @@ data class UpdateArticleRequest(
     val title: String? = null,
     val content: String? = null,
     val summary: String? = null,
-    @SerializedName("category_id") val categoryId: Long? = null
+    @SerializedName("category_id") val categoryId: Long? = null,
+    @SerializedName("sort_order") val sortOrder: Int? = null,
+    @SerializedName("is_published") val isPublished: Int? = null
 )

@@ -54,6 +54,24 @@ class ArticleManageFragment : Fragment() {
     }
 
     private fun observeData() {
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+
+        navHandle?.getLiveData<Boolean>(ArticleEditorFragment.RESULT_REFRESH_KEY)
+            ?.observe(viewLifecycleOwner) { refresh ->
+                if (refresh == true) {
+                    viewModel.loadArticles(force = true)
+                    navHandle.remove<Boolean>(ArticleEditorFragment.RESULT_REFRESH_KEY)
+                }
+            }
+
+        navHandle?.getLiveData<String>(ArticleEditorFragment.RESULT_MESSAGE_KEY)
+            ?.observe(viewLifecycleOwner) { msg ->
+                if (!msg.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>(ArticleEditorFragment.RESULT_MESSAGE_KEY)
+                }
+            }
+
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
             adapter.submitList(articles)
             binding.tvEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE

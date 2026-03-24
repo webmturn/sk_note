@@ -75,6 +75,11 @@ object ReferenceData {
     fun getByIds(ids: List<Int>): List<ReferenceItem> =
         ids.mapNotNull { id -> getAllItems().find { it.id == id.toLong() } }
 
+    fun getByIdString(idsStr: String): List<ReferenceItem> {
+        val ids = idsStr.split(",").mapNotNull { it.trim().toIntOrNull() }
+        return getByIds(ids)
+    }
+
     val shapeLabels: Map<String, String> = mapOf(
         "s" to "语句",
         "d" to "数值",

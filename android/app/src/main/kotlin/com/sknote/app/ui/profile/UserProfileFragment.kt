@@ -28,6 +28,10 @@ class UserProfileFragment : Fragment() {
     private var currentTab = 0
     private var isInitialLoad = true
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentUserProfileBinding.inflate(inflater, container, false)
         return binding.root
@@ -104,6 +108,8 @@ class UserProfileFragment : Fragment() {
             val role = tokenManager.getUserRole().first() ?: "user"
             myId = tokenManager.getUserId().first() ?: 0
 
+            if (!isFragmentUsable()) return@launch
+
             binding.tvUsername.text = nickname.ifEmpty { username }
             binding.tvHandle.text = "@$username"
             binding.chipRole.text = if (role == "admin") "管理员" else "普通用户"
@@ -112,12 +118,12 @@ class UserProfileFragment : Fragment() {
             loadContent()
 
             // 各请求独立launch，互不阻塞
-            launch {
+            launch loadMe@{
                 try {
                     val response = ApiClient.getService().getMe()
-                    if (_binding == null) return@launch
+                    if (_binding == null) return@loadMe
                     if (response.isSuccessful) {
-                        val user = response.body()?.get("user") ?: return@launch
+                        val user = response.body()?.get("user") ?: return@loadMe
                         binding.tvUsername.text = user.displayName
                         binding.tvHandle.text = "@${user.username}"
                         ApiClient.getTokenManager().updateNickname(user.displayName)
@@ -143,12 +149,12 @@ class UserProfileFragment : Fragment() {
                 } catch (_: Exception) { }
             }
 
-            if (myId > 0) launch {
+            if (myId > 0) launch loadStats@{
                 try {
                     val response = ApiClient.getService().getPublicProfile(myId)
-                    if (_binding == null) return@launch
+                    if (_binding == null) return@loadStats
                     if (response.isSuccessful) {
-                        val pStats = response.body()?.stats ?: return@launch
+                        val pStats = response.body()?.stats ?: return@loadStats
                         binding.tvFollowingCount.text = "${pStats.following}"
                         binding.tvFollowersCount.text = "${pStats.followers}"
                         binding.tvDiscussionCount.text = "${pStats.discussions}"
@@ -197,7 +203,7 @@ class UserProfileFragment : Fragment() {
                     .setEnterAnim(R.anim.slide_in_right).setExitAnim(R.anim.slide_out_left)
                     .setPopEnterAnim(R.anim.slide_in_left).setPopExitAnim(R.anim.slide_out_right).build()
                 binding.rvContent.adapter = ProfileContentAdapter<Discussion>(list, ProfileContentAdapter.TYPE_DISCUSSION) { item ->
-                    val bundle = Bundle().apply { putLong("discussion_id", (item as Discussion).id) }
+                    val bundle = Bundle().apply { putLong("discussion_id", item.id) }
                     findNavController().navigate(R.id.discussionDetailFragment, bundle, navOptions)
                 }
             }
@@ -224,7 +230,7 @@ class UserProfileFragment : Fragment() {
                     .setEnterAnim(R.anim.slide_in_right).setExitAnim(R.anim.slide_out_left)
                     .setPopEnterAnim(R.anim.slide_in_left).setPopExitAnim(R.anim.slide_out_right).build()
                 binding.rvContent.adapter = ProfileContentAdapter<Snippet>(list, ProfileContentAdapter.TYPE_SNIPPET) { item ->
-                    val bundle = Bundle().apply { putLong("snippet_id", (item as Snippet).id) }
+                    val bundle = Bundle().apply { putLong("snippet_id", item.id) }
                     findNavController().navigate(R.id.snippetDetailFragment, bundle, navOptions)
                 }
             }
@@ -251,7 +257,7 @@ class UserProfileFragment : Fragment() {
                     .setEnterAnim(R.anim.slide_in_right).setExitAnim(R.anim.slide_out_left)
                     .setPopEnterAnim(R.anim.slide_in_left).setPopExitAnim(R.anim.slide_out_right).build()
                 binding.rvContent.adapter = ProfileContentAdapter<Share>(list, ProfileContentAdapter.TYPE_SHARE) { item ->
-                    val bundle = Bundle().apply { putLong("share_id", (item as Share).id) }
+                    val bundle = Bundle().apply { putLong("share_id", item.id) }
                     findNavController().navigate(R.id.shareDetailFragment, bundle, navOptions)
                 }
             }

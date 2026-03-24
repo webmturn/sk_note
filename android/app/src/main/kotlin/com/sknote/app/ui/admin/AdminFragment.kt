@@ -139,7 +139,11 @@ class AdminFragment : Fragment() {
                             if (user != null) {
                                 binding.tvUsername.text = user.displayName
                                 ApiClient.getTokenManager().updateNickname(user.displayName)
+                                ApiClient.getTokenManager().updateUserRole(user.role)
                                 binding.tvRole.text = if (user.role == "admin") "管理员" else "普通用户"
+                                val latestIsAdmin = user.role == "admin"
+                                animateVisibility(binding.tvAdminHeader, latestIsAdmin)
+                                animateVisibility(binding.cardAdminGroup, latestIsAdmin)
                                 if (!user.avatarUrl.isNullOrEmpty()) {
                                     Glide.with(this@AdminFragment)
                                         .load(user.avatarUrl.orEmpty())

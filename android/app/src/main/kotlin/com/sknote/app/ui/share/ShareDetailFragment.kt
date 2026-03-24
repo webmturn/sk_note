@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -18,6 +19,7 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Share
 import com.sknote.app.databinding.FragmentShareDetailBinding
+import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.LanzouParser
 import com.sknote.app.util.TimeUtil
 import kotlinx.coroutines.flow.first
@@ -31,6 +33,11 @@ class ShareDetailFragment : Fragment() {
     private var currentShare: Share? = null
     private var currentUserId: Long = -1
     private var currentUserRole: String = "user"
+    private var isLiking = false
+
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null && activity != null
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentShareDetailBinding.inflate(inflater, container, false)
@@ -91,20 +98,23 @@ class ShareDetailFragment : Fragment() {
                 currentUserId = ApiClient.getTokenManager().getUserId().first() ?: -1
                 currentUserRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
             }
+            if (!isFragmentUsable()) return@launch
             loadShare()
+            refreshCurrentUserState()
         }
 
         binding.btnLike.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                if (!isLoggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                        .show()
+                if (isLiking) return@launch
+                if (!isFragmentUsable()) return@launch
+                if (!requireLoggedIn(binding.root)) {
                     return@launch
                 }
                 try {
+                    isLiking = true
+                    binding.btnLike.isEnabled = false
                     val response = ApiClient.getService().likeShare(shareId)
+                    if (_binding == null) return@launch
                     if (response.isSuccessful) {
                         val body = response.body()
                         val liked = body?.liked ?: false
@@ -112,7 +122,11 @@ class ShareDetailFragment : Fragment() {
                         loadShare(showProgress = false)
                     }
                 } catch (e: Exception) {
+                    if (_binding == null) return@launch
                     Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                } finally {
+                    isLiking = false
+                    _binding?.btnLike?.isEnabled = true
                 }
             }
         }
@@ -127,6 +141,7 @@ class ShareDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getShare(shareId)
+                if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val share = response.body()?.share ?: return@launch
                     currentShare = share
@@ -157,10 +172,38 @@ class ShareDetailFragment : Fragment() {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                if (_binding == null) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                binding.progressBar.visibility = View.GONE
+                _binding?.progressBar?.visibility = View.GONE
             }
+        }
+    }
+
+    private suspend fun refreshCurrentUserState() {
+        val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+        if (!isLoggedIn) {
+            currentUserId = -1
+            currentUserRole = "user"
+            if (_binding != null) {
+                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
+            }
+            return
+        }
+
+        try {
+            val response = ApiClient.getService().getMe()
+            if (!response.isSuccessful) return
+            val user = response.body()?.get("user") ?: return
+            currentUserId = user.id
+            currentUserRole = user.role
+            ApiClient.getTokenManager().updateNickname(user.displayName)
+            ApiClient.getTokenManager().updateUserRole(user.role)
+            if (_binding != null) {
+                val canDelete = currentShare?.authorId == currentUserId || currentUserRole == "admin"
+                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
+            }
+        } catch (_: Exception) {
         }
     }
 
@@ -176,6 +219,7 @@ class ShareDetailFragment : Fragment() {
                     try { ApiClient.getService().recordShareDownload(shareId) } catch (_: Exception) {}
 
                     val result = LanzouParser.parse(share.downloadUrl.orEmpty(), share.downloadPwd.orEmpty())
+                    if (!isFragmentUsable()) return@launch
                     if (result.success) {
                         // 用浏览器打开真实下载链接
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.downloadUrl))
@@ -185,10 +229,11 @@ class ShareDetailFragment : Fragment() {
                         showDownloadFallbackDialog(share, result.error)
                     }
                 } catch (e: Exception) {
+                    if (!isFragmentUsable()) return@launch
                     showDownloadFallbackDialog(share, e.message ?: "未知错误")
                 } finally {
-                    binding.btnDownload.isEnabled = true
-                    binding.btnDownload.text = "下载"
+                    _binding?.btnDownload?.isEnabled = true
+                    _binding?.btnDownload?.text = "下载"
                 }
             }
         } else {
@@ -202,15 +247,18 @@ class ShareDetailFragment : Fragment() {
     }
 
     private fun showDownloadFallbackDialog(share: Share, error: String) {
+        if (!isFragmentUsable()) return
         val pwd = if (!share.downloadPwd.isNullOrEmpty()) "\n密码：${share.downloadPwd}" else ""
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("自动解析失败")
             .setMessage("原因：$error\n\n你可以手动在浏览器中打开链接下载。$pwd")
             .setPositiveButton("在浏览器中打开") { _, _ ->
+                if (!isFragmentUsable()) return@setPositiveButton
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl.orEmpty()))
                 startActivity(intent)
             }
             .setNeutralButton("复制链接") { _, _ ->
+                if (!isFragmentUsable()) return@setNeutralButton
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val text = if (!share.downloadPwd.isNullOrEmpty()) {
                     "${share.downloadUrl.orEmpty()} 密码：${share.downloadPwd}"
@@ -248,6 +296,7 @@ class ShareDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().deleteShare(shareId)
+                if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     Snackbar.make(binding.root, "已删除", Snackbar.LENGTH_SHORT).show()
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_shares", true)
@@ -256,6 +305,7 @@ class ShareDetailFragment : Fragment() {
                     Snackbar.make(binding.root, "删除失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
         }

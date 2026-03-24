@@ -1,35 +1,68 @@
 package com.sknote.app.data.local
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.core.longPreferencesKey
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "sk_note_prefs")
 
 class TokenManager(private val context: Context) {
+
+    private val appContext = context.applicationContext
+
+    private val authPrefs: SharedPreferences by lazy {
+        val masterKey = MasterKey.Builder(appContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            appContext,
+            AUTH_PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    private val tokenFlow = MutableStateFlow<String?>(null)
+    private val usernameFlow = MutableStateFlow<String?>(null)
+    private val nicknameFlow = MutableStateFlow<String?>(null)
+    private val userRoleFlow = MutableStateFlow<String?>(null)
+    private val userIdFlow = MutableStateFlow<Long?>(null)
 
     @Volatile
     var cachedToken: String? = null
         private set
 
     suspend fun preloadToken() {
-        cachedToken = context.dataStore.data.map { it[TOKEN_KEY] }.first()
+        migrateLegacyAuthIfNeeded()
+        refreshAuthCache()
     }
 
     companion object {
-        private val TOKEN_KEY = stringPreferencesKey("auth_token")
-        private val USERNAME_KEY = stringPreferencesKey("username")
-        private val NICKNAME_KEY = stringPreferencesKey("nickname")
-        private val USER_ROLE_KEY = stringPreferencesKey("user_role")
-        private val USER_ID_KEY = longPreferencesKey("user_id")
+        private const val AUTH_PREFS_NAME = "sk_note_secure_auth"
+        private const val TOKEN_KEY = "auth_token"
+        private const val USERNAME_KEY = "username"
+        private const val NICKNAME_KEY = "nickname"
+        private const val USER_ROLE_KEY = "user_role"
+        private const val USER_ID_KEY = "user_id"
+
+        private val LEGACY_TOKEN_KEY = stringPreferencesKey("auth_token")
+        private val LEGACY_USERNAME_KEY = stringPreferencesKey("username")
+        private val LEGACY_NICKNAME_KEY = stringPreferencesKey("nickname")
+        private val LEGACY_USER_ROLE_KEY = stringPreferencesKey("user_role")
+        private val LEGACY_USER_ID_KEY = longPreferencesKey("user_id")
         private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
 
@@ -38,71 +71,146 @@ class TokenManager(private val context: Context) {
         const val THEME_DARK = "dark"
     }
 
-    fun getToken(): Flow<String?> = context.dataStore.data.map { it[TOKEN_KEY] }
-    fun getUsername(): Flow<String?> = context.dataStore.data.map { it[USERNAME_KEY] }
-    fun getNickname(): Flow<String?> = context.dataStore.data.map { it[NICKNAME_KEY] }
-    fun getUserRole(): Flow<String?> = context.dataStore.data.map { it[USER_ROLE_KEY] }
-    fun getUserId(): Flow<Long?> = context.dataStore.data.map { it[USER_ID_KEY] }
+    private fun refreshAuthCache() {
+        val token = authPrefs.getString(TOKEN_KEY, null)
+        val username = authPrefs.getString(USERNAME_KEY, null)
+        val nickname = authPrefs.getString(NICKNAME_KEY, null)
+        val role = authPrefs.getString(USER_ROLE_KEY, null)
+        val userId = if (authPrefs.contains(USER_ID_KEY)) authPrefs.getLong(USER_ID_KEY, 0L).takeIf { it > 0L } else null
+
+        cachedToken = token
+        tokenFlow.value = token
+        usernameFlow.value = username
+        nicknameFlow.value = nickname
+        userRoleFlow.value = role
+        userIdFlow.value = userId
+    }
+
+    private suspend fun migrateLegacyAuthIfNeeded() {
+        if (authPrefs.contains(TOKEN_KEY)) return
+
+        val legacy = appContext.dataStore.data.first()
+        val token = legacy[LEGACY_TOKEN_KEY]
+        if (token.isNullOrEmpty()) return
+
+        authPrefs.edit()
+            .putString(TOKEN_KEY, token)
+            .putString(USERNAME_KEY, legacy[LEGACY_USERNAME_KEY])
+            .putString(NICKNAME_KEY, legacy[LEGACY_NICKNAME_KEY])
+            .putString(USER_ROLE_KEY, legacy[LEGACY_USER_ROLE_KEY])
+            .apply {
+                val userId = legacy[LEGACY_USER_ID_KEY]
+                if (userId != null && userId > 0L) {
+                    putLong(USER_ID_KEY, userId)
+                } else {
+                    remove(USER_ID_KEY)
+                }
+            }
+            .apply()
+
+        appContext.dataStore.edit { prefs ->
+            prefs.remove(LEGACY_TOKEN_KEY)
+            prefs.remove(LEGACY_USERNAME_KEY)
+            prefs.remove(LEGACY_NICKNAME_KEY)
+            prefs.remove(LEGACY_USER_ROLE_KEY)
+            prefs.remove(LEGACY_USER_ID_KEY)
+        }
+    }
+
+    fun getToken(): Flow<String?> = tokenFlow
+    fun getUsername(): Flow<String?> = usernameFlow
+    fun getNickname(): Flow<String?> = nicknameFlow
+    fun getUserRole(): Flow<String?> = userRoleFlow
+    fun getUserId(): Flow<Long?> = userIdFlow
 
     suspend fun saveAuth(token: String, username: String, role: String, userId: Long = 0L, nickname: String = "") {
-        cachedToken = token
-        context.dataStore.edit { prefs ->
-            prefs[TOKEN_KEY] = token
-            prefs[USERNAME_KEY] = username
-            prefs[NICKNAME_KEY] = nickname.ifEmpty { username }
-            prefs[USER_ROLE_KEY] = role
-            if (userId > 0) prefs[USER_ID_KEY] = userId
-        }
+        authPrefs.edit()
+            .putString(TOKEN_KEY, token)
+            .putString(USERNAME_KEY, username)
+            .putString(NICKNAME_KEY, nickname.ifEmpty { username })
+            .putString(USER_ROLE_KEY, role)
+            .apply {
+                if (userId > 0L) {
+                    putLong(USER_ID_KEY, userId)
+                } else {
+                    remove(USER_ID_KEY)
+                }
+            }
+            .apply()
+        refreshAuthCache()
     }
 
     suspend fun updateUsername(username: String) {
-        context.dataStore.edit { prefs ->
-            prefs[USERNAME_KEY] = username
-        }
+        authPrefs.edit().putString(USERNAME_KEY, username).apply()
+        refreshAuthCache()
     }
 
     suspend fun updateNickname(nickname: String) {
-        context.dataStore.edit { prefs ->
-            prefs[NICKNAME_KEY] = nickname
-        }
+        authPrefs.edit().putString(NICKNAME_KEY, nickname).apply()
+        refreshAuthCache()
+    }
+
+    suspend fun updateUserRole(role: String) {
+        authPrefs.edit().putString(USER_ROLE_KEY, role).apply()
+        refreshAuthCache()
+    }
+
+    suspend fun updateCurrentUser(userId: Long, username: String, nickname: String, role: String) {
+        authPrefs.edit()
+            .putString(USERNAME_KEY, username)
+            .putString(NICKNAME_KEY, nickname.ifEmpty { username })
+            .putString(USER_ROLE_KEY, role)
+            .apply {
+                if (userId > 0L) {
+                    putLong(USER_ID_KEY, userId)
+                } else {
+                    remove(USER_ID_KEY)
+                }
+            }
+            .apply()
+        refreshAuthCache()
     }
 
     suspend fun clearAuth() {
-        cachedToken = null
-        context.dataStore.edit { prefs ->
-            prefs.remove(TOKEN_KEY)
-            prefs.remove(USERNAME_KEY)
-            prefs.remove(NICKNAME_KEY)
-            prefs.remove(USER_ROLE_KEY)
-            prefs.remove(USER_ID_KEY)
+        authPrefs.edit()
+            .remove(TOKEN_KEY)
+            .remove(USERNAME_KEY)
+            .remove(NICKNAME_KEY)
+            .remove(USER_ROLE_KEY)
+            .remove(USER_ID_KEY)
+            .apply()
+        appContext.dataStore.edit { prefs ->
+            prefs.remove(LEGACY_TOKEN_KEY)
+            prefs.remove(LEGACY_USERNAME_KEY)
+            prefs.remove(LEGACY_NICKNAME_KEY)
+            prefs.remove(LEGACY_USER_ROLE_KEY)
+            prefs.remove(LEGACY_USER_ID_KEY)
         }
+        refreshAuthCache()
     }
 
-    fun isLoggedIn(): Flow<Boolean> = context.dataStore.data.map {
-        !it[TOKEN_KEY].isNullOrEmpty()
-    }
+    fun isLoggedIn(): Flow<Boolean> = tokenFlow.map { !it.isNullOrEmpty() }
 
-    fun getThemeMode(): Flow<String> = context.dataStore.data.map { prefs ->
+    fun getThemeMode(): Flow<String> = appContext.dataStore.data.map { prefs ->
         prefs[THEME_MODE_KEY] ?: run {
-            // migrate from old boolean dark_mode key
             val oldDark = prefs[DARK_MODE_KEY] ?: false
             if (oldDark) THEME_DARK else THEME_SYSTEM
         }
     }
 
     suspend fun setThemeMode(mode: String) {
-        context.dataStore.edit { prefs ->
+        appContext.dataStore.edit { prefs ->
             prefs[THEME_MODE_KEY] = mode
             prefs.remove(DARK_MODE_KEY)
         }
     }
 
-    fun getDarkMode(): Flow<Boolean> = context.dataStore.data.map {
+    fun getDarkMode(): Flow<Boolean> = appContext.dataStore.data.map {
         it[DARK_MODE_KEY] ?: false
     }
 
     suspend fun setDarkMode(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
+        appContext.dataStore.edit { prefs ->
             prefs[DARK_MODE_KEY] = enabled
         }
     }

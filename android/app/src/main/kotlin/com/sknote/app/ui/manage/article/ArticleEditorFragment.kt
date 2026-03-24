@@ -29,6 +29,11 @@ class ArticleEditorFragment : Fragment() {
     private var categories: List<Category> = emptyList()
     private var selectedCategoryId: Long? = null
 
+    companion object {
+        const val RESULT_REFRESH_KEY = "refresh_articles"
+        const val RESULT_MESSAGE_KEY = "article_manage_message"
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleEditorBinding.inflate(inflater, container, false)
         return binding.root
@@ -95,7 +100,11 @@ class ArticleEditorFragment : Fragment() {
         viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
                 viewModel.onSaveHandled()
-                Snackbar.make(binding.root, "保存成功", Snackbar.LENGTH_SHORT).show()
+                findNavController().previousBackStackEntry?.savedStateHandle?.set(RESULT_REFRESH_KEY, true)
+                findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                    RESULT_MESSAGE_KEY,
+                    if (articleId == null) "文章创建成功" else "文章更新成功"
+                )
                 findNavController().navigateUp()
             }
         }

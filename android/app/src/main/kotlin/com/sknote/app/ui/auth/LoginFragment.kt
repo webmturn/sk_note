@@ -20,6 +20,10 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: AuthViewModel by viewModels()
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
         return binding.root
@@ -71,6 +75,7 @@ class LoginFragment : Fragment() {
     private fun checkLoginState() {
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            if (!isFragmentUsable()) return@launch
             if (isLoggedIn) {
                 findNavController().popBackStack()
             } else {

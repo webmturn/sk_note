@@ -21,6 +21,10 @@ class HomeFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: HomeViewModel by viewModels()
 
+    private fun isFragmentUsable(): Boolean {
+        return _binding != null && isAdded && context != null
+    }
+
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var articleAdapter: ArticleAdapter
     private lateinit var latestShareAdapter: LatestShareAdapter
@@ -147,6 +151,7 @@ class HomeFragment : Fragment() {
             if (isLoggedIn) {
                 val nickname = ApiClient.getTokenManager().getNickname().first() ?: ""
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
+                if (!isFragmentUsable()) return@launch
                 val displayName = nickname.ifEmpty { username }
                 val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
                 val greeting = when {

@@ -15,6 +15,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSnippetDetailBinding
+import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.SyntaxHighlightUtil
 import com.sknote.app.util.TimeUtil
 import kotlinx.coroutines.flow.first
@@ -26,6 +27,7 @@ class SnippetDetailFragment : Fragment() {
     private val binding get() = _binding!!
     private var snippetId: Long = 0
     private var codeText: String = ""
+    private var isLiking = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSnippetDetailBinding.inflate(inflater, container, false)
@@ -43,15 +45,15 @@ class SnippetDetailFragment : Fragment() {
 
         binding.btnLike.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-                if (!isLoggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(com.sknote.app.R.id.loginFragment) }
-                        .show()
+                if (isLiking) return@launch
+                if (!requireLoggedIn(binding.root)) {
                     return@launch
                 }
                 try {
+                    isLiking = true
+                    binding.btnLike.isEnabled = false
                     val response = ApiClient.getService().likeSnippet(snippetId)
+                    if (_binding == null) return@launch
                     if (response.isSuccessful) {
                         val body = response.body()
                         val liked = body?.liked ?: false
@@ -59,7 +61,11 @@ class SnippetDetailFragment : Fragment() {
                         loadSnippet(showProgress = false)
                     }
                 } catch (e: Exception) {
+                    if (_binding == null) return@launch
                     Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                } finally {
+                    isLiking = false
+                    _binding?.btnLike?.isEnabled = true
                 }
             }
         }
@@ -72,6 +78,7 @@ class SnippetDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getSnippet(snippetId)
+                if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val snippet = response.body()?.snippet ?: return@launch
                     codeText = snippet.code.orEmpty()
@@ -98,9 +105,10 @@ class SnippetDetailFragment : Fragment() {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
+                if (_binding == null) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                binding.progressBar.visibility = View.GONE
+                _binding?.progressBar?.visibility = View.GONE
             }
         }
     }

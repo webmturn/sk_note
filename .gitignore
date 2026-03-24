@@ -33,3 +33,4 @@ ai_conversations/
 .env
 .env.*
 *.pem
+backend/deploy_now.py
