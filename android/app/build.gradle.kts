@@ -11,8 +11,8 @@ android {
         applicationId = "com.sknote.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.2.2"
 
         // TODO: 部署后替换为你的 Cloudflare Workers URL
         buildConfigField("String", "API_BASE_URL", "\"https://api.wsqh.cn\"")
