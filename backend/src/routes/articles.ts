@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
-import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { authMiddleware, editorMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 
 export const articleRoutes = new Hono<{ Bindings: Env }>();
@@ -92,7 +92,7 @@ articleRoutes.get('/:id', async (c) => {
 });
 
 // 创建文章（需要编辑/管理员权限）
-articleRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
+articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
   const user = c.get('user' as never) as { id: number };
   const { title, content, summary, category_id, sort_order } = await c.req.json();
 
@@ -100,10 +100,22 @@ articleRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
     return c.json({ error: '标题、内容和分类不能为空' }, 400);
   }
 
+  const categoryIdNum = Number.parseInt(String(category_id), 10);
+  if (!Number.isInteger(categoryIdNum) || categoryIdNum <= 0) {
+    return c.json({ error: '无效的分类ID' }, 400);
+  }
+
+  const category = await c.env.DB.prepare(
+    'SELECT id FROM categories WHERE id = ?'
+  ).bind(categoryIdNum).first();
+  if (!category) {
+    return c.json({ error: '分类不存在' }, 404);
+  }
+
   const result = await c.env.DB.prepare(`
     INSERT INTO articles (title, content, summary, category_id, author_id, sort_order)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(title, content, summary || '', category_id, user.id, sort_order || 0).run();
+  `).bind(title, content, summary || '', categoryIdNum, user.id, sort_order || 0).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
@@ -111,14 +123,37 @@ articleRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
 });
 
 // 更新文章
-articleRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
+articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   const id = c.req.param('id');
   const { title, content, summary, category_id, sort_order, is_published } = await c.req.json();
+
+  if (!title || !content || !category_id) {
+    return c.json({ error: '标题、内容和分类不能为空' }, 400);
+  }
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM articles WHERE id = ?'
+  ).bind(id).first();
+  if (!existing) {
+    return c.json({ error: '文章不存在' }, 404);
+  }
+
+  const categoryIdNum = Number.parseInt(String(category_id), 10);
+  if (!Number.isInteger(categoryIdNum) || categoryIdNum <= 0) {
+    return c.json({ error: '无效的分类ID' }, 400);
+  }
+
+  const category = await c.env.DB.prepare(
+    'SELECT id FROM categories WHERE id = ?'
+  ).bind(categoryIdNum).first();
+  if (!category) {
+    return c.json({ error: '分类不存在' }, 404);
+  }
 
   await c.env.DB.prepare(`
     UPDATE articles SET title = ?, content = ?, summary = ?, category_id = ?,
     sort_order = ?, is_published = ?, updated_at = datetime('now') WHERE id = ?
-  `).bind(title, content, summary || '', category_id, sort_order || 0, is_published ?? 1, id).run();
+  `).bind(title, content, summary || '', categoryIdNum, sort_order || 0, is_published ?? 1, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
@@ -126,9 +161,12 @@ articleRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
 });
 
 // 删除文章
-articleRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => {
+articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('DELETE FROM articles WHERE id = ?').bind(id).run();
+  const result = await c.env.DB.prepare('DELETE FROM articles WHERE id = ?').bind(id).run();
+  if (result.meta.changes === 0) {
+    return c.json({ error: '文章不存在' }, 404);
+  }
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
   return c.json({ message: '删除成功' });
@@ -139,27 +177,26 @@ articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user' as never) as { id: number };
 
-  try {
-    await c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
-    ).bind(user.id, 'article', id).run();
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      'SELECT id FROM articles WHERE id = ?'
+    ).bind(id),
+    c.env.DB.prepare(
+      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM articles WHERE id = ?)'
+    ).bind(user.id, 'article', id, id),
+    c.env.DB.prepare(
+      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM articles WHERE id = ?) AND changes() = 0'
+    ).bind(user.id, 'article', id, id),
+    c.env.DB.prepare(
+      'UPDATE articles SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
+    ).bind(id),
+  ]);
 
-    await c.env.DB.prepare(
-      'UPDATE articles SET like_count = like_count + 1 WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '点赞成功', liked: true });
-  } catch (e: any) {
-    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
-    // UNIQUE 约束冲突 = 已点赞，执行取消
-    await c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
-    ).bind(user.id, 'article', id).run();
-
-    await c.env.DB.prepare(
-      'UPDATE articles SET like_count = MAX(0, like_count - 1) WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '已取消点赞', liked: false });
+  const exists = (results[0]?.results?.length || 0) > 0;
+  if (!exists) {
+    return c.json({ error: '文章不存在' }, 404);
   }
+
+  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
+  return c.json({ message: inserted ? '点赞成功' : '已取消点赞', liked: inserted });
 });

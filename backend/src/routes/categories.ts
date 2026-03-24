@@ -30,9 +30,26 @@ categoryRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
 
   if (!name) return c.json({ error: '分类名称不能为空' }, 400);
 
+  let parentIdForInsert: number | null = null;
+  if (parent_id !== undefined && parent_id !== null && String(parent_id).trim() !== '') {
+    const parentIdNum = Number.parseInt(String(parent_id), 10);
+    if (!Number.isInteger(parentIdNum) || parentIdNum <= 0) {
+      return c.json({ error: '无效的父分类ID' }, 400);
+    }
+
+    const parent = await c.env.DB.prepare(
+      'SELECT id FROM categories WHERE id = ?'
+    ).bind(parentIdNum).first();
+    if (!parent) {
+      return c.json({ error: '父分类不存在' }, 404);
+    }
+
+    parentIdForInsert = parentIdNum;
+  }
+
   const result = await c.env.DB.prepare(
     'INSERT INTO categories (name, description, icon, sort_order, parent_id) VALUES (?, ?, ?, ?, ?)'
-  ).bind(name, description || '', icon || '', sort_order || 0, parent_id || null).run();
+  ).bind(name, description || '', icon || '', sort_order || 0, parentIdForInsert).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/home`]));
@@ -44,9 +61,39 @@ categoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
   const { name, description, icon, sort_order, parent_id } = await c.req.json();
 
+  if (!name) return c.json({ error: '分类名称不能为空' }, 400);
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM categories WHERE id = ?'
+  ).bind(id).first();
+  if (!existing) {
+    return c.json({ error: '分类不存在' }, 404);
+  }
+
+  let parentIdForUpdate: number | null = null;
+  if (parent_id !== undefined && parent_id !== null && String(parent_id).trim() !== '') {
+    const parentIdNum = Number.parseInt(String(parent_id), 10);
+    const idNum = Number.parseInt(String(id), 10);
+    if (!Number.isInteger(parentIdNum) || parentIdNum <= 0) {
+      return c.json({ error: '无效的父分类ID' }, 400);
+    }
+    if (Number.isInteger(idNum) && parentIdNum === idNum) {
+      return c.json({ error: '父分类不能是自己' }, 400);
+    }
+
+    const parent = await c.env.DB.prepare(
+      'SELECT id FROM categories WHERE id = ?'
+    ).bind(parentIdNum).first();
+    if (!parent) {
+      return c.json({ error: '父分类不存在' }, 404);
+    }
+
+    parentIdForUpdate = parentIdNum;
+  }
+
   await c.env.DB.prepare(
     'UPDATE categories SET name = ?, description = ?, icon = ?, sort_order = ?, parent_id = ? WHERE id = ?'
-  ).bind(name, description || '', icon || '', sort_order || 0, parent_id || null, id).run();
+  ).bind(name, description || '', icon || '', sort_order || 0, parentIdForUpdate, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]));
@@ -57,6 +104,13 @@ categoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
 categoryRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
 
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM categories WHERE id = ?'
+  ).bind(id).first();
+  if (!existing) {
+    return c.json({ error: '分类不存在' }, 404);
+  }
+
   const articleCount = await c.env.DB.prepare(
     'SELECT COUNT(*) as count FROM articles WHERE category_id = ?'
   ).bind(id).first<{ count: number }>();
@@ -65,7 +119,10 @@ categoryRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => 
     return c.json({ error: `该分类下还有 ${articleCount.count} 篇文章，请先移动或删除这些文章` }, 400);
   }
 
-  await c.env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+  const result = await c.env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+  if (result.meta.changes === 0) {
+    return c.json({ error: '分类不存在' }, 404);
+  }
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]));
   return c.json({ message: '删除成功' });

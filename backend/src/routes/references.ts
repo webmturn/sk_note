@@ -69,6 +69,10 @@ referenceRoutes.get('/:id', edgeCache(600), async (c) => {
 referenceRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
   const { name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids } = await c.req.json();
   if (!name || !type) return c.json({ error: '名称和类型不能为空' }, 400);
+  const validTypes = ['block', 'component', 'widget', 'event', 'variable'];
+  if (!validTypes.includes(type)) {
+    return c.json({ error: `无效的类型，可选: ${validTypes.join(', ')}` }, 400);
+  }
 
   const result = await c.env.DB.prepare(`
     INSERT INTO references_doc (name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids)
@@ -85,6 +89,19 @@ referenceRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
   const { name, category, type, description, usage, parameters, example, icon, color, shape, spec, code, related_ids } = await c.req.json();
 
+  if (!name || !type) return c.json({ error: '名称和类型不能为空' }, 400);
+  const validTypes = ['block', 'component', 'widget', 'event', 'variable'];
+  if (!validTypes.includes(type)) {
+    return c.json({ error: `无效的类型，可选: ${validTypes.join(', ')}` }, 400);
+  }
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM references_doc WHERE id = ?'
+  ).bind(id).first();
+  if (!existing) {
+    return c.json({ error: '参考条目不存在' }, 404);
+  }
+
   await c.env.DB.prepare(`
     UPDATE references_doc SET name = ?, category = ?, type = ?, description = ?,
     usage = ?, parameters = ?, example = ?, icon = ?, color = ?, shape = ?, spec = ?, code = ?,
@@ -100,7 +117,10 @@ referenceRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
 // 删除参考条目（管理员）
 referenceRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('DELETE FROM references_doc WHERE id = ?').bind(id).run();
+  const result = await c.env.DB.prepare('DELETE FROM references_doc WHERE id = ?').bind(id).run();
+  if (result.meta.changes === 0) {
+    return c.json({ error: '参考条目不存在' }, 404);
+  }
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]));
   return c.json({ message: '删除成功' });
