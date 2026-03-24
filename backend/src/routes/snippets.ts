@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
-import { authMiddleware, adminMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 
 export const snippetRoutes = new Hono<{ Bindings: Env }>();
 
@@ -64,22 +65,23 @@ snippetRoutes.get('/categories', edgeCache(300), async (c) => {
 // 获取单个代码片段
 snippetRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const snippet = await c.env.DB.prepare('SELECT * FROM snippets WHERE id = ?').bind(id).first();
+  if (!snippet) return c.json({ error: '未找到' }, 404);
+
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
     || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
   const viewResult = await c.env.DB.prepare(
-    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)' 
   ).bind(viewerKey, 'snippet', id).run();
   if (viewResult.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE snippets SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
   }
-  const snippet = await c.env.DB.prepare('SELECT * FROM snippets WHERE id = ?').bind(id).first();
-  if (!snippet) return c.json({ error: '未找到' }, 404);
   return c.json({ snippet });
 });
 
 // 创建代码片段（需要登录）
-snippetRoutes.post('/', authMiddleware(), async (c) => {
+snippetRoutes.post('/', authMiddleware(), rateLimit({ key: 'snippet:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const user = c.get('user' as never) as { id: number; username: string };
   const { title, description, code, language, category, tags } = await c.req.json();
 
@@ -131,27 +133,26 @@ snippetRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user' as never) as { id: number };
 
-  try {
-    await c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
-    ).bind(user.id, 'snippet', id).run();
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      'SELECT id FROM snippets WHERE id = ?'
+    ).bind(id),
+    c.env.DB.prepare(
+      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM snippets WHERE id = ?)'
+    ).bind(user.id, 'snippet', id, id),
+    c.env.DB.prepare(
+      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM snippets WHERE id = ?) AND changes() = 0'
+    ).bind(user.id, 'snippet', id, id),
+    c.env.DB.prepare(
+      'UPDATE snippets SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
+    ).bind(id),
+  ]);
 
-    await c.env.DB.prepare(
-      'UPDATE snippets SET like_count = like_count + 1 WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '已点赞', liked: true });
-  } catch (e: any) {
-    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
-    // UNIQUE 约束冲突 = 已点赞，执行取消
-    await c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
-    ).bind(user.id, 'snippet', id).run();
-
-    await c.env.DB.prepare(
-      'UPDATE snippets SET like_count = MAX(0, like_count - 1) WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '取消点赞', liked: false });
+  const exists = (results[0]?.results?.length || 0) > 0;
+  if (!exists) {
+    return c.json({ error: '代码片段不存在' }, 404);
   }
+
+  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
+  return c.json({ message: inserted ? '已点赞' : '取消点赞', liked: inserted });
 });

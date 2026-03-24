@@ -60,6 +60,17 @@ notificationRoutes.get('/unread-count', authMiddleware(), async (c) => {
   return c.json({ count: result?.count || 0 });
 });
 
+// 标记所有通知为已读（必须在 /:id/read 之前注册，否则 "read-all" 会匹配为 :id）
+notificationRoutes.put('/read-all', authMiddleware(), async (c) => {
+  const user = c.get('user' as never) as { id: number };
+
+  await c.env.DB.prepare(
+    'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0'
+  ).bind(user.id).run();
+
+  return c.json({ message: '全部已读' });
+});
+
 // 标记单条通知为已读
 notificationRoutes.put('/:id/read', authMiddleware(), async (c) => {
   const id = c.req.param('id');
@@ -72,18 +83,7 @@ notificationRoutes.put('/:id/read', authMiddleware(), async (c) => {
   return c.json({ message: '已标记为已读' });
 });
 
-// 标记所有通知为已读
-notificationRoutes.put('/read-all', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
-
-  await c.env.DB.prepare(
-    'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0'
-  ).bind(user.id).run();
-
-  return c.json({ message: '全部已读' });
-});
-
-// 删除全部通知
+// 删除全部通知（必须在 /:id 之前注册，否则 "all" 会匹配为 :id）
 notificationRoutes.delete('/all', authMiddleware(), async (c) => {
   const user = c.get('user' as never) as { id: number };
   await c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(user.id).run();

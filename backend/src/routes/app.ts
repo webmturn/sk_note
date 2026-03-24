@@ -80,7 +80,10 @@ appRoutes.get('/releases', authMiddleware(), adminMiddleware(), async (c) => {
 // 管理员：删除版本
 appRoutes.delete('/releases/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('DELETE FROM app_releases WHERE id = ?').bind(id).run();
+  const result = await c.env.DB.prepare('DELETE FROM app_releases WHERE id = ?').bind(id).run();
+  if (result.meta.changes === 0) {
+    return c.json({ error: '版本不存在' }, 404);
+  }
   return c.json({ message: '已删除' });
 });
 

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import { authMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 
 export const shareRoutes = new Hono<{ Bindings: Env }>();
 
@@ -64,23 +65,27 @@ shareRoutes.get('/categories', edgeCache(300), async (c) => {
 // 获取单个分享详情
 shareRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ?').bind(id).first();
+  if (!share) return c.json({ error: '未找到' }, 404);
+
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
     || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
   const viewResult = await c.env.DB.prepare(
-    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)' 
   ).bind(viewerKey, 'share', id).run();
   if (viewResult.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE shares SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
   }
-  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ?').bind(id).first();
-  if (!share) return c.json({ error: '未找到' }, 404);
   return c.json({ share });
 });
 
 // 记录下载次数（IP 去重）
 shareRoutes.post('/:id/download', async (c) => {
   const id = c.req.param('id');
+  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ?').bind(id).first();
+  if (!share) return c.json({ error: '分享不存在' }, 404);
+
   const viewerKey = 'dl:' + (
     c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
@@ -96,7 +101,7 @@ shareRoutes.post('/:id/download', async (c) => {
 });
 
 // 创建分享（需要登录）
-shareRoutes.post('/', authMiddleware(), async (c) => {
+shareRoutes.post('/', authMiddleware(), rateLimit({ key: 'share:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const user = c.get('user' as never) as { id: number; username: string };
   const { title, description, category, download_url, download_pwd, file_size } = await c.req.json();
 
@@ -148,27 +153,26 @@ shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user' as never) as { id: number };
 
-  try {
-    await c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
-    ).bind(user.id, 'share', id).run();
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      'SELECT id FROM shares WHERE id = ?'
+    ).bind(id),
+    c.env.DB.prepare(
+      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM shares WHERE id = ?)'
+    ).bind(user.id, 'share', id, id),
+    c.env.DB.prepare(
+      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM shares WHERE id = ?) AND changes() = 0'
+    ).bind(user.id, 'share', id, id),
+    c.env.DB.prepare(
+      'UPDATE shares SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
+    ).bind(id),
+  ]);
 
-    await c.env.DB.prepare(
-      'UPDATE shares SET like_count = like_count + 1 WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '已点赞', liked: true });
-  } catch (e: any) {
-    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
-    // UNIQUE 约束冲突 = 已点赞，执行取消
-    await c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
-    ).bind(user.id, 'share', id).run();
-
-    await c.env.DB.prepare(
-      'UPDATE shares SET like_count = MAX(0, like_count - 1) WHERE id = ?'
-    ).bind(id).run();
-
-    return c.json({ message: '取消点赞', liked: false });
+  const exists = (results[0]?.results?.length || 0) > 0;
+  if (!exists) {
+    return c.json({ error: '分享不存在' }, 404);
   }
+
+  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
+  return c.json({ message: inserted ? '已点赞' : '取消点赞', liked: inserted });
 });

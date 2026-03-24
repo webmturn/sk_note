@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth';
+import { rateLimit } from '../middleware/rateLimit';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
@@ -35,7 +36,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
 }
 
 // 注册
-authRoutes.post('/register', async (c) => {
+authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, windowMs: 30 * 60 * 1000 }), async (c) => {
   try {
     const { username, email, password, nickname } = await c.req.json();
 
@@ -76,7 +77,7 @@ authRoutes.post('/register', async (c) => {
 });
 
 // 登录
-authRoutes.post('/login', async (c) => {
+authRoutes.post('/login', rateLimit({ key: 'auth:login', maxRequests: 10, windowMs: 15 * 60 * 1000 }), async (c) => {
   try {
     const { username, password } = await c.req.json();
 
@@ -92,12 +93,12 @@ authRoutes.post('/login', async (c) => {
     }>();
 
     if (!user) {
-      return c.json({ error: '用户不存在' }, 404);
+      return c.json({ error: '用户名或密码错误' }, 401);
     }
 
     const passwordMatch = await verifyPassword(password, user.password_hash);
     if (!passwordMatch) {
-      return c.json({ error: '密码错误' }, 401);
+      return c.json({ error: '用户名或密码错误' }, 401);
     }
 
     // 自动升级旧格式（无盐）为新格式（加盐）

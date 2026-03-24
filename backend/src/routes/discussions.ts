@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env } from '../index';
 import { authMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { createNotification } from './notifications';
 
 export const discussionRoutes = new Hono<{ Bindings: Env }>();
@@ -108,7 +109,7 @@ discussionRoutes.get('/:id', async (c) => {
 });
 
 // 发起讨论（需要登录）
-discussionRoutes.post('/', authMiddleware(), async (c) => {
+discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const user = c.get('user' as never) as { id: number };
   const { title, content, category, article_id } = await c.req.json();
 
@@ -139,10 +140,27 @@ discussionRoutes.post('/', authMiddleware(), async (c) => {
     resolvedCategory = defaultCategory.slug;
   }
 
+  let articleIdForInsert: number | null = null;
+  if (article_id !== undefined && article_id !== null && String(article_id).trim() !== '') {
+    const articleIdNum = Number.parseInt(String(article_id), 10);
+    if (!Number.isInteger(articleIdNum) || articleIdNum <= 0) {
+      return c.json({ error: '无效的关联文章ID' }, 400);
+    }
+
+    const article = await c.env.DB.prepare(
+      'SELECT id FROM articles WHERE id = ?'
+    ).bind(articleIdNum).first();
+    if (!article) {
+      return c.json({ error: '关联文章不存在' }, 404);
+    }
+
+    articleIdForInsert = articleIdNum;
+  }
+
   const result = await c.env.DB.prepare(`
     INSERT INTO discussions (title, content, author_id, category, article_id)
     VALUES (?, ?, ?, ?, ?)
-  `).bind(title, content, user.id, resolvedCategory, article_id || null).run();
+  `).bind(title, content, user.id, resolvedCategory, articleIdForInsert).run();
 
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]));
@@ -150,7 +168,7 @@ discussionRoutes.post('/', authMiddleware(), async (c) => {
 });
 
 // 回复讨论
-discussionRoutes.post('/:id/comments', authMiddleware(), async (c) => {
+discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discussion:comment', maxRequests: 20, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const discussionId = c.req.param('id');
   const discussionIdNum = Number.parseInt(discussionId, 10);
   const user = c.get('user' as never) as { id: number };
@@ -160,6 +178,13 @@ discussionRoutes.post('/:id/comments', authMiddleware(), async (c) => {
     return c.json({ error: '无效的讨论ID' }, 400);
   }
   if (!content) return c.json({ error: '回复内容不能为空' }, 400);
+
+  const discussionExists = await c.env.DB.prepare(
+    'SELECT id FROM discussions WHERE id = ?'
+  ).bind(discussionIdNum).first();
+  if (!discussionExists) {
+    return c.json({ error: '讨论不存在' }, 404);
+  }
 
   let parentIdForInsert: number | null = null;
   let parentCommentAuthorId: number | null = null;
@@ -297,28 +322,27 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
 discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (c) => {
   const commentId = c.req.param('commentId');
   const user = c.get('user' as never) as { id: number };
+  
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      'SELECT id FROM comments WHERE id = ?'
+    ).bind(commentId),
+    c.env.DB.prepare(
+      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM comments WHERE id = ?)'
+    ).bind(user.id, 'comment', commentId, commentId),
+    c.env.DB.prepare(
+      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM comments WHERE id = ?) AND changes() = 0'
+    ).bind(user.id, 'comment', commentId, commentId),
+    c.env.DB.prepare(
+      'UPDATE comments SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
+    ).bind(commentId),
+  ]);
 
-  try {
-    await c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
-    ).bind(user.id, 'comment', commentId).run();
-
-    await c.env.DB.prepare(
-      'UPDATE comments SET like_count = like_count + 1 WHERE id = ?'
-    ).bind(commentId).run();
-
-    return c.json({ message: '点赞成功', liked: true });
-  } catch (e: any) {
-    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
-    // UNIQUE 约束冲突 = 已点赞，执行取消
-    await c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
-    ).bind(user.id, 'comment', commentId).run();
-
-    await c.env.DB.prepare(
-      'UPDATE comments SET like_count = MAX(0, like_count - 1) WHERE id = ?'
-    ).bind(commentId).run();
-
-    return c.json({ message: '已取消点赞', liked: false });
+  const exists = (results[0]?.results?.length || 0) > 0;
+  if (!exists) {
+    return c.json({ error: '评论不存在' }, 404);
   }
+
+  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
+  return c.json({ message: inserted ? '点赞成功' : '已取消点赞', liked: inserted });
 });
