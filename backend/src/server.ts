@@ -46,6 +46,17 @@ app.use('*', async (c, next) => {
 // 挂载所有路由
 setupApp(app);
 
+// 定期清理 content_views 过期记录（保留最近 30 天）
+async function cleanupContentViews() {
+  try {
+    await db.prepare("DELETE FROM content_views WHERE viewed_at < datetime('now', '-30 days')").run();
+  } catch (e) {
+    console.error('content_views 清理失败:', e);
+  }
+}
+cleanupContentViews();
+setInterval(cleanupContentViews, 24 * 60 * 60 * 1000).unref(); // 每 24 小时清理一次
+
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
   console.log(`🚀 Server running on http://0.0.0.0:${info.port}`);
 });
