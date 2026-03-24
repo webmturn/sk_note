@@ -10,7 +10,11 @@ import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
 import com.sknote.app.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +23,14 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 
 object AppUpdateManager {
+
+    private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Volatile
+    private var startupPrefetchJob: Deferred<UpdateResult>? = null
+
+    @Volatile
+    private var startupPrefetchResult: UpdateResult? = null
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -38,6 +50,38 @@ object AppUpdateManager {
         val info: UpdateInfo? = null,
         val error: String? = null
     )
+
+    @Synchronized
+    fun prefetchForStartup(context: Context) {
+        if (!shouldAutoCheck(context)) return
+        if (startupPrefetchResult != null) return
+        val job = startupPrefetchJob
+        if (job != null && job.isActive) return
+        val appContext = context.applicationContext
+        startupPrefetchJob = startupScope.async {
+            val result = checkForUpdate()
+            if (result.error == null) {
+                markChecked(appContext)
+            }
+            startupPrefetchResult = result
+            result
+        }
+    }
+
+    suspend fun consumeStartupPrefetch(context: Context): UpdateResult? {
+        if (startupPrefetchResult == null && startupPrefetchJob == null) {
+            prefetchForStartup(context)
+        }
+
+        val result = startupPrefetchResult ?: startupPrefetchJob?.await() ?: return null
+
+        synchronized(this) {
+            startupPrefetchResult = null
+            startupPrefetchJob = null
+        }
+
+        return result
+    }
 
     suspend fun checkForUpdate(): UpdateResult = withContext(Dispatchers.IO) {
         try {
@@ -118,17 +162,22 @@ object AppUpdateManager {
     }
 
     fun startDownload(context: Context, url: String, versionName: String, onComplete: (File?) -> Unit): Long {
+        val appContext = context.applicationContext
         val fileName = "SkNote_v${versionName}.apk"
-        val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        val downloadDir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            ?: run {
+                onComplete(null)
+                return -1L
+            }
         val targetFile = File(downloadDir, fileName)
         if (targetFile.exists()) targetFile.delete()
 
-        val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val dm = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val request = DownloadManager.Request(Uri.parse(url))
             .setTitle("SkNote 更新")
             .setDescription("正在下载 v$versionName ...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, fileName)
+            .setDestinationInExternalFilesDir(appContext, Environment.DIRECTORY_DOWNLOADS, fileName)
             .setMimeType("application/vnd.android.package-archive")
 
         val downloadId = dm.enqueue(request)
@@ -137,17 +186,25 @@ object AppUpdateManager {
             override fun onReceive(ctx: Context, intent: Intent) {
                 val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
                 if (id == downloadId) {
-                    ctx.unregisterReceiver(this)
+                    try {
+                        appContext.unregisterReceiver(this)
+                    } catch (_: IllegalArgumentException) {
+                    }
                     val query = DownloadManager.Query().setFilterById(downloadId)
                     val cursor = dm.query(query)
-                    if (cursor != null && cursor.moveToFirst()) {
-                        val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            onComplete(targetFile)
-                        } else {
-                            onComplete(null)
+                    if (cursor != null) {
+                        cursor.use {
+                            if (it.moveToFirst()) {
+                                val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                                    onComplete(targetFile)
+                                } else {
+                                    onComplete(null)
+                                }
+                            } else {
+                                onComplete(null)
+                            }
                         }
-                        cursor.close()
                     } else {
                         onComplete(null)
                     }
@@ -156,13 +213,13 @@ object AppUpdateManager {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(
+            appContext.registerReceiver(
                 receiver,
                 IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-                Context.RECEIVER_EXPORTED
+                Context.RECEIVER_NOT_EXPORTED
             )
         } else {
-            context.registerReceiver(
+            appContext.registerReceiver(
                 receiver,
                 IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
             )

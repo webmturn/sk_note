@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
@@ -17,6 +18,8 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private var pendingStartupUpdateInfo: AppUpdateManager.UpdateInfo? = null
+    private var hasShownStartupUpdate = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,23 +48,41 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null) {
-            autoCheckUpdate()
+            observeStartupUpdate()
         }
     }
 
-    private fun autoCheckUpdate() {
-        if (!AppUpdateManager.shouldAutoCheck(this)) return
+    override fun onPostResume() {
+        super.onPostResume()
+        maybeShowPendingStartupUpdate()
+    }
 
-        lifecycleScope.launch {
-            val result = AppUpdateManager.checkForUpdate()
-            AppUpdateManager.markChecked(this@MainActivity)
-
-            if (result.hasUpdate && result.info != null) {
-                if (!AppUpdateManager.isVersionSkipped(this@MainActivity, result.info.versionName)) {
-                    showAutoUpdateDialog(result.info)
-                }
-            }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            maybeShowPendingStartupUpdate()
         }
+    }
+
+    private fun observeStartupUpdate() {
+        lifecycleScope.launch {
+            val result = AppUpdateManager.consumeStartupPrefetch(this@MainActivity) ?: return@launch
+            val info = result.info ?: return@launch
+            if (!result.hasUpdate) return@launch
+            if (AppUpdateManager.isVersionSkipped(this@MainActivity, info.versionName)) return@launch
+            pendingStartupUpdateInfo = info
+            maybeShowPendingStartupUpdate()
+        }
+    }
+
+    private fun maybeShowPendingStartupUpdate() {
+        val info = pendingStartupUpdateInfo ?: return
+        if (hasShownStartupUpdate) return
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        if (!hasWindowFocus() || isFinishing || isDestroyed) return
+        hasShownStartupUpdate = true
+        pendingStartupUpdateInfo = null
+        showAutoUpdateDialog(info)
     }
 
     private fun showAutoUpdateDialog(info: AppUpdateManager.UpdateInfo) {
@@ -92,6 +113,7 @@ class MainActivity : AppCompatActivity() {
 
         AppUpdateManager.startDownload(this, info.downloadUrl, info.versionName) { file ->
             runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
                 if (file != null && file.exists()) {
                     AppUpdateManager.installApk(this@MainActivity, file)
                 } else {

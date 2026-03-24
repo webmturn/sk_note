@@ -9,6 +9,7 @@ import com.sknote.app.data.model.Article
 import com.sknote.app.data.model.Category
 import com.sknote.app.data.model.Share
 import com.sknote.app.util.ErrorUtil
+import com.sknote.app.util.StartupWarmupManager
 import kotlinx.coroutines.launch
 
 class HomeViewModel : ViewModel() {
@@ -36,24 +37,54 @@ class HomeViewModel : ViewModel() {
         if (!force && now - lastLoadTime < cacheDuration && _categories.value != null) {
             return
         }
+
+        if (!force) {
+            val warmData = StartupWarmupManager.getWarmHomeData(cacheDuration)
+            if (warmData != null) {
+                _categories.value = warmData.categories
+                _articles.value = warmData.articles
+                _latestShares.value = warmData.latestShares
+                _error.value = null
+                lastLoadTime = warmData.fetchedAt
+                fetchHomeData(showLoading = false)
+                return
+            }
+        }
+
+        fetchHomeData(showLoading = true)
+    }
+
+    private fun fetchHomeData(showLoading: Boolean) {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
+            if (showLoading) {
+                _isLoading.value = true
+                _error.value = null
+            }
+
             try {
                 val response = ApiClient.getService().getHomeData(limit = 10)
                 if (response.isSuccessful) {
                     val data = response.body()
-                    _categories.value = data?.categories ?: emptyList()
-                    _articles.value = data?.articles ?: emptyList()
-                    _latestShares.value = data?.latestShares ?: emptyList()
+                    val categories = data?.categories ?: emptyList()
+                    val articles = data?.articles ?: emptyList()
+                    val latestShares = data?.latestShares ?: emptyList()
+                    _categories.value = categories
+                    _articles.value = articles
+                    _latestShares.value = latestShares
+                    StartupWarmupManager.updateWarmHomeData(categories, articles, latestShares)
                     lastLoadTime = System.currentTimeMillis()
-                } else {
+                    _error.value = null
+                } else if (showLoading) {
                     _error.value = "加载失败 (${response.code()})"
                 }
             } catch (e: Exception) {
-                _error.value = ErrorUtil.friendlyMessage(e)
+                if (showLoading) {
+                    _error.value = ErrorUtil.friendlyMessage(e)
+                }
             } finally {
-                _isLoading.value = false
+                if (showLoading) {
+                    _isLoading.value = false
+                }
             }
         }
     }
