@@ -91,8 +91,25 @@ class ArticleDetailFragment : Fragment() {
         }
 
         binding.btnLike.setOnClickListener {
-            viewModel.likeArticle(articleId)
-            Snackbar.make(binding.root, "已点赞", Snackbar.LENGTH_SHORT).show()
+            viewLifecycleOwner.lifecycleScope.launch {
+                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+                if (!isLoggedIn) {
+                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
+                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
+                        .show()
+                    return@launch
+                }
+                try {
+                    val response = ApiClient.getService().likeArticle(articleId)
+                    if (response.isSuccessful) {
+                        val liked = response.body()?.liked ?: false
+                        Snackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
+                        viewModel.loadArticle(articleId)
+                    }
+                } catch (e: Exception) {
+                    Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                }
+            }
         }
 
         binding.btnShare.setOnClickListener {

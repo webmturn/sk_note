@@ -19,7 +19,9 @@ package com.sknote.app.ui.manage.discussioncategory
  
      override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
          super.onViewCreated(view, savedInstanceState)
-         findNavController().navigate(
+         val navController = findNavController()
+         navController.popBackStack()
+         navController.navigate(
              R.id.categoryManageFragment,
              bundleOf(CategoryManageFragment.ARG_INITIAL_TAB to 1)
          )

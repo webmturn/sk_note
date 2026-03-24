@@ -85,7 +85,7 @@ interface ApiService {
     suspend fun deleteArticle(@Path("id") id: Long): Response<MessageResponse>
 
     @POST("api/articles/{id}/like")
-    suspend fun likeArticle(@Path("id") id: Long): Response<MessageResponse>
+    suspend fun likeArticle(@Path("id") id: Long): Response<LikeResponse>
 
     // ============ 讨论 ============
 
