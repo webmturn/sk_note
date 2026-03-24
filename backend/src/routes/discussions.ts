@@ -82,7 +82,8 @@ discussionRoutes.get('/:id', async (c) => {
 
   // 增加阅读量（去重）
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip') || 'anonymous';
+    || c.req.header('x-real-ip')
+    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
   const viewResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'discussion', id).run();
@@ -132,7 +133,10 @@ discussionRoutes.post('/', authMiddleware(), async (c) => {
       'SELECT slug FROM discussion_categories ORDER BY sort_order ASC, id ASC LIMIT 1'
     ).first<{ slug: string }>();
 
-    resolvedCategory = defaultCategory?.slug || 'general';
+    if (!defaultCategory) {
+      return c.json({ error: '暂无可用的讨论分类，请先创建分类' }, 400);
+    }
+    resolvedCategory = defaultCategory.slug;
   }
 
   const result = await c.env.DB.prepare(`
@@ -304,7 +308,8 @@ discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (
     ).bind(commentId).run();
 
     return c.json({ message: '点赞成功', liked: true });
-  } catch {
+  } catch (e: any) {
+    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
     // UNIQUE 约束冲突 = 已点赞，执行取消
     await c.env.DB.prepare(
       'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'

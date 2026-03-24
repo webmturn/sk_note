@@ -65,7 +65,8 @@ shareRoutes.get('/categories', edgeCache(300), async (c) => {
 shareRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip') || 'anonymous';
+    || c.req.header('x-real-ip')
+    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
   const viewResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'share', id).run();
@@ -77,10 +78,20 @@ shareRoutes.get('/:id', async (c) => {
   return c.json({ share });
 });
 
-// 记录下载次数
+// 记录下载次数（IP 去重）
 shareRoutes.post('/:id/download', async (c) => {
   const id = c.req.param('id');
-  await c.env.DB.prepare('UPDATE shares SET download_count = download_count + 1 WHERE id = ?').bind(id).run();
+  const viewerKey = 'dl:' + (
+    c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
+    || c.req.header('x-real-ip')
+    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`
+  );
+  const result = await c.env.DB.prepare(
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
+  ).bind(viewerKey, 'share', id).run();
+  if (result.meta.changes > 0) {
+    await c.env.DB.prepare('UPDATE shares SET download_count = download_count + 1 WHERE id = ?').bind(id).run();
+  }
   return c.json({ message: '已记录' });
 });
 
@@ -147,7 +158,8 @@ shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
     ).bind(id).run();
 
     return c.json({ message: '已点赞', liked: true });
-  } catch {
+  } catch (e: any) {
+    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
     // UNIQUE 约束冲突 = 已点赞，执行取消
     await c.env.DB.prepare(
       'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'

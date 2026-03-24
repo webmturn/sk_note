@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
 import { edgeCache } from '../middleware/cache';
-import { adminMiddleware } from '../middleware/auth';
+import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 export const appRoutes = new Hono<{ Bindings: Env }>();
 
@@ -39,7 +39,7 @@ appRoutes.get('/check-update', edgeCache(300), async (c) => {
 });
 
 // 管理员：发布新版本
-appRoutes.post('/releases', adminMiddleware(), async (c) => {
+appRoutes.post('/releases', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const { version_name, version_code, changelog, download_url, file_size, release_url } = await c.req.json();
 
@@ -66,7 +66,7 @@ appRoutes.post('/releases', adminMiddleware(), async (c) => {
 });
 
 // 管理员：获取所有版本列表
-appRoutes.get('/releases', adminMiddleware(), async (c) => {
+appRoutes.get('/releases', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const result = await c.env.DB.prepare(
       'SELECT * FROM app_releases ORDER BY created_at DESC'
@@ -78,7 +78,7 @@ appRoutes.get('/releases', adminMiddleware(), async (c) => {
 });
 
 // 管理员：删除版本
-appRoutes.delete('/releases/:id', adminMiddleware(), async (c) => {
+appRoutes.delete('/releases/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
   await c.env.DB.prepare('DELETE FROM app_releases WHERE id = ?').bind(id).run();
   return c.json({ message: '已删除' });

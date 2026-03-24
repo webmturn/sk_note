@@ -45,7 +45,8 @@ discussionCategoryRoutes.post('/', authMiddleware(), adminMiddleware(), async (c
     const baseUrl = new URL(c.req.url).origin;
     c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]));
     return c.json({ id: result.meta.last_row_id, message: '创建成功' }, 201);
-  } catch {
+  } catch (e: any) {
+    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
     return c.json({ error: `Slug「${normalizedSlug}」已存在` }, 409);
   }
 });
@@ -74,7 +75,8 @@ discussionCategoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async 
     const baseUrl = new URL(c.req.url).origin;
     c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]));
     return c.json({ message: '更新成功' });
-  } catch {
+  } catch (e: any) {
+    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
     return c.json({ error: `Slug「${normalizedSlug}」已存在` }, 409);
   }
 });

@@ -65,7 +65,8 @@ snippetRoutes.get('/categories', edgeCache(300), async (c) => {
 snippetRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip') || 'anonymous';
+    || c.req.header('x-real-ip')
+    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
   const viewResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'snippet', id).run();
@@ -140,7 +141,8 @@ snippetRoutes.post('/:id/like', authMiddleware(), async (c) => {
     ).bind(id).run();
 
     return c.json({ message: '已点赞', liked: true });
-  } catch {
+  } catch (e: any) {
+    if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
     // UNIQUE 约束冲突 = 已点赞，执行取消
     await c.env.DB.prepare(
       'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'

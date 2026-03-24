@@ -294,6 +294,7 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
       c.env.DB.prepare('DELETE FROM discussions WHERE author_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM snippets WHERE author_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM shares WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('DELETE FROM articles WHERE author_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM follows WHERE follower_id = ? OR following_id = ?').bind(userId, userId),
       c.env.DB.prepare('DELETE FROM bookmarks WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM reading_history WHERE user_id = ?').bind(userId),
