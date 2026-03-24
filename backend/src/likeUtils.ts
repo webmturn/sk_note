@@ -22,18 +22,15 @@ interface ToggleRelationOptions {
   deactivateSuccessMessage: string;
 }
 
-const COUNT_TABLES: Record<LikeCountTable, LikeCountTable> = {
-  articles: 'articles',
-  comments: 'comments',
-  snippets: 'snippets',
-  shares: 'shares',
-};
+const VALID_COUNT_TABLES = new Set<string>(['articles', 'comments', 'snippets', 'shares']);
 
-function recountSql(countTable: LikeCountTable, targetType: LikeTargetType): string {
-  const table = COUNT_TABLES[countTable];
-  return `UPDATE ${table}
+function recountSql(countTable: LikeCountTable): string {
+  if (!VALID_COUNT_TABLES.has(countTable)) {
+    throw new Error(`Invalid count table: ${countTable}`);
+  }
+  return `UPDATE ${countTable}
 SET like_count = (
-  SELECT COUNT(*) FROM likes WHERE target_type = '${targetType}' AND target_id = ?
+  SELECT COUNT(*) FROM likes WHERE target_type = ? AND target_id = ?
 )
 WHERE id = ?`;
 }
@@ -50,7 +47,7 @@ export async function toggleLike(c: Context<AppEnv>, options: ToggleLikeOptions)
       'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ?'
     ).bind(userId, targetType, targetId).run();
 
-    await c.env.DB.prepare(recountSql(countTable, targetType)).bind(targetId, targetId).run();
+    await c.env.DB.prepare(recountSql(countTable)).bind(targetType, targetId, targetId).run();
 
     return { liked: false, message: unlikeSuccessMessage };
   }
@@ -59,7 +56,7 @@ export async function toggleLike(c: Context<AppEnv>, options: ToggleLikeOptions)
     'INSERT OR IGNORE INTO likes (user_id, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(userId, targetType, targetId).run();
 
-  await c.env.DB.prepare(recountSql(countTable, targetType)).bind(targetId, targetId).run();
+  await c.env.DB.prepare(recountSql(countTable)).bind(targetType, targetId, targetId).run();
 
   return { liked: true, message: likeSuccessMessage };
 }

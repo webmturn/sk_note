@@ -57,6 +57,7 @@ class TokenManager(private val context: Context) {
         private const val NICKNAME_KEY = "nickname"
         private const val USER_ROLE_KEY = "user_role"
         private const val USER_ID_KEY = "user_id"
+        private const val LEGACY_MIGRATED_KEY = "legacy_migrated"
 
         private val LEGACY_TOKEN_KEY = stringPreferencesKey("auth_token")
         private val LEGACY_USERNAME_KEY = stringPreferencesKey("username")
@@ -87,13 +88,17 @@ class TokenManager(private val context: Context) {
     }
 
     private suspend fun migrateLegacyAuthIfNeeded() {
-        if (authPrefs.contains(TOKEN_KEY)) return
+        if (authPrefs.getBoolean(LEGACY_MIGRATED_KEY, false)) return
 
         val legacy = appContext.dataStore.data.first()
         val token = legacy[LEGACY_TOKEN_KEY]
-        if (token.isNullOrEmpty()) return
+        if (token.isNullOrEmpty()) {
+            authPrefs.edit().putBoolean(LEGACY_MIGRATED_KEY, true).apply()
+            return
+        }
 
         authPrefs.edit()
+            .putBoolean(LEGACY_MIGRATED_KEY, true)
             .putString(TOKEN_KEY, token)
             .putString(USERNAME_KEY, legacy[LEGACY_USERNAME_KEY])
             .putString(NICKNAME_KEY, legacy[LEGACY_NICKNAME_KEY])

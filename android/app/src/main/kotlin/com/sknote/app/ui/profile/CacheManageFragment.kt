@@ -43,12 +43,6 @@ class CacheManageFragment : Fragment() {
             }
         }
 
-        binding.rowClearNetworkCache.setOnClickListener {
-            showClearDialog("网络缓存") {
-                clearNetworkCache()
-            }
-        }
-
         binding.rowClearAllCache.setOnClickListener {
             showClearDialog("全部缓存") {
                 clearAllCache()
@@ -66,28 +60,22 @@ class CacheManageFragment : Fragment() {
     }
 
     private val IMAGE_CACHE_DIRS = setOf("image_manager_disk_cache", "com.bumptech.glide")
-    private val NETWORK_CACHE_DIRS = setOf("http_cache")
 
     private fun refreshCacheSizes() {
         val cacheDir = requireContext().cacheDir
 
         var imageSize = 0L
-        var networkSize = 0L
         val totalSize = getDirSize(cacheDir)
 
         cacheDir.listFiles()?.forEach { sub ->
             val name = sub.name.lowercase()
-            when {
-                IMAGE_CACHE_DIRS.any { name.contains(it) } -> imageSize += getDirSize(sub)
-                NETWORK_CACHE_DIRS.any { name.contains(it) } -> networkSize += getDirSize(sub)
-            }
+            if (IMAGE_CACHE_DIRS.any { name.contains(it) }) imageSize += getDirSize(sub)
         }
 
-        val otherSize = (totalSize - imageSize - networkSize).coerceAtLeast(0)
+        val otherSize = (totalSize - imageSize).coerceAtLeast(0)
 
         binding.tvTotalCache.text = formatSize(totalSize)
         binding.tvImageCache.text = formatSize(imageSize)
-        binding.tvNetworkCache.text = formatSize(networkSize)
         binding.tvOtherCache.text = formatSize(otherSize)
     }
 
@@ -101,18 +89,6 @@ class CacheManageFragment : Fragment() {
             if (!isFragmentUsable()) return@launch
             refreshCacheSizes()
             Snackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun clearNetworkCache() {
-        val ctx = requireContext()
-        viewLifecycleOwner.lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                NETWORK_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
-            }
-            if (!isFragmentUsable()) return@launch
-            refreshCacheSizes()
-            Snackbar.make(binding.root, "网络缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
 

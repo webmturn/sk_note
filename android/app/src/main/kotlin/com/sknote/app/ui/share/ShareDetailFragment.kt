@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -100,7 +99,6 @@ class ShareDetailFragment : Fragment() {
             }
             if (!isFragmentUsable()) return@launch
             loadShare()
-            refreshCurrentUserState()
         }
 
         binding.btnLike.setOnClickListener {
@@ -114,7 +112,7 @@ class ShareDetailFragment : Fragment() {
                     isLiking = true
                     binding.btnLike.isEnabled = false
                     val response = ApiClient.getService().likeShare(shareId)
-                    if (_binding == null) return@launch
+                    if (!isFragmentUsable()) return@launch
                     if (response.isSuccessful) {
                         val body = response.body()
                         val liked = body?.liked ?: false
@@ -122,7 +120,7 @@ class ShareDetailFragment : Fragment() {
                         loadShare(showProgress = false)
                     }
                 } catch (e: Exception) {
-                    if (_binding == null) return@launch
+                    if (!isFragmentUsable()) return@launch
                     Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
                 } finally {
                     isLiking = false
@@ -141,7 +139,7 @@ class ShareDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getShare(shareId)
-                if (_binding == null) return@launch
+                if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     val share = response.body()?.share ?: return@launch
                     currentShare = share
@@ -172,40 +170,14 @@ class ShareDetailFragment : Fragment() {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                if (_binding == null) return@launch
+                if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                _binding?.progressBar?.visibility = View.GONE
+                if (isFragmentUsable()) binding.progressBar.visibility = View.GONE
             }
         }
     }
 
-    private suspend fun refreshCurrentUserState() {
-        val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-        if (!isLoggedIn) {
-            currentUserId = -1
-            currentUserRole = "user"
-            if (_binding != null) {
-                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
-            }
-            return
-        }
-
-        try {
-            val response = ApiClient.getService().getMe()
-            if (!response.isSuccessful) return
-            val user = response.body()?.get("user") ?: return
-            currentUserId = user.id
-            currentUserRole = user.role
-            ApiClient.getTokenManager().updateNickname(user.displayName)
-            ApiClient.getTokenManager().updateUserRole(user.role)
-            if (_binding != null) {
-                val canDelete = currentShare?.authorId == currentUserId || currentUserRole == "admin"
-                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
-            }
-        } catch (_: Exception) {
-        }
-    }
 
     private fun startDownload(share: Share) {
         if (LanzouParser.isLanzouUrl(share.downloadUrl.orEmpty())) {

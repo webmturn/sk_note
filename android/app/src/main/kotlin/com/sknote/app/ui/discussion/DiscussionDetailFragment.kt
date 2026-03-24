@@ -17,7 +17,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Comment
-import com.sknote.app.data.model.CreateCommentRequest
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.TimeUtil
@@ -124,34 +123,6 @@ class DiscussionDetailFragment : Fragment() {
 
             observeData()
             viewModel.loadDiscussion(discussionId)
-            refreshCurrentUserState()
-        }
-    }
-
-    private suspend fun refreshCurrentUserState() {
-        val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-        if (!isLoggedIn) {
-            cachedUserId = -1
-            cachedRole = "user"
-            if (_binding != null) {
-                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
-            }
-            return
-        }
-
-        try {
-            val response = ApiClient.getService().getMe()
-            if (!response.isSuccessful) return
-            val user = response.body()?.get("user") ?: return
-            cachedUserId = user.id
-            cachedRole = user.role
-            ApiClient.getTokenManager().updateNickname(user.displayName)
-            ApiClient.getTokenManager().updateUserRole(user.role)
-            if (_binding != null && currentDiscussionAuthorId > 0) {
-                binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible =
-                    currentDiscussionAuthorId == cachedUserId || cachedRole == "admin"
-            }
-        } catch (_: Exception) {
         }
     }
 

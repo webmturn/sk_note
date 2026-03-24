@@ -155,60 +155,6 @@
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
-                    <!-- 网络缓存 -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="20dp"
-                        android:paddingVertical="14dp"
-                        android:gravity="center_vertical">
-
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
-                            app:cardBackgroundColor="@color/icon_bg_green"
-                            android:layout_marginEnd="16dp">
-
-                            <ImageView
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:src="@drawable/ic_cached"
-                                android:scaleType="centerInside"
-                                android:padding="9dp" />
-                        </com.google.android.material.card.MaterialCardView>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="网络缓存"
-                                android:textSize="16sp"
-                                android:textColor="?attr/colorOnSurface" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="API 响应数据缓存"
-                                android:textSize="12sp"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/tvNetworkCache"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textSize="13sp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-
                     <!-- 其他缓存 -->
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -323,49 +269,6 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="清除图片缓存"
-                            android:textSize="16sp"
-                            android:textColor="?attr/colorOnSurface" />
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/rowClearNetworkCache"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="20dp"
-                        android:paddingVertical="16dp"
-                        android:gravity="center_vertical"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
-                            app:cardBackgroundColor="@color/icon_bg_green"
-                            android:layout_marginEnd="16dp">
-
-                            <ImageView
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:src="@drawable/ic_delete_sweep"
-                                android:scaleType="centerInside"
-                                android:padding="9dp" />
-                        </com.google.android.material.card.MaterialCardView>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="清除网络缓存"
                             android:textSize="16sp"
                             android:textColor="?attr/colorOnSurface" />
 
