@@ -16,16 +16,16 @@ bookmarkRoutes.get('/', authMiddleware(), async (c) => {
      COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
      a.view_count, a.like_count, a.created_at
      FROM bookmarks b
-     JOIN articles a ON b.article_id = a.id
+     LEFT JOIN articles a ON b.article_id = a.id
      LEFT JOIN users u ON a.author_id = u.id
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE b.user_id = ?
+     WHERE b.user_id = ? AND a.id IS NOT NULL
      ORDER BY b.created_at DESC
      LIMIT ? OFFSET ?`
   ).bind(user.id, limit, offset).all();
 
   const countResult = await c.env.DB.prepare(
-    'SELECT COUNT(*) as total FROM bookmarks WHERE user_id = ?'
+    'SELECT COUNT(*) as total FROM bookmarks b JOIN articles a ON b.article_id = a.id WHERE b.user_id = ?'
   ).bind(user.id).first<{ total: number }>();
 
   return c.json({
@@ -84,16 +84,16 @@ bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
      COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
      a.view_count, a.created_at
      FROM reading_history rh
-     JOIN articles a ON rh.article_id = a.id
+     LEFT JOIN articles a ON rh.article_id = a.id
      LEFT JOIN users u ON a.author_id = u.id
      LEFT JOIN categories c ON a.category_id = c.id
-     WHERE rh.user_id = ?
+     WHERE rh.user_id = ? AND a.id IS NOT NULL
      ORDER BY rh.read_at DESC
      LIMIT ? OFFSET ?`
   ).bind(user.id, limit, offset).all();
 
   const countResult = await c.env.DB.prepare(
-    'SELECT COUNT(*) as total FROM reading_history WHERE user_id = ?'
+    'SELECT COUNT(*) as total FROM reading_history rh JOIN articles a ON rh.article_id = a.id WHERE rh.user_id = ?'
   ).bind(user.id).first<{ total: number }>();
 
   return c.json({

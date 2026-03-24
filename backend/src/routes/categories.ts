@@ -56,6 +56,15 @@ categoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
 // 删除分类（需要管理员权限）
 categoryRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   const id = c.req.param('id');
+
+  const articleCount = await c.env.DB.prepare(
+    'SELECT COUNT(*) as count FROM articles WHERE category_id = ?'
+  ).bind(id).first<{ count: number }>();
+
+  if (articleCount && articleCount.count > 0) {
+    return c.json({ error: `该分类下还有 ${articleCount.count} 篇文章，请先移动或删除这些文章` }, 400);
+  }
+
   await c.env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
   const baseUrl = new URL(c.req.url).origin;
   c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]));

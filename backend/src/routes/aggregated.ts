@@ -18,6 +18,7 @@ aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
          FROM articles a
          LEFT JOIN users u ON a.author_id = u.id
          LEFT JOIN categories c ON a.category_id = c.id
+         WHERE a.is_published = 1
          ORDER BY a.created_at DESC LIMIT ?`
       ).bind(limit),
       c.env.DB.prepare(
