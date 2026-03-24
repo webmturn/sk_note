@@ -1,5 +1,5 @@
 import { Context, Next } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 
 // 检测是否运行在 Cloudflare Workers 环境
 const isCloudflare = typeof caches !== 'undefined' && 'default' in (caches as any);
@@ -31,7 +31,7 @@ function cacheSet(key: string, value: { data: string; headers: Record<string, st
  * 缓存中间件（自适应 Cloudflare 边缘缓存 / Node.js 内存缓存）
  */
 export function edgeCache(maxAgeSec: number = 300) {
-  return async (c: Context<{ Bindings: Env }>, next: Next) => {
+  return async (c: Context<AppEnv>, next: Next) => {
     if (c.req.method !== 'GET') {
       await next();
       return;

@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
+import { toggleRelation } from '../likeUtils';
 
-export const bookmarkRoutes = new Hono<{ Bindings: Env }>();
+export const bookmarkRoutes = new Hono<AppEnv>();
 
 // 获取收藏列表
 bookmarkRoutes.get('/', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
@@ -40,7 +41,7 @@ bookmarkRoutes.get('/', authMiddleware(), async (c) => {
 
 // 检查是否已收藏
 bookmarkRoutes.get('/check/:articleId', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const articleId = c.req.param('articleId');
 
   const existing = await c.env.DB.prepare(
@@ -52,29 +53,27 @@ bookmarkRoutes.get('/check/:articleId', authMiddleware(), async (c) => {
 
 // 添加/取消收藏（toggle）
 bookmarkRoutes.post('/:articleId', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const articleId = c.req.param('articleId');
 
-  const existing = await c.env.DB.prepare(
-    'SELECT id FROM bookmarks WHERE user_id = ? AND article_id = ?'
-  ).bind(user.id, articleId).first();
+  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(articleId).first();
+  if (!article) return c.json({ error: '文章不存在' }, 404);
 
-  if (existing) {
-    await c.env.DB.prepare(
-      'DELETE FROM bookmarks WHERE user_id = ? AND article_id = ?'
-    ).bind(user.id, articleId).run();
-    return c.json({ message: '已取消收藏', bookmarked: false });
-  } else {
-    await c.env.DB.prepare(
-      'INSERT INTO bookmarks (user_id, article_id) VALUES (?, ?)'
-    ).bind(user.id, articleId).run();
-    return c.json({ message: '已收藏', bookmarked: true });
-  }
+  const result = await toggleRelation(c, {
+    existsSql: 'SELECT id FROM bookmarks WHERE user_id = ? AND article_id = ?',
+    deleteSql: 'DELETE FROM bookmarks WHERE user_id = ? AND article_id = ?',
+    insertSql: 'INSERT OR IGNORE INTO bookmarks (user_id, article_id) VALUES (?, ?)',
+    bindings: [user.id, articleId],
+    activateSuccessMessage: '已收藏',
+    deactivateSuccessMessage: '已取消收藏',
+  });
+
+  return c.json({ message: result.message, bookmarked: result.active });
 });
 
 // 阅读历史列表
 bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
@@ -108,8 +107,11 @@ bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
 
 // 记录阅读历史
 bookmarkRoutes.post('/history/:articleId', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const articleId = c.req.param('articleId');
+
+  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(articleId).first();
+  if (!article) return c.json({ error: '文章不存在' }, 404);
 
   // 删除旧记录（避免重复），再插入新记录（更新时间）
   await c.env.DB.prepare(
@@ -125,7 +127,7 @@ bookmarkRoutes.post('/history/:articleId', authMiddleware(), async (c) => {
 
 // 清空阅读历史
 bookmarkRoutes.delete('/history', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   await c.env.DB.prepare('DELETE FROM reading_history WHERE user_id = ?').bind(user.id).run();
   return c.json({ message: '已清空' });
 });

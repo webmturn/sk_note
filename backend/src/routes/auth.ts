@@ -1,38 +1,41 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
+import bcrypt from 'bcryptjs';
 
-export const authRoutes = new Hono<{ Bindings: Env }>();
+export const authRoutes = new Hono<AppEnv>();
 
-// 密码哈希（加盐 SHA-256，Cloudflare Workers 兼容）
-function generateSalt(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
-}
+const BCRYPT_ROUNDS = 10;
 
-async function hashPassword(password: string, salt?: string): Promise<string> {
-  const s = salt || generateSalt();
-  const encoder = new TextEncoder();
-  const data = encoder.encode(s + password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  const hashStr = btoa(String.fromCharCode(...new Uint8Array(hash)));
-  return `${s}:${hashStr}`;
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  if (storedHash.includes(':')) {
-    // 新格式: salt:hash
-    const [salt] = storedHash.split(':');
-    const computed = await hashPassword(password, salt);
-    return computed === storedHash;
+  // bcrypt 格式: 以 $2a$ / $2b$ 开头
+  if (storedHash.startsWith('$2')) {
+    return bcrypt.compare(password, storedHash);
   }
-  // 旧格式: 无盐 SHA-256（向后兼容）
+  // 旧格式兼容: salt:sha256hash
+  if (storedHash.includes(':')) {
+    const [salt] = storedHash.split(':');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(salt + password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const hashStr = btoa(String.fromCharCode(...new Uint8Array(hash)));
+    return `${salt}:${hashStr}` === storedHash;
+  }
+  // 最旧格式: 无盐 SHA-256
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   const hash = await crypto.subtle.digest('SHA-256', data);
   const legacyHash = btoa(String.fromCharCode(...new Uint8Array(hash)));
   return legacyHash === storedHash;
+}
+
+function needsUpgrade(storedHash: string): boolean {
+  return !storedHash.startsWith('$2');
 }
 
 // 注册
@@ -43,8 +46,23 @@ authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, w
     if (!username || !email || !password) {
       return c.json({ error: '账号、邮箱和密码不能为空' }, 400);
     }
+    if (typeof username !== 'string' || username.length < 2 || username.length > 30) {
+      return c.json({ error: '用户名长度应为2-30个字符' }, 400);
+    }
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(username)) {
+      return c.json({ error: '用户名只能包含字母、数字、下划线和中文' }, 400);
+    }
+    if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return c.json({ error: '邮箱格式不正确' }, 400);
+    }
+    if (email.length > 100) {
+      return c.json({ error: '邮箱最长100个字符' }, 400);
+    }
     if (password.length < 6) {
       return c.json({ error: '密码至少6位' }, 400);
+    }
+    if (password.length > 128) {
+      return c.json({ error: '密码最长128个字符' }, 400);
     }
 
     const existing = await c.env.DB.prepare(
@@ -72,7 +90,8 @@ authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, w
       user: { id: userId, username, nickname: displayName, email, role: 'user' }
     }, 201);
   } catch (e: any) {
-    return c.json({ error: '注册失败: ' + e.message }, 500);
+    console.error('注册失败:', e);
+    return c.json({ error: '注册失败，请稍后再试' }, 500);
   }
 });
 
@@ -101,8 +120,8 @@ authRoutes.post('/login', rateLimit({ key: 'auth:login', maxRequests: 10, window
       return c.json({ error: '用户名或密码错误' }, 401);
     }
 
-    // 自动升级旧格式（无盐）为新格式（加盐）
-    if (!user.password_hash.includes(':')) {
+    // 自动升级旧格式（SHA-256）为 bcrypt
+    if (needsUpgrade(user.password_hash)) {
       const upgradedHash = await hashPassword(password);
       await c.env.DB.prepare(
         'UPDATE users SET password_hash = ? WHERE id = ?'
@@ -127,13 +146,14 @@ authRoutes.post('/login', rateLimit({ key: 'auth:login', maxRequests: 10, window
       }
     });
   } catch (e: any) {
-    return c.json({ error: '登录失败: ' + e.message }, 500);
+    console.error('登录失败:', e);
+    return c.json({ error: '登录失败，请稍后再试' }, 500);
   }
 });
 
 // 获取当前用户信息
 authRoutes.get('/me', authMiddleware(), async (c) => {
-  const payload = c.get('user' as never) as { id: number };
+  const payload = c.get('user')!;
   const user = await c.env.DB.prepare(
     'SELECT id, username, nickname, email, role, avatar_url, bio, created_at FROM users WHERE id = ?'
   ).bind(payload.id).first();
@@ -144,7 +164,7 @@ authRoutes.get('/me', authMiddleware(), async (c) => {
 
 // 更新个人信息
 authRoutes.put('/me', authMiddleware(), async (c) => {
-  const payload = c.get('user' as never) as { id: number };
+  const payload = c.get('user')!;
   const body = await c.req.json();
 
   const fields: string[] = [];
@@ -236,7 +256,8 @@ authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
       }
     });
   } catch (e: any) {
-    return c.json({ error: '获取用户列表失败: ' + e.message }, 500);
+    console.error('获取用户列表失败:', e);
+    return c.json({ error: '获取用户列表失败' }, 500);
   }
 });
 
@@ -246,7 +267,7 @@ authRoutes.put('/users/:id/role', authMiddleware(), adminMiddleware(), async (c)
     const userId = parseInt(c.req.param('id'));
     if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
     const { role } = await c.req.json();
-    const currentUser = c.get('user' as never) as { id: number };
+    const currentUser = c.get('user')!;
 
     if (userId === currentUser.id) {
       return c.json({ error: '不能修改自己的角色' }, 400);
@@ -266,7 +287,8 @@ authRoutes.put('/users/:id/role', authMiddleware(), adminMiddleware(), async (c)
 
     return c.json({ message: '角色更新成功' });
   } catch (e: any) {
-    return c.json({ error: '更新角色失败: ' + e.message }, 500);
+    console.error('更新角色失败:', e);
+    return c.json({ error: '更新角色失败' }, 500);
   }
 });
 
@@ -275,7 +297,7 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
   try {
     const userId = parseInt(c.req.param('id'));
     if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
-    const currentUser = c.get('user' as never) as { id: number };
+    const currentUser = c.get('user')!;
 
     if (userId === currentUser.id) {
       return c.json({ error: '不能删除自己的账号' }, 400);
@@ -304,7 +326,8 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
 
     return c.json({ message: '用户已删除' });
   } catch (e: any) {
-    return c.json({ error: '删除用户失败: ' + e.message }, 500);
+    console.error('删除用户失败:', e);
+    return c.json({ error: '删除用户失败' }, 500);
   }
 });
 
@@ -330,13 +353,14 @@ authRoutes.put('/users/:id/password', authMiddleware(), adminMiddleware(), async
 
     return c.json({ message: '密码重置成功' });
   } catch (e: any) {
-    return c.json({ error: '重置密码失败: ' + e.message }, 500);
+    console.error('重置密码失败:', e);
+    return c.json({ error: '重置密码失败' }, 500);
   }
 });
 
 // 修改密码
-authRoutes.put('/password', authMiddleware(), async (c) => {
-  const payload = c.get('user' as never) as { id: number };
+authRoutes.put('/password', rateLimit({ key: 'auth:password', maxRequests: 5, windowMs: 15 * 60 * 1000 }), authMiddleware(), async (c) => {
+  const payload = c.get('user')!;
   const { old_password, new_password } = await c.req.json();
 
   if (!old_password || !new_password) {

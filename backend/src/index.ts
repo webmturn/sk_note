@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { bodyLimit } from 'hono/body-limit';
 import { authRoutes } from './routes/auth';
 import { articleRoutes } from './routes/articles';
 import { discussionRoutes } from './routes/discussions';
@@ -19,13 +20,25 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-export function setupApp(app: Hono<{ Bindings: Env }>) {
+export interface JwtPayload {
+  id: number;
+  username: string;
+  role: string;
+  exp: number;
+}
+
+export type AppEnv = { Bindings: Env; Variables: { user?: JwtPayload } };
+
+export function setupApp(app: Hono<AppEnv>) {
   // CORS 配置
   app.use('*', cors({
     origin: ['https://api.wsqh.cn', 'http://localhost:3000'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowHeaders: ['Content-Type', 'Authorization'],
   }));
+
+  // 请求体大小限制（1MB）
+  app.use('*', bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: '请求体过大，最大 1MB' }, 413) }));
 
   // 健康检查
   app.get('/', (c) => c.json({ status: 'ok', service: 'Sketchware-Pro Manual API' }));
@@ -49,4 +62,4 @@ export function setupApp(app: Hono<{ Bindings: Env }>) {
 }
 
 // 默认导出（兼容 Cloudflare Workers 入口）
-export default setupApp(new Hono<{ Bindings: Env }>());
+export default setupApp(new Hono<AppEnv>());

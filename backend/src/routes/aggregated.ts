@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
 import { edgeCache } from '../middleware/cache';
 
-export const aggregatedRoutes = new Hono<{ Bindings: Env }>();
+export const aggregatedRoutes = new Hono<AppEnv>();
 
 // 首页数据：分类 + 最新文章（合并 2 次调用为 1 次）
 aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
@@ -32,14 +32,15 @@ aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
       latest_shares: shareResult.results,
     });
   } catch (e: any) {
-    return c.json({ error: '加载首页数据失败: ' + e.message }, 500);
+    console.error('加载首页数据失败:', e);
+    return c.json({ error: '加载首页数据失败' }, 500);
   }
 });
 
 // 管理面板统计：未读通知数 + 文章总数 + 讨论总数（合并 3 次调用为 1 次）
 aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
   try {
-    const user = c.get('user' as never) as { id: number };
+    const user = c.get('user')!;
 
     const [unreadResult, articleResult, discussionResult, snippetResult, userResult, shareResult, myDiscussionResult, mySnippetResult, myArticleResult] = await c.env.DB.batch([
       c.env.DB.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').bind(user.id),
@@ -65,6 +66,7 @@ aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
       my_articles: (myArticleResult.results[0] as any)?.count || 0,
     });
   } catch (e: any) {
-    return c.json({ error: '加载统计数据失败: ' + e.message }, 500);
+    console.error('加载统计数据失败:', e);
+    return c.json({ error: '加载统计数据失败' }, 500);
   }
 });

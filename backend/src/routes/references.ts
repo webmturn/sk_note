@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 
-export const referenceRoutes = new Hono<{ Bindings: Env }>();
+export const referenceRoutes = new Hono<AppEnv>();
 
 // 获取参考列表（支持类型/分类/搜索筛选）
 referenceRoutes.get('/', edgeCache(600), async (c) => {
@@ -80,7 +80,7 @@ referenceRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
   `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', color || '', shape || 's', spec || '', code || '', related_ids || '').run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`]));
+  await purgeCache([`${baseUrl}/api/references`]);
   return c.json({ id: result.meta.last_row_id, message: '创建成功' }, 201);
 });
 
@@ -110,7 +110,7 @@ referenceRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   `).bind(name, category || '', type, description || '', usage || '', parameters || '', example || '', icon || '', color || '', shape || 's', spec || '', code || '', related_ids || '', id).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]));
+  await purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]);
   return c.json({ message: '更新成功' });
 });
 
@@ -122,6 +122,6 @@ referenceRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) =>
     return c.json({ error: '参考条目不存在' }, 404);
   }
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]));
+  await purgeCache([`${baseUrl}/api/references`, `${baseUrl}/api/references/${id}`]);
   return c.json({ message: '删除成功' });
 });

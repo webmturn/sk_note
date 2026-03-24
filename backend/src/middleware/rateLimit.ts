@@ -1,7 +1,7 @@
 import { Context, Next } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 
-type IdentifierResolver = (c: Context<{ Bindings: Env }>) => string;
+type IdentifierResolver = (c: Context<AppEnv>) => string;
 
 interface RateLimitOptions {
   key: string;
@@ -23,7 +23,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref();
 
-function defaultIdentifier(c: Context<{ Bindings: Env }>): string {
+function defaultIdentifier(c: Context<AppEnv>): string {
   return c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
     || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
@@ -41,7 +41,7 @@ function prune(now: number, timestamps: number[], windowMs: number): number[] {
 export function rateLimit(options: RateLimitOptions) {
   const identifier = options.identifier || defaultIdentifier;
 
-  return async (c: Context<{ Bindings: Env }>, next: Next) => {
+  return async (c: Context<AppEnv>, next: Next) => {
     const now = Date.now();
     const bucketKey = `${options.key}:${identifier(c)}`;
     const current = prune(now, buckets.get(bucketKey) || [], options.windowMs);
@@ -64,8 +64,8 @@ export function rateLimit(options: RateLimitOptions) {
   };
 }
 
-export function userOrIpIdentifier(c: Context<{ Bindings: Env }>): string {
-  const user = c.get('user' as never) as { id?: number } | undefined;
+export function userOrIpIdentifier(c: Context<AppEnv>): string {
+  const user = c.get('user');
   if (user?.id) {
     return `user:${user.id}`;
   }

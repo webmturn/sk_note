@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
-import { authMiddleware, editorMiddleware } from '../middleware/auth';
+import type { AppEnv } from '../index';
+import { authMiddleware, editorMiddleware, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { toggleLike } from '../likeUtils';
 
-export const articleRoutes = new Hono<{ Bindings: Env }>();
+export const articleRoutes = new Hono<AppEnv>();
 
 // 获取文章列表（支持分页和分类筛选）
 articleRoutes.get('/', edgeCache(120), async (c) => {
@@ -62,8 +63,9 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
 });
 
 // 获取单篇文章
-articleRoutes.get('/:id', async (c) => {
+articleRoutes.get('/:id', authMiddleware(false), async (c) => {
   const id = c.req.param('id');
+  const user = c.get('user');
 
   const article = await c.env.DB.prepare(`
     SELECT a.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, c.name as category_name
@@ -71,9 +73,20 @@ articleRoutes.get('/:id', async (c) => {
     LEFT JOIN users u ON a.author_id = u.id
     LEFT JOIN categories c ON a.category_id = c.id
     WHERE a.id = ?
-  `).bind(id).first();
+  `).bind(id).first<any>();
 
   if (!article) return c.json({ error: '文章不存在' }, 404);
+
+  // 未发布文章仅编辑/管理员可见
+  if (!article.is_published) {
+    if (!user) {
+      return c.json({ error: '文章不存在' }, 404);
+    }
+    const role = await refreshCurrentUserRole(c);
+    if (role !== 'admin' && role !== 'editor') {
+      return c.json({ error: '文章不存在' }, 404);
+    }
+  }
 
   // 增加阅读量（去重）
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
@@ -93,7 +106,7 @@ articleRoutes.get('/:id', async (c) => {
 
 // 创建文章（需要编辑/管理员权限）
 articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const { title, content, summary, category_id, sort_order } = await c.req.json();
 
   if (!title || !content || !category_id) {
@@ -118,7 +131,7 @@ articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
   `).bind(title, content, summary || '', categoryIdNum, user.id, sort_order || 0).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ id: result.meta.last_row_id, message: '发布成功' }, 201);
 });
 
@@ -156,7 +169,7 @@ articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   `).bind(title, content, summary || '', categoryIdNum, sort_order || 0, is_published ?? 1, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ message: '更新成功' });
 });
 
@@ -168,35 +181,26 @@ articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => 
     return c.json({ error: '文章不存在' }, 404);
   }
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ message: '删除成功' });
 });
 
 // 点赞文章
 articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
-  const results = await c.env.DB.batch([
-    c.env.DB.prepare(
-      'SELECT id FROM articles WHERE id = ?'
-    ).bind(id),
-    c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM articles WHERE id = ?)'
-    ).bind(user.id, 'article', id, id),
-    c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM articles WHERE id = ?) AND changes() = 0'
-    ).bind(user.id, 'article', id, id),
-    c.env.DB.prepare(
-      'UPDATE articles SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
-    ).bind(id),
-  ]);
+  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(id).first();
+  if (!article) return c.json({ error: '文章不存在' }, 404);
 
-  const exists = (results[0]?.results?.length || 0) > 0;
-  if (!exists) {
-    return c.json({ error: '文章不存在' }, 404);
-  }
+  const result = await toggleLike(c, {
+    userId: user.id,
+    targetId: id,
+    targetType: 'article',
+    countTable: 'articles',
+    likeSuccessMessage: '点赞成功',
+    unlikeSuccessMessage: '已取消点赞',
+  });
 
-  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
-  return c.json({ message: inserted ? '点赞成功' : '已取消点赞', liked: inserted });
+  return c.json(result);
 });

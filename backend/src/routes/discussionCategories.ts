@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 
-export const discussionCategoryRoutes = new Hono<{ Bindings: Env }>();
+export const discussionCategoryRoutes = new Hono<AppEnv>();
 
 const slugPattern = /^[a-z0-9_-]+$/;
 
@@ -43,7 +43,7 @@ discussionCategoryRoutes.post('/', authMiddleware(), adminMiddleware(), async (c
     ).bind(normalizedSlug, String(name).trim(), description || '', icon || '', sort_order || 0).run();
 
     const baseUrl = new URL(c.req.url).origin;
-    c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]));
+    await purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]);
     return c.json({ id: result.meta.last_row_id, message: '创建成功' }, 201);
   } catch (e: any) {
     if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
@@ -73,7 +73,7 @@ discussionCategoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async 
     ).bind(normalizedSlug, String(name).trim(), description || '', icon || '', sort_order || 0, id).run();
 
     const baseUrl = new URL(c.req.url).origin;
-    c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]));
+    await purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]);
     return c.json({ message: '更新成功' });
   } catch (e: any) {
     if (!String(e?.message || '').includes('UNIQUE constraint failed')) throw e;
@@ -100,6 +100,6 @@ discussionCategoryRoutes.delete('/:id', authMiddleware(), adminMiddleware(), asy
   await c.env.DB.prepare('DELETE FROM discussion_categories WHERE id = ?').bind(id).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]));
+  await purgeCache([`${baseUrl}/api/discussion-categories`, `${baseUrl}/api/discussions`]);
   return c.json({ message: '删除成功' });
 });

@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
 
-export const notificationRoutes = new Hono<{ Bindings: Env }>();
+export const notificationRoutes = new Hono<AppEnv>();
 
 // 获取通知列表
 notificationRoutes.get('/', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const unreadOnly = c.req.query('unread') === '1';
@@ -51,7 +51,7 @@ notificationRoutes.get('/', authMiddleware(), async (c) => {
 
 // 获取未读通知数量
 notificationRoutes.get('/unread-count', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
   const result = await c.env.DB.prepare(
     'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0'
@@ -62,7 +62,7 @@ notificationRoutes.get('/unread-count', authMiddleware(), async (c) => {
 
 // 标记所有通知为已读（必须在 /:id/read 之前注册，否则 "read-all" 会匹配为 :id）
 notificationRoutes.put('/read-all', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
   await c.env.DB.prepare(
     'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0'
@@ -74,7 +74,7 @@ notificationRoutes.put('/read-all', authMiddleware(), async (c) => {
 // 标记单条通知为已读
 notificationRoutes.put('/:id/read', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
   await c.env.DB.prepare(
     'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?'
@@ -85,7 +85,7 @@ notificationRoutes.put('/:id/read', authMiddleware(), async (c) => {
 
 // 删除全部通知（必须在 /:id 之前注册，否则 "all" 会匹配为 :id）
 notificationRoutes.delete('/all', authMiddleware(), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   await c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(user.id).run();
   return c.json({ message: '已清空全部通知' });
 });
@@ -93,7 +93,7 @@ notificationRoutes.delete('/all', authMiddleware(), async (c) => {
 // 删除通知
 notificationRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
   await c.env.DB.prepare(
     'DELETE FROM notifications WHERE id = ? AND user_id = ?'

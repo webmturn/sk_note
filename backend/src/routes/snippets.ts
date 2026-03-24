@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
-import { authMiddleware } from '../middleware/auth';
+import type { AppEnv } from '../index';
+import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { toggleLike } from '../likeUtils';
 
-export const snippetRoutes = new Hono<{ Bindings: Env }>();
+export const snippetRoutes = new Hono<AppEnv>();
 
 // 获取代码片段列表（支持分页、分类、搜索）
 snippetRoutes.get('/', edgeCache(120), async (c) => {
@@ -65,7 +66,7 @@ snippetRoutes.get('/categories', edgeCache(300), async (c) => {
 // 获取单个代码片段
 snippetRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const snippet = await c.env.DB.prepare('SELECT * FROM snippets WHERE id = ?').bind(id).first();
+  const snippet = await c.env.DB.prepare('SELECT * FROM snippets WHERE id = ? AND is_approved = 1').bind(id).first();
   if (!snippet) return c.json({ error: '未找到' }, 404);
 
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
@@ -82,11 +83,20 @@ snippetRoutes.get('/:id', async (c) => {
 
 // 创建代码片段（需要登录）
 snippetRoutes.post('/', authMiddleware(), rateLimit({ key: 'snippet:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
-  const user = c.get('user' as never) as { id: number; username: string };
+  const user = c.get('user')!;
   const { title, description, code, language, category, tags } = await c.req.json();
 
   if (!title || !code) {
     return c.json({ error: '标题和代码不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (code.length > 50000) {
+    return c.json({ error: '代码最长50000个字符' }, 400);
+  }
+  if (description && description.length > 2000) {
+    return c.json({ error: '描述最长2000个字符' }, 400);
   }
 
   const userInfo = await c.env.DB.prepare('SELECT nickname, username FROM users WHERE id = ?').bind(user.id).first<{ nickname: string; username: string }>();
@@ -107,52 +117,42 @@ snippetRoutes.post('/', authMiddleware(), rateLimit({ key: 'snippet:create', max
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/categories`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '创建成功', id: result.meta.last_row_id }, 201);
 });
 
 // 删除代码片段（作者或管理员）
 snippetRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number; role: string };
 
   const snippet = await c.env.DB.prepare('SELECT author_id FROM snippets WHERE id = ?').bind(id).first<{ author_id: number }>();
   if (!snippet) return c.json({ error: '未找到' }, 404);
-  if (snippet.author_id !== user.id && user.role !== 'admin') {
+  if (!(await isOwnerOrAdmin(c, snippet.author_id))) {
     return c.json({ error: '无权限' }, 403);
   }
 
   await c.env.DB.prepare('DELETE FROM snippets WHERE id = ?').bind(id).run();
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/${id}`, `${baseUrl}/api/snippets/categories`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/${id}`, `${baseUrl}/api/snippets/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '已删除' });
 });
 
 // 点赞代码片段
 snippetRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
-  const results = await c.env.DB.batch([
-    c.env.DB.prepare(
-      'SELECT id FROM snippets WHERE id = ?'
-    ).bind(id),
-    c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM snippets WHERE id = ?)'
-    ).bind(user.id, 'snippet', id, id),
-    c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM snippets WHERE id = ?) AND changes() = 0'
-    ).bind(user.id, 'snippet', id, id),
-    c.env.DB.prepare(
-      'UPDATE snippets SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
-    ).bind(id),
-  ]);
+  const snippet = await c.env.DB.prepare('SELECT id FROM snippets WHERE id = ?').bind(id).first();
+  if (!snippet) return c.json({ error: '代码片段不存在' }, 404);
 
-  const exists = (results[0]?.results?.length || 0) > 0;
-  if (!exists) {
-    return c.json({ error: '代码片段不存在' }, 404);
-  }
+  const result = await toggleLike(c, {
+    userId: user.id,
+    targetId: id,
+    targetType: 'snippet',
+    countTable: 'snippets',
+    likeSuccessMessage: '已点赞',
+    unlikeSuccessMessage: '取消点赞',
+  });
 
-  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
-  return c.json({ message: inserted ? '已点赞' : '取消点赞', liked: inserted });
+  return c.json(result);
 });

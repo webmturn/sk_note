@@ -1,6 +1,6 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { setupApp, type Env } from './index';
+import { setupApp, type AppEnv } from './index';
 import { createD1Database } from './db';
 import dotenv from 'dotenv';
 import { existsSync, mkdirSync } from 'fs';
@@ -25,7 +25,7 @@ if (!existsSync(dbDir)) {
 
 const db = createD1Database(dbPath);
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
 
 // 注入环境变量（替代 Cloudflare Workers 的 Bindings）
 app.use('*', async (c, next) => {

@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { edgeCache } from '../middleware/cache';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
-export const appRoutes = new Hono<{ Bindings: Env }>();
+export const appRoutes = new Hono<AppEnv>();
 
 // 检查更新（从数据库读取最新版本信息，缓存 5 分钟）
 appRoutes.get('/check-update', edgeCache(300), async (c) => {
@@ -34,7 +34,8 @@ appRoutes.get('/check-update', edgeCache(300), async (c) => {
       released_at: release.created_at
     });
   } catch (e: any) {
-    return c.json({ error: '检查更新失败: ' + e.message }, 500);
+    console.error('检查更新失败:', e);
+    return c.json({ error: '检查更新失败' }, 500);
   }
 });
 
@@ -61,7 +62,8 @@ appRoutes.post('/releases', authMiddleware(), adminMiddleware(), async (c) => {
 
     return c.json({ message: '版本发布成功', id: result.meta.last_row_id }, 201);
   } catch (e: any) {
-    return c.json({ error: '发布失败: ' + e.message }, 500);
+    console.error('发布失败:', e);
+    return c.json({ error: '发布失败' }, 500);
   }
 });
 
@@ -73,7 +75,8 @@ appRoutes.get('/releases', authMiddleware(), adminMiddleware(), async (c) => {
     ).all();
     return c.json({ releases: result.results });
   } catch (e: any) {
-    return c.json({ error: '获取失败: ' + e.message }, 500);
+    console.error('获取失败:', e);
+    return c.json({ error: '获取失败' }, 500);
   }
 });
 

@@ -1,10 +1,11 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
-import { authMiddleware } from '../middleware/auth';
+import type { AppEnv } from '../index';
+import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { toggleLike } from '../likeUtils';
 
-export const shareRoutes = new Hono<{ Bindings: Env }>();
+export const shareRoutes = new Hono<AppEnv>();
 
 // 获取分享列表（支持分页、分类、搜索）
 shareRoutes.get('/', edgeCache(120), async (c) => {
@@ -65,7 +66,7 @@ shareRoutes.get('/categories', edgeCache(300), async (c) => {
 // 获取单个分享详情
 shareRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ?').bind(id).first();
+  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ? AND is_approved = 1').bind(id).first();
   if (!share) return c.json({ error: '未找到' }, 404);
 
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
@@ -102,11 +103,25 @@ shareRoutes.post('/:id/download', async (c) => {
 
 // 创建分享（需要登录）
 shareRoutes.post('/', authMiddleware(), rateLimit({ key: 'share:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
-  const user = c.get('user' as never) as { id: number; username: string };
+  const user = c.get('user')!;
   const { title, description, category, download_url, download_pwd, file_size } = await c.req.json();
 
   if (!title || !download_url) {
     return c.json({ error: '标题和下载链接不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (download_url.length > 500) {
+    return c.json({ error: '下载链接最长500个字符' }, 400);
+  }
+  if (description && description.length > 2000) {
+    return c.json({ error: '描述最长2000个字符' }, 400);
+  }
+
+  const validCategories = ['general', 'apk', 'mod', 'resource', 'plugin', 'tool', 'other'];
+  if (category && !validCategories.includes(category)) {
+    return c.json({ error: `无效的分类，可选: ${validCategories.join(', ')}` }, 400);
   }
 
   const userInfo = await c.env.DB.prepare('SELECT nickname, username FROM users WHERE id = ?').bind(user.id).first<{ nickname: string; username: string }>();
@@ -127,52 +142,42 @@ shareRoutes.post('/', authMiddleware(), rateLimit({ key: 'share:create', maxRequ
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '分享成功', id: result.meta.last_row_id }, 201);
 });
 
 // 删除分享（作者或管理员）
 shareRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number; role: string };
 
   const share = await c.env.DB.prepare('SELECT author_id FROM shares WHERE id = ?').bind(id).first<{ author_id: number }>();
   if (!share) return c.json({ error: '未找到' }, 404);
-  if (share.author_id !== user.id && user.role !== 'admin') {
+  if (!(await isOwnerOrAdmin(c, share.author_id))) {
     return c.json({ error: '无权限' }, 403);
   }
 
   await c.env.DB.prepare('DELETE FROM shares WHERE id = ?').bind(id).run();
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '已删除' });
 });
 
 // 点赞分享
 shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
 
-  const results = await c.env.DB.batch([
-    c.env.DB.prepare(
-      'SELECT id FROM shares WHERE id = ?'
-    ).bind(id),
-    c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM shares WHERE id = ?)'
-    ).bind(user.id, 'share', id, id),
-    c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM shares WHERE id = ?) AND changes() = 0'
-    ).bind(user.id, 'share', id, id),
-    c.env.DB.prepare(
-      'UPDATE shares SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
-    ).bind(id),
-  ]);
+  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ?').bind(id).first();
+  if (!share) return c.json({ error: '分享不存在' }, 404);
 
-  const exists = (results[0]?.results?.length || 0) > 0;
-  if (!exists) {
-    return c.json({ error: '分享不存在' }, 404);
-  }
+  const result = await toggleLike(c, {
+    userId: user.id,
+    targetId: id,
+    targetType: 'share',
+    countTable: 'shares',
+    likeSuccessMessage: '已点赞',
+    unlikeSuccessMessage: '取消点赞',
+  });
 
-  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
-  return c.json({ message: inserted ? '已点赞' : '取消点赞', liked: inserted });
+  return c.json(result);
 });

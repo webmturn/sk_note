@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 
-export const categoryRoutes = new Hono<{ Bindings: Env }>();
+export const categoryRoutes = new Hono<AppEnv>();
 
 // 获取所有分类
 categoryRoutes.get('/', edgeCache(600), async (c) => {
@@ -52,7 +52,7 @@ categoryRoutes.post('/', authMiddleware(), adminMiddleware(), async (c) => {
   ).bind(name, description || '', icon || '', sort_order || 0, parentIdForInsert).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/home`]));
+  await purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/home`]);
   return c.json({ id: result.meta.last_row_id, message: '创建成功' }, 201);
 });
 
@@ -96,7 +96,7 @@ categoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   ).bind(name, description || '', icon || '', sort_order || 0, parentIdForUpdate, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]));
+  await purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]);
   return c.json({ message: '更新成功' });
 });
 
@@ -124,6 +124,6 @@ categoryRoutes.delete('/:id', authMiddleware(), adminMiddleware(), async (c) => 
     return c.json({ error: '分类不存在' }, 404);
   }
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]));
+  await purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]);
   return c.json({ message: '删除成功' });
 });

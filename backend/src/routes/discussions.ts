@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
-import { authMiddleware } from '../middleware/auth';
+import type { AppEnv } from '../index';
+import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { toggleLike } from '../likeUtils';
 import { createNotification } from './notifications';
 
-export const discussionRoutes = new Hono<{ Bindings: Env }>();
+export const discussionRoutes = new Hono<AppEnv>();
 
 // 获取讨论列表
 discussionRoutes.get('/', edgeCache(120), async (c) => {
@@ -110,11 +111,17 @@ discussionRoutes.get('/:id', async (c) => {
 
 // 发起讨论（需要登录）
 discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const { title, content, category, article_id } = await c.req.json();
 
   if (!title || !content) {
     return c.json({ error: '标题和内容不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (content.length > 20000) {
+    return c.json({ error: '内容最长20000个字符' }, 400);
   }
 
   let resolvedCategory = typeof category === 'string' && category.trim().length > 0
@@ -163,7 +170,7 @@ discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create
   `).bind(title, content, user.id, resolvedCategory, articleIdForInsert).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]);
   return c.json({ id: result.meta.last_row_id, message: '发布成功' }, 201);
 });
 
@@ -171,13 +178,16 @@ discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create
 discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discussion:comment', maxRequests: 20, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const discussionId = c.req.param('id');
   const discussionIdNum = Number.parseInt(discussionId, 10);
-  const user = c.get('user' as never) as { id: number };
+  const user = c.get('user')!;
   const { content, parent_id } = await c.req.json();
 
   if (!Number.isInteger(discussionIdNum) || discussionIdNum <= 0) {
     return c.json({ error: '无效的讨论ID' }, 400);
   }
   if (!content) return c.json({ error: '回复内容不能为空' }, 400);
+  if (content.length > 5000) {
+    return c.json({ error: '回复内容最长5000个字符' }, 400);
+  }
 
   const discussionExists = await c.env.DB.prepare(
     'SELECT id FROM discussions WHERE id = ?'
@@ -267,20 +277,19 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
 // 删除讨论（仅作者或管理员）
 discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const user = c.get('user' as never) as { id: number; role: string };
 
   const discussion = await c.env.DB.prepare(
     'SELECT author_id FROM discussions WHERE id = ?'
   ).bind(id).first<{ author_id: number }>();
 
   if (!discussion) return c.json({ error: '讨论不存在' }, 404);
-  if (discussion.author_id !== user.id && user.role !== 'admin') {
+  if (!(await isOwnerOrAdmin(c, discussion.author_id))) {
     return c.json({ error: '无权删除' }, 403);
   }
 
   await c.env.DB.prepare('DELETE FROM discussions WHERE id = ?').bind(id).run();
   const baseUrl = new URL(c.req.url).origin;
-  c.executionCtx.waitUntil(purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]));
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
   return c.json({ message: '删除成功' });
 });
 
@@ -288,14 +297,13 @@ discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
 discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) => {
   const commentId = c.req.param('commentId');
   const discussionId = c.req.param('id');
-  const user = c.get('user' as never) as { id: number; role: string };
 
   const comment = await c.env.DB.prepare(
     'SELECT author_id FROM comments WHERE id = ?'
   ).bind(commentId).first<{ author_id: number }>();
 
   if (!comment) return c.json({ error: '评论不存在' }, 404);
-  if (comment.author_id !== user.id && user.role !== 'admin') {
+  if (!(await isOwnerOrAdmin(c, comment.author_id))) {
     return c.json({ error: '无权删除' }, 403);
   }
 
@@ -321,28 +329,19 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
 // 点赞评论
 discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (c) => {
   const commentId = c.req.param('commentId');
-  const user = c.get('user' as never) as { id: number };
-  
-  const results = await c.env.DB.batch([
-    c.env.DB.prepare(
-      'SELECT id FROM comments WHERE id = ?'
-    ).bind(commentId),
-    c.env.DB.prepare(
-      'DELETE FROM likes WHERE user_id = ? AND target_type = ? AND target_id = ? AND EXISTS (SELECT 1 FROM comments WHERE id = ?)'
-    ).bind(user.id, 'comment', commentId, commentId),
-    c.env.DB.prepare(
-      'INSERT INTO likes (user_id, target_type, target_id) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM comments WHERE id = ?) AND changes() = 0'
-    ).bind(user.id, 'comment', commentId, commentId),
-    c.env.DB.prepare(
-      'UPDATE comments SET like_count = MAX(0, like_count + CASE WHEN changes() > 0 THEN 1 ELSE -1 END) WHERE id = ?'
-    ).bind(commentId),
-  ]);
+  const user = c.get('user')!;
 
-  const exists = (results[0]?.results?.length || 0) > 0;
-  if (!exists) {
-    return c.json({ error: '评论不存在' }, 404);
-  }
+  const comment = await c.env.DB.prepare('SELECT id FROM comments WHERE id = ?').bind(commentId).first();
+  if (!comment) return c.json({ error: '评论不存在' }, 404);
 
-  const inserted = ((results[2]?.results?.[0] as any)?.changes || 0) > 0;
-  return c.json({ message: inserted ? '点赞成功' : '已取消点赞', liked: inserted });
+  const result = await toggleLike(c, {
+    userId: user.id,
+    targetId: commentId,
+    targetType: 'comment',
+    countTable: 'comments',
+    likeSuccessMessage: '点赞成功',
+    unlikeSuccessMessage: '已取消点赞',
+  });
+
+  return c.json(result);
 });

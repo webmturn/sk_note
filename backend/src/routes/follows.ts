@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
-import type { Env } from '../index';
+import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
+import { toggleRelation } from '../likeUtils';
 
-export const followRoutes = new Hono<{ Bindings: Env }>();
+export const followRoutes = new Hono<AppEnv>();
 
 function parsePositiveInt(value: string): number | null {
   const num = Number.parseInt(value, 10);
@@ -13,7 +14,7 @@ function parsePositiveInt(value: string): number | null {
 // 关注/取消关注
 followRoutes.post('/:userId', authMiddleware(), async (c) => {
   try {
-    const currentUser = c.get('user' as never) as { id: number };
+    const currentUser = c.get('user')!;
     const targetId = parsePositiveInt(c.req.param('userId'));
     if (!targetId) return c.json({ error: '无效的用户ID' }, 400);
 
@@ -25,29 +26,25 @@ followRoutes.post('/:userId', authMiddleware(), async (c) => {
       .bind(targetId).first();
     if (!target) return c.json({ error: '用户不存在' }, 404);
 
-    const existing = await c.env.DB.prepare(
-      'SELECT id FROM follows WHERE follower_id = ? AND following_id = ?'
-    ).bind(currentUser.id, targetId).first();
+    const result = await toggleRelation(c, {
+      existsSql: 'SELECT id FROM follows WHERE follower_id = ? AND following_id = ?',
+      deleteSql: 'DELETE FROM follows WHERE follower_id = ? AND following_id = ?',
+      insertSql: 'INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)',
+      bindings: [currentUser.id, targetId],
+      activateSuccessMessage: '已关注',
+      deactivateSuccessMessage: '已取消关注',
+    });
 
-    if (existing) {
-      await c.env.DB.prepare(
-        'DELETE FROM follows WHERE follower_id = ? AND following_id = ?'
-      ).bind(currentUser.id, targetId).run();
-      return c.json({ message: '已取消关注', following: false });
-    } else {
-      await c.env.DB.prepare(
-        'INSERT INTO follows (follower_id, following_id) VALUES (?, ?)'
-      ).bind(currentUser.id, targetId).run();
-      return c.json({ message: '已关注', following: true });
-    }
+    return c.json({ message: result.message, following: result.active });
   } catch (e: any) {
-    return c.json({ error: '操作失败: ' + e.message }, 500);
+    console.error('关注操作失败:', e);
+    return c.json({ error: '操作失败' }, 500);
   }
 });
 
 // 检查是否已关注
 followRoutes.get('/check/:userId', authMiddleware(), async (c) => {
-  const currentUser = c.get('user' as never) as { id: number };
+  const currentUser = c.get('user')!;
   const targetId = parsePositiveInt(c.req.param('userId'));
   if (!targetId) return c.json({ error: '无效的用户ID' }, 400);
 
@@ -83,7 +80,8 @@ followRoutes.get('/:userId/following', async (c) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) }
     });
   } catch (e: any) {
-    return c.json({ error: '获取关注列表失败: ' + e.message }, 500);
+    console.error('获取关注列表失败:', e);
+    return c.json({ error: '获取关注列表失败' }, 500);
   }
 });
 
@@ -112,7 +110,8 @@ followRoutes.get('/:userId/followers', async (c) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) }
     });
   } catch (e: any) {
-    return c.json({ error: '获取粉丝列表失败: ' + e.message }, 500);
+    console.error('获取粉丝列表失败:', e);
+    return c.json({ error: '获取粉丝列表失败' }, 500);
   }
 });
 
@@ -146,7 +145,8 @@ followRoutes.get('/profile/:userId', async (c) => {
       }
     });
   } catch (e: any) {
-    return c.json({ error: '获取资料失败: ' + e.message }, 500);
+    console.error('获取资料失败:', e);
+    return c.json({ error: '获取资料失败' }, 500);
   }
 });
 
@@ -175,7 +175,8 @@ followRoutes.get('/profile/:userId/discussions', async (c) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) }
     });
   } catch (e: any) {
-    return c.json({ error: '获取讨论列表失败: ' + e.message }, 500);
+    console.error('获取讨论列表失败:', e);
+    return c.json({ error: '获取讨论列表失败' }, 500);
   }
 });
 
@@ -202,7 +203,8 @@ followRoutes.get('/profile/:userId/snippets', async (c) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) }
     });
   } catch (e: any) {
-    return c.json({ error: '获取片段列表失败: ' + e.message }, 500);
+    console.error('获取片段列表失败:', e);
+    return c.json({ error: '获取片段列表失败' }, 500);
   }
 });
 
@@ -229,6 +231,7 @@ followRoutes.get('/profile/:userId/shares', async (c) => {
       pagination: { page, limit, total, total_pages: Math.ceil(total / limit) }
     });
   } catch (e: any) {
-    return c.json({ error: '获取分享列表失败: ' + e.message }, 500);
+    console.error('获取分享列表失败:', e);
+    return c.json({ error: '获取分享列表失败' }, 500);
   }
 });
