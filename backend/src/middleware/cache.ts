@@ -101,9 +101,12 @@ export async function purgeCache(urls: string[]) {
       await cache.delete(key);
     }
   } else {
-    // Node.js: 清除内存缓存
+    // Node.js: 清除内存缓存（前缀匹配，清除带参数的变体）
     for (const url of urls) {
       memoryCache.delete(url);
+      for (const key of memoryCache.keys()) {
+        if (key.startsWith(url + '?')) memoryCache.delete(key);
+      }
     }
   }
 }

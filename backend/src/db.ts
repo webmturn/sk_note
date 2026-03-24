@@ -65,8 +65,14 @@ class D1DatabaseWrapper {
     const txn = this.db.transaction(() => {
       for (const stmt of statements) {
         const s = this.db.prepare(stmt._sql);
-        const rows = stmt._params.length > 0 ? s.all(...stmt._params) : s.all();
-        batchResults.push({ results: rows });
+        const sqlUpper = stmt._sql.trimStart().toUpperCase();
+        if (sqlUpper.startsWith('SELECT') || sqlUpper.startsWith('WITH')) {
+          const rows = stmt._params.length > 0 ? s.all(...stmt._params) : s.all();
+          batchResults.push({ results: rows });
+        } else {
+          const result = stmt._params.length > 0 ? s.run(...stmt._params) : s.run();
+          batchResults.push({ results: [{ last_row_id: Number(result.lastInsertRowid), changes: result.changes }] });
+        }
       }
     });
     txn();

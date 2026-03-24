@@ -127,34 +127,22 @@ followRoutes.get('/profile/:userId', async (c) => {
     ).bind(userId).first();
     if (!user) return c.json({ error: '用户不存在' }, 404);
 
-    const followingCount = await c.env.DB.prepare(
-      'SELECT COUNT(*) as count FROM follows WHERE follower_id = ?'
-    ).bind(userId).first<{ count: number }>();
-
-    const followersCount = await c.env.DB.prepare(
-      'SELECT COUNT(*) as count FROM follows WHERE following_id = ?'
-    ).bind(userId).first<{ count: number }>();
-
-    const discussionCount = await c.env.DB.prepare(
-      'SELECT COUNT(*) as count FROM discussions WHERE author_id = ?'
-    ).bind(userId).first<{ count: number }>();
-
-    const snippetCount = await c.env.DB.prepare(
-      'SELECT COUNT(*) as count FROM snippets WHERE author_id = ?'
-    ).bind(userId).first<{ count: number }>();
-
-    const shareCount = await c.env.DB.prepare(
-      'SELECT COUNT(*) as count FROM shares WHERE author_id = ?'
-    ).bind(userId).first<{ count: number }>();
+    const [followingResult, followersResult, discussionResult, snippetResult, shareResult] = await c.env.DB.batch([
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM discussions WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM shares WHERE author_id = ?').bind(userId),
+    ]);
 
     return c.json({
       user,
       stats: {
-        following: followingCount?.count || 0,
-        followers: followersCount?.count || 0,
-        discussions: discussionCount?.count || 0,
-        snippets: snippetCount?.count || 0,
-        shares: shareCount?.count || 0,
+        following: (followingResult.results[0] as any)?.count || 0,
+        followers: (followersResult.results[0] as any)?.count || 0,
+        discussions: (discussionResult.results[0] as any)?.count || 0,
+        snippets: (snippetResult.results[0] as any)?.count || 0,
+        shares: (shareResult.results[0] as any)?.count || 0,
       }
     });
   } catch (e: any) {
