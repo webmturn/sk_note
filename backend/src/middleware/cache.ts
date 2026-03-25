@@ -65,15 +65,21 @@ export function edgeCache(maxAgeSec: number = 300) {
         c.executionCtx.waitUntil(cache.put(cacheKey, cachedResponse));
       }
     } else {
-      // Node.js: 简易内存缓存
-      const key = c.req.url;
+      // Node.js: 简易内存缓存（使用路径作为 key，避免 origin 不一致导致缓存失效）
+      const parsed = new URL(c.req.url);
+      const key = parsed.pathname + parsed.search;
       const now = Date.now();
       const hit = memoryCache.get(key);
 
       if (hit && hit.expiry > now) {
         const remaining = Math.ceil((hit.expiry - now) / 1000);
-        c.header('Cache-Control', `public, max-age=${remaining}`);
-        return c.json(JSON.parse(hit.data));
+        return new Response(hit.data, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Cache-Control': `public, max-age=${remaining}`,
+          },
+        });
       }
 
       c.header('Cache-Control', `public, max-age=${maxAgeSec}`);
@@ -101,11 +107,18 @@ export async function purgeCache(urls: string[]) {
       await cache.delete(key);
     }
   } else {
-    // Node.js: 清除内存缓存（前缀匹配，清除带参数的变体）
+    // Node.js: 清除内存缓存（基于路径前缀匹配，清除带参数的变体）
     for (const url of urls) {
-      memoryCache.delete(url);
+      let path: string;
+      try {
+        path = new URL(url).pathname;
+      } catch {
+        path = url;
+      }
       for (const key of memoryCache.keys()) {
-        if (key.startsWith(url + '?')) memoryCache.delete(key);
+        if (key === path || key.startsWith(path + '?')) {
+          memoryCache.delete(key);
+        }
       }
     }
   }

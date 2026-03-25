@@ -40,6 +40,15 @@ export function setupApp(app: Hono<AppEnv>) {
   // 请求体大小限制（1MB）
   app.use('*', bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: '请求体过大，最大 1MB' }, 413) }));
 
+  // 全局错误处理（捕获未处理的异常，如 JSON 解析失败）
+  app.onError((err, c) => {
+    if (err.message?.includes('JSON')) {
+      return c.json({ error: '请求体格式错误' }, 400);
+    }
+    console.error('未处理的错误:', err);
+    return c.json({ error: '服务器内部错误' }, 500);
+  });
+
   // 健康检查
   app.get('/', (c) => c.json({ status: 'ok', service: 'Sketchware-Pro Manual API' }));
 
