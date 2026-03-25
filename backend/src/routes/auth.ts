@@ -370,21 +370,26 @@ authRoutes.put('/password', rateLimit({ key: 'auth:password', maxRequests: 5, wi
     return c.json({ error: '新密码至少6位' }, 400);
   }
 
-  const user = await c.env.DB.prepare(
-    'SELECT password_hash FROM users WHERE id = ?'
-  ).bind(payload.id).first<{ password_hash: string }>();
+  try {
+    const user = await c.env.DB.prepare(
+      'SELECT password_hash FROM users WHERE id = ?'
+    ).bind(payload.id).first<{ password_hash: string }>();
 
-  if (!user) return c.json({ error: '用户不存在' }, 404);
+    if (!user) return c.json({ error: '用户不存在' }, 404);
 
-  const oldMatch = await verifyPassword(old_password, user.password_hash);
-  if (!oldMatch) {
-    return c.json({ error: '旧密码错误' }, 401);
+    const oldMatch = await verifyPassword(old_password, user.password_hash);
+    if (!oldMatch) {
+      return c.json({ error: '旧密码错误' }, 401);
+    }
+
+    const newHash = await hashPassword(new_password);
+    await c.env.DB.prepare(
+      'UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?'
+    ).bind(newHash, payload.id).run();
+
+    return c.json({ message: '密码修改成功' });
+  } catch (e: any) {
+    console.error('修改密码失败:', e);
+    return c.json({ error: '修改密码失败' }, 500);
   }
-
-  const newHash = await hashPassword(new_password);
-  await c.env.DB.prepare(
-    'UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?'
-  ).bind(newHash, payload.id).run();
-
-  return c.json({ message: '密码修改成功' });
 });
