@@ -41,6 +41,7 @@ class CommentAdapter(
                 .placeholder(R.drawable.ic_person)
                 .into(holder.binding.ivAvatar)
         } else {
+            Glide.with(holder.itemView.context).clear(holder.binding.ivAvatar)
             holder.binding.ivAvatar.setImageResource(R.drawable.ic_person)
         }
         holder.binding.tvContent.text = comment.content.orEmpty()
