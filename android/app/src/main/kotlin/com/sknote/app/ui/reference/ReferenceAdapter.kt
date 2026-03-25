@@ -16,8 +16,14 @@ class ReferenceAdapter(
 ) : ListAdapter<ReferenceItem, ReferenceAdapter.ViewHolder>(DiffCallback) {
 
     fun updateBookmarks(ids: Set<Long>) {
+        val old = bookmarkedIds
         bookmarkedIds = ids
-        notifyDataSetChanged()
+        for (i in 0 until itemCount) {
+            val itemId = getItem(i).id
+            if (old.contains(itemId) != ids.contains(itemId)) {
+                notifyItemChanged(i)
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

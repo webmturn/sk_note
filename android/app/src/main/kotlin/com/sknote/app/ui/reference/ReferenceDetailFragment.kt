@@ -841,7 +841,7 @@ class ReferenceDetailFragment : Fragment() {
 
     private fun loadRelatedItems(ref: ReferenceItem) {
         val related = if (!ref.relatedIds.isNullOrEmpty()) {
-            ReferenceData.getByIds(ref.relatedIds)
+            ReferenceData.getByIdString(ref.relatedIds)
         } else {
             ReferenceData.getByTypeAndCategory(ref.type, ref.category)
                 .filter { it.id != ref.id }
