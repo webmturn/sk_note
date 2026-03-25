@@ -6,7 +6,11 @@ import android.os.Build
 import androidx.appcompat.app.AppCompatDelegate
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.local.TokenManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class SkNoteApp : Application() {
@@ -14,10 +18,13 @@ class SkNoteApp : Application() {
         super.onCreate()
         ApiClient.init(this)
 
-        runBlocking {
-            ApiClient.getTokenManager().preloadToken()
-            val mode = ApiClient.getTokenManager().getThemeMode().first()
-            applyThemeMode(this@SkNoteApp, mode)
+        // Theme must be applied synchronously before Activities render (DataStore read is lightweight)
+        val mode = runBlocking { ApiClient.getTokenManager().getThemeMode().first() }
+        applyThemeMode(this@SkNoteApp, mode)
+
+        // Token preload (EncryptedSharedPreferences init + migration) is heavy — run in background
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try { ApiClient.getTokenManager().preloadToken() } catch (_: Exception) {}
         }
     }
 
