@@ -9,3 +9,4 @@ CREATE TABLE IF NOT EXISTS content_views (
 );
 
 CREATE INDEX IF NOT EXISTS idx_content_views_target ON content_views(target_type, target_id);
+CREATE INDEX IF NOT EXISTS idx_content_views_viewed_at ON content_views(viewed_at);
