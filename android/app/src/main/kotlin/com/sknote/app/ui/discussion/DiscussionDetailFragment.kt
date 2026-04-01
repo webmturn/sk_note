@@ -36,6 +36,7 @@ class DiscussionDetailFragment : Fragment() {
     private var discussionId: Long = 0
     private var cachedUserId: Long = -1
     private var cachedRole: String = "user"
+    private var isLoggedIn: Boolean = false
     private var currentDiscussionAuthorId: Long = -1
     private var replyParentCommentId: Long? = null
     private var replyTargetName: String = ""
@@ -56,21 +57,44 @@ class DiscussionDetailFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_discussion_detail)
 
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_discussion_detail")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    viewModel.loadDiscussion(discussionId)
+                    findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
+                    navHandle.remove<Boolean>("refresh_discussion_detail")
+                }
+            }
+
+        navHandle?.getLiveData<String>("discussion_result_message")
+            ?.observe(viewLifecycleOwner) { msg ->
+                if (!msg.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("discussion_result_message")
+                }
+            }
+
         commentAdapter = CommentAdapter(
             onReplyClick = { comment ->
-                beginReplyTo(comment)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    if (!requireLoggedIn(binding.root)) return@launch
+                    beginReplyTo(comment)
+                }
             },
             onCopyClick = { comment ->
                 copyCommentContent(comment.content.orEmpty())
             },
             onDeleteClick = { comment ->
-                if (comment.authorId == cachedUserId || cachedRole == "admin") {
+                if (comment.authorId == cachedUserId || cachedRole == "admin" || cachedRole == "editor") {
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle("删除评论")
                         .setMessage("确定删除这条评论吗？")
                         .setPositiveButton("删除") { _, _ -> viewModel.deleteComment(discussionId, comment.id) }
                         .setNegativeButton("取消", null)
                         .show()
+                } else {
+                    Snackbar.make(binding.root, "你没有权限删除这条评论", Snackbar.LENGTH_SHORT).show()
                 }
             },
             onLikeClick = { comment ->
@@ -91,11 +115,8 @@ class DiscussionDetailFragment : Fragment() {
             adapter = commentAdapter
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
-            if (!isLoggedIn) {
-                binding.layoutReply.visibility = View.GONE
-            }
+        binding.btnLoginReply.setOnClickListener {
+            findNavController().navigate(R.id.loginFragment)
         }
 
         binding.btnSend.setOnClickListener {
@@ -117,17 +138,13 @@ class DiscussionDetailFragment : Fragment() {
             clearReplyTarget()
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            cachedUserId = ApiClient.getTokenManager().getUserId().first() ?: -1
-            cachedRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
-
-            observeData()
-            viewModel.loadDiscussion(discussionId)
-        }
+        observeData()
+        refreshUserContext(loadDiscussion = true)
     }
 
     private fun observeData() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
+            discussion ?: return@observe
             currentDiscussionAuthorId = discussion.authorId
             binding.tvTitle.text = discussion.title
             binding.tvAuthor.text = discussion.authorName ?: "匿名"
@@ -185,7 +202,9 @@ class DiscussionDetailFragment : Fragment() {
                 binding.blockPreviewContainer.visibility = android.view.View.GONE
             }
 
-            val canDelete = discussion.authorId == cachedUserId || cachedRole == "admin"
+            val canEdit = discussion.authorId == cachedUserId || cachedRole == "admin" || cachedRole == "editor"
+            val canDelete = canEdit
+            binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
             binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
 
             binding.toolbar.setOnMenuItemClickListener { menuItem ->
@@ -198,6 +217,11 @@ class DiscussionDetailFragment : Fragment() {
                             putExtra(Intent.EXTRA_TEXT, shareText)
                         }
                         startActivity(Intent.createChooser(intent, "分享讨论"))
+                        true
+                    }
+                    R.id.action_edit -> {
+                        val bundle = Bundle().apply { putLong("discussion_id", discussionId) }
+                        findNavController().navigate(R.id.createDiscussionFragment, bundle)
                         true
                     }
                     R.id.action_delete -> {
@@ -260,13 +284,37 @@ class DiscussionDetailFragment : Fragment() {
                 val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                 imm.hideSoftInputFromWindow(binding.etReply.windowToken, 0)
                 Snackbar.make(binding.root, "评论成功", Snackbar.LENGTH_SHORT).show()
-                // 滚动到底部查看新评论
-                binding.rvComments.post {
-                    var v: android.view.View? = binding.rvComments
-                    while (v != null && v !is androidx.core.widget.NestedScrollView) v = v.parent as? android.view.View
-                    (v as? androidx.core.widget.NestedScrollView)?.fullScroll(View.FOCUS_DOWN)
-                }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            refreshUserContext()
+        }
+    }
+
+    private fun refreshUserContext(loadDiscussion: Boolean = false) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            cachedUserId = if (isLoggedIn) ApiClient.getTokenManager().getUserId().first() ?: -1 else -1
+            cachedRole = if (isLoggedIn) ApiClient.getTokenManager().getUserRole().first() ?: "user" else "user"
+            if (_binding == null) return@launch
+            commentAdapter.updateUserContext(cachedUserId, cachedRole)
+            renderReplyComposer()
+            if (loadDiscussion) {
+                viewModel.loadDiscussion(discussionId)
+            }
+        }
+    }
+
+    private fun renderReplyComposer() {
+        binding.layoutReplyGuest.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
+        binding.layoutReply.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
+        if (!isLoggedIn) {
+            binding.etReply.text?.clear()
+            clearReplyTarget()
         }
     }
 

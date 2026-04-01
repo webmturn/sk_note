@@ -1,5 +1,6 @@
 package com.sknote.app.ui.discussion
 
+import android.view.View
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -19,6 +20,9 @@ class CommentAdapter(
     private val onAvatarClick: (Comment) -> Unit = {}
 ) : ListAdapter<Comment, CommentAdapter.ViewHolder>(DiffCallback) {
 
+    private var currentUserId: Long = -1L
+    private var currentUserRole: String = "user"
+
     class ViewHolder(val binding: ItemCommentBinding) : RecyclerView.ViewHolder(binding.root)
 
     companion object DiffCallback : DiffUtil.ItemCallback<Comment>() {
@@ -29,6 +33,14 @@ class CommentAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemCommentBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
+    }
+
+    fun updateUserContext(userId: Long, userRole: String) {
+        val role = userRole.ifBlank { "user" }
+        if (currentUserId == userId && currentUserRole == role) return
+        currentUserId = userId
+        currentUserRole = role
+        notifyDataSetChanged()
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -66,10 +78,9 @@ class CommentAdapter(
         holder.binding.btnLike.setOnClickListener { onLikeClick(comment) }
         holder.binding.btnReply.setOnClickListener { onReplyClick(comment) }
         holder.binding.btnCopy.setOnClickListener { onCopyClick(comment) }
-        // 长按删除（仅作者或管理员）
-        holder.binding.root.setOnLongClickListener {
-            onDeleteClick(comment)
-            true
-        }
+
+        val canDelete = comment.authorId == currentUserId || currentUserRole == "admin" || currentUserRole == "editor"
+        holder.binding.btnDelete.visibility = if (canDelete) View.VISIBLE else View.GONE
+        holder.binding.btnDelete.setOnClickListener { onDeleteClick(comment) }
     }
 }

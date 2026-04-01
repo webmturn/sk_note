@@ -130,6 +130,21 @@
                 android:text="复制"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/btnDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="3dp"
+                android:text="删除"
+                android:textColor="?attr/colorError"
+                android:textSize="12sp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
