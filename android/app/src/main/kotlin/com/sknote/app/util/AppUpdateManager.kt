@@ -253,6 +253,11 @@ object AppUpdateManager {
         return System.currentTimeMillis() - lastCheck > CHECK_INTERVAL
     }
 
+    fun getLastCheckedTime(context: Context): Long {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getLong(KEY_LAST_CHECK, 0L)
+    }
+
     fun markChecked(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
@@ -264,8 +269,16 @@ object AppUpdateManager {
     }
 
     fun isVersionSkipped(context: Context, versionName: String): Boolean {
-        val skipped = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_SKIP_VERSION, "")
-        return skipped == versionName
+        return getSkippedVersion(context) == versionName
+    }
+
+    fun getSkippedVersion(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val skipped = prefs.getString(KEY_SKIP_VERSION, "")?.ifBlank { null } ?: return null
+        if (!isNewerVersion(skipped, BuildConfig.VERSION_NAME)) {
+            prefs.edit().remove(KEY_SKIP_VERSION).apply()
+            return null
+        }
+        return skipped
     }
 }

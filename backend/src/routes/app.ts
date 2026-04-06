@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
-import { edgeCache } from '../middleware/cache';
+import { edgeCache, purgeCache } from '../middleware/cache';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 
 export const appRoutes = new Hono<AppEnv>();
@@ -60,6 +60,8 @@ appRoutes.post('/releases', authMiddleware(), adminMiddleware(), async (c) => {
       release_url || ''
     ).run();
 
+    const baseUrl = new URL(c.req.url).origin;
+    await purgeCache([`${baseUrl}/api/app/check-update`]);
     return c.json({ message: '版本发布成功', id: result.meta.last_row_id }, 201);
   } catch (e: any) {
     console.error('发布失败:', e);
@@ -87,6 +89,8 @@ appRoutes.delete('/releases/:id', authMiddleware(), adminMiddleware(), async (c)
   if (result.meta.changes === 0) {
     return c.json({ error: '版本不存在' }, 404);
   }
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/app/check-update`]);
   return c.json({ message: '已删除' });
 });
 

@@ -2,6 +2,7 @@ package com.sknote.app.ui.profile
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +41,7 @@ class SettingsFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         binding.tvVersion.text = "v${BuildConfig.VERSION_NAME}"
+        refreshUpdateSummary()
 
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setEnterAnim(R.anim.slide_in_right)
@@ -78,21 +80,51 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun setUpdateBusyState(isBusy: Boolean) {
+        binding.progressUpdate.visibility = if (isBusy) View.VISIBLE else View.GONE
+        binding.rowCheckUpdate.isEnabled = !isBusy
+        binding.rowCheckUpdate.alpha = if (isBusy) 0.7f else 1f
+    }
+
+    private fun refreshUpdateSummary() {
+        if (!isFragmentUsable()) return
+        val skippedVersion = AppUpdateManager.getSkippedVersion(requireContext())
+        val lastChecked = AppUpdateManager.getLastCheckedTime(requireContext())
+        binding.tvUpdateStatus.text = when {
+            skippedVersion != null && lastChecked > 0L -> "已跳过 v$skippedVersion · 上次检查 ${formatCheckedTime(lastChecked)}"
+            skippedVersion != null -> "已跳过 v$skippedVersion · 点击重新检查"
+            lastChecked > 0L -> "上次检查 ${formatCheckedTime(lastChecked)}"
+            else -> "点击检查新版本"
+        }
+    }
+
+    private fun formatCheckedTime(timeMillis: Long): String {
+        return DateUtils.getRelativeTimeSpanString(
+            timeMillis,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS
+        ).toString()
+    }
+
     private fun checkUpdate(manual: Boolean) {
-        binding.progressUpdate.visibility = View.VISIBLE
+        setUpdateBusyState(true)
         binding.tvUpdateStatus.text = "正在检查..."
 
         viewLifecycleOwner.lifecycleScope.launch {
             val result = AppUpdateManager.checkForUpdate()
             if (!isFragmentUsable()) return@launch
 
-            binding.progressUpdate.visibility = View.GONE
+            setUpdateBusyState(false)
 
-            if (result.error != null && manual) {
-                binding.tvUpdateStatus.text = "检查失败"
-                Snackbar.make(binding.root, "检查更新失败: ${result.error}", Snackbar.LENGTH_SHORT).show()
+            if (result.error != null) {
+                binding.tvUpdateStatus.text = "检查失败，请稍后重试"
+                if (manual) {
+                    Snackbar.make(binding.root, "检查更新失败: ${result.error}", Snackbar.LENGTH_SHORT).show()
+                }
                 return@launch
             }
+
+            AppUpdateManager.markChecked(requireContext())
 
             if (result.hasUpdate && result.info != null) {
                 binding.tvUpdateStatus.text = "发现新版本 v${result.info.versionName}"
@@ -100,12 +132,8 @@ class SettingsFragment : Fragment() {
                     showUpdateDialog(result.info)
                 }
             } else {
-                binding.tvUpdateStatus.text = "已是最新版本"
-                if (manual) {
-                    Snackbar.make(binding.root, "当前已是最新版本", Snackbar.LENGTH_SHORT).show()
-                }
+                binding.tvUpdateStatus.text = "已是最新版本 · 刚刚检查"
             }
-            AppUpdateManager.markChecked(requireContext())
         }
     }
 
@@ -133,19 +161,19 @@ class SettingsFragment : Fragment() {
         builder.setNeutralButton("跳过此版本") { _, _ ->
             if (!isFragmentUsable()) return@setNeutralButton
             AppUpdateManager.skipVersion(requireContext(), info.versionName)
-            binding.tvUpdateStatus.text = "已跳过 v${info.versionName}"
+            refreshUpdateSummary()
         }
         builder.show()
     }
 
     private fun startDownloadAndInstall(info: AppUpdateManager.UpdateInfo) {
-        binding.tvUpdateStatus.text = "正在下载..."
-        binding.progressUpdate.visibility = View.VISIBLE
+        binding.tvUpdateStatus.text = "正在下载 v${info.versionName}..."
+        setUpdateBusyState(true)
 
         AppUpdateManager.startDownload(requireContext(), info.downloadUrl, info.versionName) { file ->
             activity?.runOnUiThread {
                 if (!isFragmentUsable()) return@runOnUiThread
-                binding.progressUpdate.visibility = View.GONE
+                setUpdateBusyState(false)
                 if (file != null && file.exists()) {
                     binding.tvUpdateStatus.text = "下载完成，正在安装..."
                     AppUpdateManager.installApk(requireContext(), file)
@@ -188,6 +216,7 @@ class SettingsFragment : Fragment() {
         }
         if (isFragmentUsable()) {
             binding.tvCacheSize.text = getCacheSize()
+            refreshUpdateSummary()
         }
     }
 

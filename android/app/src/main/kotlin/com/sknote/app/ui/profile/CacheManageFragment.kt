@@ -21,6 +21,12 @@ class CacheManageFragment : Fragment() {
     private var _binding: FragmentCacheManageBinding? = null
     private val binding get() = _binding!!
 
+    private data class CacheUsage(
+        val totalSize: Long,
+        val imageSize: Long,
+        val otherSize: Long
+    )
+
     private fun isFragmentUsable(): Boolean {
         return _binding != null && isAdded && context != null
     }
@@ -53,7 +59,7 @@ class CacheManageFragment : Fragment() {
     private fun showClearDialog(name: String, onConfirm: () -> Unit) {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("清除$name")
-            .setMessage("确定要清除${name}吗？")
+            .setMessage("确定要清除${name}吗？这不会影响账号数据。")
             .setNegativeButton("取消", null)
             .setPositiveButton("清除") { _, _ -> onConfirm() }
             .show()
@@ -61,9 +67,17 @@ class CacheManageFragment : Fragment() {
 
     private val IMAGE_CACHE_DIRS = setOf("image_manager_disk_cache", "com.bumptech.glide")
 
-    private fun refreshCacheSizes() {
-        val cacheDir = requireContext().cacheDir
+    private fun setBusyState(isBusy: Boolean, statusText: String? = null) {
+        binding.rowClearImageCache.isEnabled = !isBusy
+        binding.rowClearAllCache.isEnabled = !isBusy
+        binding.rowClearImageCache.alpha = if (isBusy) 0.6f else 1f
+        binding.rowClearAllCache.alpha = if (isBusy) 0.6f else 1f
+        if (statusText != null) {
+            binding.tvCacheSummary.text = statusText
+        }
+    }
 
+    private fun readCacheUsage(cacheDir: File): CacheUsage {
         var imageSize = 0L
         val totalSize = getDirSize(cacheDir)
 
@@ -74,32 +88,73 @@ class CacheManageFragment : Fragment() {
 
         val otherSize = (totalSize - imageSize).coerceAtLeast(0)
 
-        binding.tvTotalCache.text = formatSize(totalSize)
-        binding.tvImageCache.text = formatSize(imageSize)
-        binding.tvOtherCache.text = formatSize(otherSize)
+        return CacheUsage(
+            totalSize = totalSize,
+            imageSize = imageSize,
+            otherSize = otherSize
+        )
+    }
+
+    private fun refreshCacheSizes(statusText: String? = null) {
+        val usage = readCacheUsage(requireContext().cacheDir)
+
+        binding.tvTotalCache.text = formatSize(usage.totalSize)
+        binding.tvImageCache.text = formatSize(usage.imageSize)
+        binding.tvOtherCache.text = formatSize(usage.otherSize)
+        binding.tvCacheSummary.text = statusText ?: if (usage.totalSize > 0L) {
+            "图片 ${formatSize(usage.imageSize)} · 其他 ${formatSize(usage.otherSize)}"
+        } else {
+            "当前缓存已清理"
+        }
     }
 
     private fun clearImageCache() {
-        val ctx = requireContext()
+        val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+            val beforeUsage = readCacheUsage(ctx.cacheDir)
+            setBusyState(true, "正在清理图片缓存...")
+            Glide.get(ctx).clearMemory()
+            val afterUsage = withContext(Dispatchers.IO) {
                 Glide.get(ctx).clearDiskCache()
                 IMAGE_CACHE_DIRS.forEach { File(ctx.cacheDir, it).deleteRecursively() }
+                readCacheUsage(ctx.cacheDir)
             }
             if (!isFragmentUsable()) return@launch
-            refreshCacheSizes()
+            setBusyState(false)
+            val clearedBytes = (beforeUsage.imageSize - afterUsage.imageSize).coerceAtLeast(0)
+            refreshCacheSizes(
+                if (clearedBytes > 0L) {
+                    "已清理图片缓存 ${formatSize(clearedBytes)}"
+                } else {
+                    "图片缓存已清理"
+                }
+            )
             Snackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
 
     private fun clearAllCache() {
-        val ctx = requireContext()
+        val ctx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+            val beforeUsage = readCacheUsage(ctx.cacheDir)
+            setBusyState(true, "正在清理全部缓存...")
+            Glide.get(ctx).clearMemory()
+            val afterUsage = withContext(Dispatchers.IO) {
+                Glide.get(ctx).clearDiskCache()
                 ctx.cacheDir.deleteRecursively()
+                ctx.cacheDir.mkdirs()
+                readCacheUsage(ctx.cacheDir)
             }
             if (!isFragmentUsable()) return@launch
-            refreshCacheSizes()
+            setBusyState(false)
+            val clearedBytes = (beforeUsage.totalSize - afterUsage.totalSize).coerceAtLeast(0)
+            refreshCacheSizes(
+                if (clearedBytes > 0L) {
+                    "已清理全部缓存 ${formatSize(clearedBytes)}"
+                } else {
+                    "全部缓存已清理"
+                }
+            )
             Snackbar.make(binding.root, "全部缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
