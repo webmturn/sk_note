@@ -14,7 +14,7 @@ android {
         versionCode = 5
         versionName = "1.2.2"
 
-        // TODO: 部署后替换为你的 Cloudflare Workers URL
+        // 当前默认 API 地址为生产域名；如需切换环境，请修改这里
         buildConfigField("String", "API_BASE_URL", "\"https://api.wsqh.cn\"")
         // TODO: 替换为你的 SM.MS API Token (https://sm.ms/home/apitoken)
         buildConfigField("String", "SMMS_API_TOKEN", "\"\"")

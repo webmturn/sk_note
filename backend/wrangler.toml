@@ -2,6 +2,8 @@ name = "sk-note-api"
 main = "src/index.ts"
 compatibility_date = "2024-06-01"
 
+# Legacy Workers config kept only for local/compatibility tooling.
+# Current production deployment is self-hosted and does not use Wrangler routes.
 # routes = [
 #   { pattern = "api.wsqh.cn", custom_domain = true }
 # ]

@@ -44,7 +44,7 @@ aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
 
     const [unreadResult, articleResult, discussionResult, snippetResult, userResult, shareResult, myDiscussionResult, mySnippetResult, myArticleResult] = await c.env.DB.batch([
       c.env.DB.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').bind(user.id),
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM articles'),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM articles WHERE is_published = 1'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM discussions'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM users'),

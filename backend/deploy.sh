@@ -2,14 +2,14 @@
 set -e
 
 # SK-Note Backend 服务器部署脚本
-# 适用于 Ubuntu 24.04 LTS
+# 适用于 Ubuntu 22.04+ 自托管环境
 
 echo "========== SK-Note Backend 部署 =========="
 
 # 1. 系统更新 + 基础工具
 echo ">>> 安装基础依赖..."
 apt-get update -y
-apt-get install -y curl git build-essential python3 nginx
+apt-get install -y curl git build-essential python3 nginx certbot python3-certbot-nginx
 
 # 2. 安装 Node.js 20.x
 if ! command -v node &> /dev/null; then
@@ -107,7 +107,7 @@ nginx -t && systemctl reload nginx
 echo ""
 echo "========== 部署完成 =========="
 echo "API 地址: http://$(hostname -I | awk '{print $1}'):3000"
-echo "Nginx 代理: http://api.wsqh.cn"
+echo "域名入口: http://api.wsqh.cn"
 echo ""
 echo "后续步骤:"
 echo "  1. 配置 DNS 将 api.wsqh.cn 指向此服务器 IP"

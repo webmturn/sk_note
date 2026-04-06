@@ -5,6 +5,7 @@ import com.sknote.app.BuildConfig
 import com.sknote.app.data.local.TokenManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.Interceptor
 import okhttp3.logging.HttpLoggingInterceptor
@@ -12,6 +13,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 object ApiClient {
 
@@ -19,6 +21,8 @@ object ApiClient {
     private var apiService: ApiService? = null
     private var tokenManager: TokenManager? = null
     private var appContext: Context? = null
+    private val authScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val clearingAuth = AtomicBoolean(false)
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -49,8 +53,14 @@ object ApiClient {
                 chain.request()
             }
             val response = chain.proceed(request)
-            if (response.code == 401 && !token.isNullOrEmpty()) {
-                CoroutineScope(Dispatchers.IO).launch { tokenManager?.clearAuth() }
+            if (response.code == 401 && !token.isNullOrEmpty() && clearingAuth.compareAndSet(false, true)) {
+                authScope.launch {
+                    try {
+                        tokenManager?.clearAuth()
+                    } finally {
+                        clearingAuth.set(false)
+                    }
+                }
             }
             response
         }

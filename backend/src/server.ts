@@ -11,6 +11,7 @@ dotenv.config();
 const dbPath = process.env.DB_PATH || './data/sk-note.db';
 const port = parseInt(process.env.PORT || '3000');
 const jwtSecret = process.env.JWT_SECRET || '';
+const corsOrigins = process.env.CORS_ORIGINS || '';
 
 if (!jwtSecret) {
   console.error('❌ JWT_SECRET 未配置，请在 .env 文件中设置');
@@ -31,6 +32,7 @@ const app = new Hono<AppEnv>();
 app.use('*', async (c, next) => {
   (c.env as any).DB = db;
   (c.env as any).JWT_SECRET = jwtSecret;
+  (c.env as any).CORS_ORIGINS = corsOrigins;
   // Polyfill Cloudflare Workers executionCtx
   try { c.executionCtx; } catch {
     Object.defineProperty(c, 'executionCtx', {

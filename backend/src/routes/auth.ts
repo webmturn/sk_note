@@ -171,12 +171,23 @@ authRoutes.put('/me', authMiddleware(), async (c) => {
   const values: any[] = [];
 
   if (body.avatar_url !== undefined) {
+    const avatarUrl = (body.avatar_url || '').trim();
+    if (avatarUrl.length > 500) {
+      return c.json({ error: '头像链接最长500个字符' }, 400);
+    }
+    if (avatarUrl && !/^https?:\/\/.+/.test(avatarUrl)) {
+      return c.json({ error: '头像链接格式无效' }, 400);
+    }
     fields.push('avatar_url = ?');
-    values.push(body.avatar_url || '');
+    values.push(avatarUrl);
   }
   if (body.bio !== undefined) {
+    const bio = (body.bio || '').trim();
+    if (bio.length > 300) {
+      return c.json({ error: '个人简介最长300个字符' }, 400);
+    }
     fields.push('bio = ?');
-    values.push(body.bio || '');
+    values.push(bio);
   }
   if (body.nickname !== undefined) {
     const newNickname = (body.nickname || '').trim();
@@ -193,6 +204,9 @@ authRoutes.put('/me', authMiddleware(), async (c) => {
     const newUsername = (body.username || '').trim();
     if (newUsername.length < 2) {
       return c.json({ error: '用户名至少2个字符' }, 400);
+    }
+    if (newUsername.length > 30) {
+      return c.json({ error: '用户名最长30个字符' }, 400);
     }
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE username = ? AND id != ?'

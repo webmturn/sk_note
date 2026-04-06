@@ -83,46 +83,109 @@ sk_note/
 
 ## 部署步骤
 
-### 1. 部署后端
+### 1. 当前生产部署
+
+当前线上环境为自托管部署：
+
+- 后端目录：`/opt/sk-note-backend`
+- 数据库目录：`/opt/sk-note-backend/data`
+- PM2 进程名：`sk-note-api`
+- 域名：`https://api.wsqh.cn`
+- 反向代理：`Nginx`
+
+### 2. 初始化新服务器（Ubuntu 22.04+）
 
 ```bash
-# 准备服务器（Ubuntu），运行初始化脚本
-bash deploy.sh
+sudo apt update
+sudo apt install -y curl git build-essential python3 nginx certbot python3-certbot-nginx
 
-# 或手动部署：
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo npm install -g pm2
+
+sudo mkdir -p /opt/sk-note-backend/data /opt/sk-note-backend/logs
+sudo chown -R $USER:$USER /opt/sk-note-backend
+```
+
+### 3. 上传并启动后端
+
+可先把 `backend/` 目录上传到服务器临时目录，再复制到正式目录：
+
+```bash
+rsync -av backend/ ubuntu@your-server:/tmp/backend/
+```
+
+登录服务器后执行：
+
+```bash
+rsync -av /tmp/backend/ /opt/sk-note-backend/
 cd /opt/sk-note-backend
 npm install
 
-# 配置环境变量
 cp .env.example .env
-# 编辑 .env，设置 JWT_SECRET、DB_PATH、PORT
+# 编辑 .env，至少配置以下变量
+# PORT=3000
+# JWT_SECRET=你的随机密钥
+# DB_PATH=./data/sk-note.db
+# CORS_ORIGINS=https://wsqh.cn,https://www.wsqh.cn
 
-# 初始化数据库（首次运行自动创建）
-# 或手动执行 schema.sql
-
-# 启动服务
 pm2 start ecosystem.config.cjs
 pm2 save
 ```
 
-API 域名：`https://api.wsqh.cn`
+### 4. 迁移已有生产数据
 
-### 2. 构建 Android App
+如果是从旧服务器迁移，请优先迁移以下内容：
+
+- `/opt/sk-note-backend/data/`
+- `/opt/sk-note-backend/.env`
+
+建议流程：
+
+```bash
+# 旧服务器停应用，避免 SQLite 双写
+pm2 stop sk-note-api
+
+# 备份数据库和环境文件
+tar czf /tmp/sk-note-backend-data.tar.gz -C /opt/sk-note-backend data .env
+
+# 传到新服务器后恢复
+tar xzf /tmp/sk-note-backend-data.tar.gz -C /opt/sk-note-backend
+```
+
+恢复后在新服务器重启：
+
+```bash
+cd /opt/sk-note-backend
+pm2 restart ecosystem.config.cjs --update-env
+```
+
+### 5. 配置域名与 HTTPS
+
+`api.wsqh.cn` 当前指向自托管服务器。完成服务启动后：
+
+```bash
+sudo certbot --nginx -d api.wsqh.cn
+```
+
+建议在 `Cloudflare` 中：
+
+- 先把记录切到新源站
+- 证书签发成功后再按需开启代理
+- `SSL/TLS` 模式使用 `Full (strict)`
+
+### 6. 构建 Android App
 
 ```bash
 cd android
 
-# 修改 API 地址
-# 编辑 app/build.gradle.kts 中的 API_BASE_URL
+# 当前默认 API 地址已经指向生产域名 https://api.wsqh.cn
 
-# 构建
 ./gradlew assembleDebug
-
-# 安装到设备
 ./gradlew installDebug
 ```
 
-### 3. 创建管理员账号
+### 7. 创建管理员账号
 
 注册一个账号后，通过 SQLite 手动提升为管理员：
 
@@ -186,7 +249,7 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 | PUT | /api/notifications/:id/read | 标记已读 | 登录 |
 | PUT | /api/notifications/read-all | 全部已读 | 登录 |
 | DELETE | /api/notifications/:id | 删除通知 | 登录 |
-| GET | /api/app/latest-release | 检查应用更新 | 公开 |
+| GET | /api/app/check-update | 检查应用更新 | 公开 |
 
 ## License
 

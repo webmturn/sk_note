@@ -18,6 +18,7 @@ import { followRoutes } from './routes/follows';
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
+  CORS_ORIGINS?: string;
 }
 
 export interface JwtPayload {
@@ -30,9 +31,18 @@ export interface JwtPayload {
 export type AppEnv = { Bindings: Env; Variables: { user?: JwtPayload } };
 
 export function setupApp(app: Hono<AppEnv>) {
+  const fallbackOrigins = ['http://localhost:3000', 'https://wsqh.cn', 'https://www.wsqh.cn'];
   // CORS 配置
   app.use('*', cors({
-    origin: ['https://api.wsqh.cn', 'http://localhost:3000'],
+    origin: (origin, c) => {
+      if (!origin) return origin;
+      const configuredOrigins = (c.env.CORS_ORIGINS || '')
+        .split(',')
+        .map((item: string) => item.trim())
+        .filter(Boolean);
+      const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : fallbackOrigins;
+      return allowedOrigins.includes(origin) ? origin : null;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowHeaders: ['Content-Type', 'Authorization'],
   }));

@@ -96,7 +96,7 @@ categoryRoutes.put('/:id', authMiddleware(), adminMiddleware(), async (c) => {
   ).bind(name, description || '', icon || '', sort_order || 0, parentIdForUpdate, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/home`]);
+  await purgeCache([`${baseUrl}/api/categories`, `${baseUrl}/api/categories/${id}`, `${baseUrl}/api/articles`, `${baseUrl}/api/home`]);
   return c.json({ message: '更新成功' });
 });
 

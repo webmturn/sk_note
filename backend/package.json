@@ -1,7 +1,7 @@
 {
   "name": "sk-note-backend",
   "version": "1.0.0",
-  "description": "Sketchware-Pro Manual Backend - Cloudflare Workers + D1",
+  "description": "Sketchware-Pro Manual Backend - Self-hosted Node.js + SQLite",
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
