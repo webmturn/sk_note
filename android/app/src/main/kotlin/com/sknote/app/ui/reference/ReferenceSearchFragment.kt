@@ -56,6 +56,7 @@ class ReferenceSearchFragment : Fragment() {
         }
 
         binding.btnBack.setOnClickListener { findNavController().navigateUp() }
+        binding.btnSearch.setOnClickListener { performSearch() }
 
         binding.etSearch.requestFocus()
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -65,22 +66,16 @@ class ReferenceSearchFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                binding.btnClear.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                val query = s?.toString()?.trim().orEmpty()
+                updateSearchActionState(query)
                 searchRunnable?.let { searchHandler.removeCallbacks(it) }
                 searchRunnable = Runnable {
-                    val q = s?.toString()?.trim() ?: ""
-                    if (q.isNotEmpty()) {
+                    if (query.isNotEmpty()) {
                         binding.layoutHistory.visibility = View.GONE
                         binding.layoutHotTags.visibility = View.GONE
-                        showSuggestions(q)
+                        showSuggestions(query)
                     } else {
-                        adapter.submitList(emptyList())
-                        binding.tvEmpty.visibility = View.VISIBLE
-                        binding.tvEmpty.text = "输入关键词搜索参考文档"
-                        binding.tvResultCount.visibility = View.GONE
-                        binding.layoutSuggestions.visibility = View.GONE
-                        showHistory()
-                        showHotTags()
+                        showIdleState()
                     }
                 }
                 searchHandler.postDelayed(searchRunnable!!, 200)
@@ -97,13 +92,7 @@ class ReferenceSearchFragment : Fragment() {
 
         binding.btnClear.setOnClickListener {
             binding.etSearch.text?.clear()
-            adapter.submitList(emptyList())
-            binding.tvEmpty.visibility = View.VISIBLE
-            binding.tvEmpty.text = "输入关键词搜索参考文档"
-            binding.tvResultCount.visibility = View.GONE
-            binding.layoutSuggestions.visibility = View.GONE
-            showHistory()
-            showHotTags()
+            showIdleState()
         }
 
         binding.btnClearHistory.setOnClickListener {
@@ -113,6 +102,7 @@ class ReferenceSearchFragment : Fragment() {
 
         showHistory()
         showHotTags()
+        updateSearchActionState("")
         observeData()
     }
 
@@ -158,8 +148,8 @@ class ReferenceSearchFragment : Fragment() {
         }
     }
 
-    private fun performSearch() {
-        val query = binding.etSearch.text.toString().trim()
+    private fun performSearch(queryOverride: String? = null) {
+        val query = queryOverride?.trim().orEmpty().ifBlank { binding.etSearch.text.toString().trim() }
         if (query.isEmpty()) return
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
@@ -167,20 +157,23 @@ class ReferenceSearchFragment : Fragment() {
         binding.layoutHistory.visibility = View.GONE
         binding.layoutHotTags.visibility = View.GONE
         binding.layoutSuggestions.visibility = View.GONE
+        binding.tvEmpty.visibility = View.GONE
+        binding.tvResultCount.visibility = View.GONE
         viewModel.searchReferences(query)
     }
 
     private fun showSuggestions(query: String) {
         val suggestions = ReferenceData.getSuggestions(query)
         binding.layoutSuggestions.removeAllViews()
+        adapter.submitList(emptyList())
+        binding.tvResultCount.visibility = View.GONE
         if (suggestions.isEmpty()) {
             binding.layoutSuggestions.visibility = View.GONE
-            viewModel.searchReferences(query)
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.tvEmpty.text = "点击搜索查看「$query」的完整结果"
             return
         }
         binding.layoutSuggestions.visibility = View.VISIBLE
-        adapter.submitList(emptyList())
-        binding.tvResultCount.visibility = View.GONE
         binding.tvEmpty.visibility = View.GONE
 
         for (item in suggestions) {
@@ -223,11 +216,7 @@ class ReferenceSearchFragment : Fragment() {
             row.setOnClickListener {
                 binding.etSearch.setText(item.name)
                 binding.etSearch.setSelection(item.name.length)
-                saveSearchQuery(item.name)
-                binding.layoutSuggestions.visibility = View.GONE
-                viewModel.searchReferences(item.name)
-                val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+                performSearch(item.name)
             }
 
             binding.layoutSuggestions.addView(row)
@@ -240,14 +229,26 @@ class ReferenceSearchFragment : Fragment() {
             setTextColor(resolveColor(com.google.android.material.R.attr.colorPrimary))
             setPadding(dp(16), dp(12), dp(16), dp(12))
             setOnClickListener {
-                saveSearchQuery(query)
-                binding.layoutSuggestions.visibility = View.GONE
-                viewModel.searchReferences(query)
-                val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+                performSearch(query)
             }
         }
         binding.layoutSuggestions.addView(searchAll)
+    }
+
+    private fun updateSearchActionState(query: String) {
+        binding.btnClear.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+        binding.btnSearch.isEnabled = query.isNotEmpty()
+        binding.btnSearch.alpha = if (query.isNotEmpty()) 1f else 0.4f
+    }
+
+    private fun showIdleState() {
+        adapter.submitList(emptyList())
+        binding.layoutSuggestions.visibility = View.GONE
+        binding.tvResultCount.visibility = View.GONE
+        binding.tvEmpty.visibility = View.VISIBLE
+        binding.tvEmpty.text = "输入关键词搜索参考文档"
+        showHistory()
+        showHotTags()
     }
 
     private val hotTags = listOf(

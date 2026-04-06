@@ -26,6 +26,7 @@ class ReferenceFragment : Fragment() {
     private var currentShape: String? = null
     private var showingBookmarks = false
     private var statsExpanded = false
+    private var detailFiltersExpanded = false
     private val bookmarkPrefs by lazy {
         requireContext().getSharedPreferences("reference_bookmarks", Context.MODE_PRIVATE)
     }
@@ -62,9 +63,11 @@ class ReferenceFragment : Fragment() {
         setupScrollToTop()
         setupStatsPanel()
         setupSortButton()
+        setupDetailFilterToggle()
         setupGuideButton()
         observeData()
         updateSubtitle()
+        updateSortUi()
 
         // 恢复 chip 选中状态（返回时 fragment 实例保留 currentType）
         if (showingBookmarks) {
@@ -99,7 +102,13 @@ class ReferenceFragment : Fragment() {
     private fun updateSubtitle() {
         val total = ReferenceData.getItemCount()
         val bm = getBookmarkedIds().size
-        binding.tvSubtitle.text = "共 $total 项参考 · 已收藏 $bm 项"
+        binding.tvSubtitle.text = when {
+            showingBookmarks -> "已收藏 $bm 项参考"
+            currentCategory != null && currentType != null -> "${typeLabel(currentType)} / $currentCategory"
+            currentShape != null && currentType != null -> "${typeLabel(currentType)} / ${shapeLabel(currentShape)}"
+            currentType != null -> "${typeLabel(currentType)} · 共 ${ReferenceData.getByType(currentType!!).size} 项"
+            else -> "共 $total 项参考 · 已收藏 $bm 项"
+        }
     }
 
     private fun setupStatsPanel() {
@@ -128,6 +137,13 @@ class ReferenceFragment : Fragment() {
     private fun setupGuideButton() {
         binding.btnGuide.setOnClickListener {
             BlockGuideDialog().show(childFragmentManager, "guide")
+        }
+    }
+
+    private fun setupDetailFilterToggle() {
+        binding.btnToggleDetailFilters.setOnClickListener {
+            detailFiltersExpanded = !detailFiltersExpanded
+            applyDetailFilterVisibility()
         }
     }
 
@@ -164,10 +180,59 @@ class ReferenceFragment : Fragment() {
                 } else {
                     viewModel.loadReferences(currentType, currentCategory)
                 }
+                updateSortUi()
                 true
             }
             popup.show()
         }
+    }
+
+    private fun updateSortUi() {
+        binding.tvSortMode.text = viewModel.getSortLabel()
+        binding.tvSortMode.alpha = if (viewModel.sortMode == SortMode.DEFAULT) 0.7f else 1f
+    }
+
+    private fun typeLabel(type: String?): String = when (type) {
+        "block" -> "积木块"
+        "component" -> "组件"
+        "widget" -> "控件"
+        "event" -> "事件"
+        else -> "全部"
+    }
+
+    private fun shapeLabel(shape: String?): String = shape?.let { ReferenceData.shapeLabels[it] ?: it } ?: "全部"
+
+    private fun updateDetailFilterSummary(type: String?) {
+        if (type == null || showingBookmarks) {
+            binding.layoutDetailFilterSummary.visibility = View.GONE
+            return
+        }
+        val hasSubCategories = !ReferenceData.subCategories[type].isNullOrEmpty()
+        val shapeEnabled = requireContext().getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
+            .getBoolean("shape_filter_enabled", false)
+        val hasShapeFilters = shapeEnabled && type == "block" && currentCategory == null && ReferenceData.getShapesForType(type).size > 1
+        val hasDetailFilters = hasSubCategories || hasShapeFilters || currentCategory != null || currentShape != null
+        binding.layoutDetailFilterSummary.visibility = if (hasDetailFilters) View.VISIBLE else View.GONE
+        if (!hasDetailFilters) return
+
+        binding.tvDetailFilterSummary.text = when {
+            currentCategory != null -> "当前细分：$currentCategory"
+            currentShape != null -> "当前形状：${shapeLabel(currentShape)}"
+            hasSubCategories && hasShapeFilters -> "可继续按子分类或形状细分"
+            hasSubCategories -> "可继续按子分类细分"
+            hasShapeFilters -> "可继续按形状细分"
+            else -> ""
+        }
+    }
+
+    private fun applyDetailFilterVisibility() {
+        val hasSubFilters = binding.subChipGroup.childCount > 0
+        val hasShapeFilters = binding.shapeChipGroup.childCount > 0
+        val showSummary = binding.layoutDetailFilterSummary.visibility == View.VISIBLE
+        val showExpandedFilters = showSummary && detailFiltersExpanded
+        binding.subChipScroll.visibility = if (showExpandedFilters && hasSubFilters) View.VISIBLE else View.GONE
+        binding.shapeChipScroll.visibility = if (showExpandedFilters && hasShapeFilters) View.VISIBLE else View.GONE
+        binding.btnToggleDetailFilters.text = if (showExpandedFilters) "收起" else "细分"
     }
 
     private fun getBookmarkedIds(): Set<Long> {
@@ -215,22 +280,28 @@ class ReferenceFragment : Fragment() {
         chipMap.forEach { (chip, type) ->
             chip.setOnClickListener {
                 showingBookmarks = false
+                detailFiltersExpanded = false
                 currentType = type
                 currentCategory = null
                 currentShape = null
                 viewModel.shapeFilter = null
                 updateSubCategories(type)
+                updateSubtitle()
                 viewModel.loadReferences(type)
             }
         }
         binding.chipBookmark.setOnClickListener {
             showingBookmarks = true
+            detailFiltersExpanded = false
             currentType = null
             currentCategory = null
+            currentShape = null
             binding.subChipScroll.visibility = View.GONE
             binding.subChipGroup.removeAllViews()
             binding.shapeChipScroll.visibility = View.GONE
             binding.shapeChipGroup.removeAllViews()
+            binding.layoutDetailFilterSummary.visibility = View.GONE
+            updateSubtitle()
             loadBookmarks()
         }
     }
@@ -238,55 +309,59 @@ class ReferenceFragment : Fragment() {
     private fun updateSubCategories(type: String?) {
         binding.subChipGroup.removeAllViews()
         if (type == null) {
-            binding.subChipScroll.visibility = View.GONE
+            binding.shapeChipGroup.removeAllViews()
+            binding.layoutDetailFilterSummary.visibility = View.GONE
+            applyDetailFilterVisibility()
             return
         }
         val subs = ReferenceData.subCategories[type]
-        if (subs.isNullOrEmpty()) {
-            binding.subChipScroll.visibility = View.GONE
-            return
-        }
-        binding.subChipScroll.visibility = View.VISIBLE
-
-        val totalCount = ReferenceData.getByType(type).size
-        val allChip = Chip(requireContext()).apply {
-            text = "全部 $totalCount"
-            isCheckable = true
-            isChecked = currentCategory == null
-            isCloseIconVisible = false
-            isChipIconVisible = false
-            setOnClickListener {
-                currentCategory = null
-                currentShape = null
-                viewModel.shapeFilter = null
-                updateShapeChips(currentType)
-                viewModel.loadReferences(currentType)
-            }
-        }
-        binding.subChipGroup.addView(allChip)
-
-        subs.forEach { cat ->
-            val catCount = ReferenceData.getByTypeAndCategory(type, cat).size
-            val chip = Chip(requireContext()).apply {
-                text = "$cat $catCount"
+        if (!subs.isNullOrEmpty()) {
+            val totalCount = ReferenceData.getByType(type).size
+            val allChip = Chip(requireContext()).apply {
+                text = "全部 $totalCount"
                 isCheckable = true
-                isChecked = currentCategory == cat
+                isChecked = currentCategory == null
                 isCloseIconVisible = false
                 isChipIconVisible = false
                 setOnClickListener {
-                    currentCategory = cat
+                    currentCategory = null
                     currentShape = null
                     viewModel.shapeFilter = null
-                    binding.shapeChipScroll.visibility = View.GONE
-                    binding.shapeChipGroup.removeAllViews()
-                    viewModel.loadReferences(currentType, cat)
+                    updateShapeChips(currentType)
+                    updateDetailFilterSummary(currentType)
+                    applyDetailFilterVisibility()
+                    updateSubtitle()
+                    viewModel.loadReferences(currentType)
                 }
             }
-            binding.subChipGroup.addView(chip)
+            binding.subChipGroup.addView(allChip)
+
+            subs.forEach { cat ->
+                val catCount = ReferenceData.getByTypeAndCategory(type, cat).size
+                val chip = Chip(requireContext()).apply {
+                    text = "$cat $catCount"
+                    isCheckable = true
+                    isChecked = currentCategory == cat
+                    isCloseIconVisible = false
+                    isChipIconVisible = false
+                    setOnClickListener {
+                        currentCategory = cat
+                        currentShape = null
+                        viewModel.shapeFilter = null
+                        updateShapeChips(currentType)
+                        updateDetailFilterSummary(currentType)
+                        applyDetailFilterVisibility()
+                        updateSubtitle()
+                        viewModel.loadReferences(currentType, cat)
+                    }
+                }
+                binding.subChipGroup.addView(chip)
+            }
         }
 
-        // Update shape filter row
         updateShapeChips(type)
+        updateDetailFilterSummary(type)
+        applyDetailFilterVisibility()
     }
 
     private fun updateShapeChips(type: String?) {
@@ -294,15 +369,12 @@ class ReferenceFragment : Fragment() {
         val shapeEnabled = requireContext().getSharedPreferences("app_settings", android.content.Context.MODE_PRIVATE)
             .getBoolean("shape_filter_enabled", false)
         if (!shapeEnabled || type != "block" || currentCategory != null) {
-            binding.shapeChipScroll.visibility = View.GONE
             return
         }
         val shapes = ReferenceData.getShapesForType(type)
         if (shapes.size <= 1) {
-            binding.shapeChipScroll.visibility = View.GONE
             return
         }
-        binding.shapeChipScroll.visibility = View.VISIBLE
         shapes.forEach { shape ->
             val label = ReferenceData.shapeLabels[shape] ?: shape
             val shapeItems = ReferenceData.getByShape(ReferenceData.getByType(type), shape)
@@ -321,6 +393,9 @@ class ReferenceFragment : Fragment() {
                         currentShape = shape
                         viewModel.shapeFilter = shape
                     }
+                    updateDetailFilterSummary(currentType)
+                    applyDetailFilterVisibility()
+                    updateSubtitle()
                     viewModel.loadReferences(currentType, currentCategory)
                 }
             }

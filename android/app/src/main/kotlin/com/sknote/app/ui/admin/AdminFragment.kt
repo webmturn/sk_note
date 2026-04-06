@@ -107,6 +107,14 @@ class AdminFragment : Fragment() {
         refreshLoginState()
     }
 
+    private fun roleLabel(role: String?): String {
+        return when (role) {
+            "admin" -> "管理员"
+            "editor" -> "编辑"
+            else -> "普通用户"
+        }
+    }
+
     private fun refreshLoginState() {
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
@@ -116,7 +124,7 @@ class AdminFragment : Fragment() {
                 val role = ApiClient.getTokenManager().getUserRole().first() ?: "user"
 
                 binding.tvUsername.text = nickname.ifEmpty { username }
-                binding.tvRole.text = if (role == "admin") "管理员" else "普通用户"
+                binding.tvRole.text = roleLabel(role)
 
                 // 先立即显示所有卡片（不等网络）
                 val isAdmin = role == "admin"
@@ -140,7 +148,7 @@ class AdminFragment : Fragment() {
                                 binding.tvUsername.text = user.displayName
                                 ApiClient.getTokenManager().updateNickname(user.displayName)
                                 ApiClient.getTokenManager().updateUserRole(user.role)
-                                binding.tvRole.text = if (user.role == "admin") "管理员" else "普通用户"
+                                binding.tvRole.text = roleLabel(user.role)
                                 val latestIsAdmin = user.role == "admin"
                                 animateVisibility(binding.tvAdminHeader, latestIsAdmin)
                                 animateVisibility(binding.cardAdminGroup, latestIsAdmin)

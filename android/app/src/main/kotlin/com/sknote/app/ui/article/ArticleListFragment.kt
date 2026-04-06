@@ -19,6 +19,7 @@ class ArticleListFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ArticleListViewModel by viewModels()
     private lateinit var adapter: ArticleAdapter
+    private var currentCategoryId: Long? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleListBinding.inflate(inflater, container, false)
@@ -28,8 +29,8 @@ class ArticleListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val categoryId = arguments?.getLong("category_id", 0L) ?: 0L
-        if (categoryId <= 0L) return
+        val categoryIdArg = arguments?.getLong("category_id", 0L) ?: 0L
+        currentCategoryId = if (categoryIdArg > 0L) categoryIdArg else null
         val categoryName = arguments?.getString("category_name") ?: "文章列表"
 
         binding.toolbar.title = categoryName
@@ -43,11 +44,11 @@ class ArticleListFragment : Fragment() {
         binding.rvArticles.adapter = adapter
 
         binding.swipeRefresh.setOnRefreshListener {
-            viewModel.loadArticles(categoryId)
+            viewModel.loadArticles(currentCategoryId)
         }
 
         observeData()
-        viewModel.loadArticles(categoryId)
+        viewModel.loadArticles(currentCategoryId)
     }
 
     private fun observeData() {
@@ -68,9 +69,7 @@ class ArticleListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
-            val categoryId = arguments?.getLong("category_id", 0L) ?: 0L
-            if (categoryId <= 0L) return@setOnClickListener
-            viewModel.loadArticles(categoryId)
+            viewModel.loadArticles(currentCategoryId)
         }
     }
 

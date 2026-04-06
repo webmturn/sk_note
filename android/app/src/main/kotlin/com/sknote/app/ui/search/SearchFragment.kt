@@ -43,6 +43,7 @@ class SearchFragment : Fragment() {
         }
 
         binding.btnBack.setOnClickListener { findNavController().navigateUp() }
+        binding.btnSearch.setOnClickListener { performSearch() }
 
         binding.etSearch.post {
             binding.etSearch.requestFocus()
@@ -56,7 +57,7 @@ class SearchFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                binding.btnClear.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                updateSearchActionState(s?.toString()?.trim().orEmpty())
             }
         })
 
@@ -70,8 +71,10 @@ class SearchFragment : Fragment() {
         binding.btnClear.setOnClickListener {
             binding.etSearch.text?.clear()
             viewModel.loadAll()
+            updateSearchActionState("")
         }
 
+        updateSearchActionState("")
         observeData()
     }
 
@@ -81,6 +84,12 @@ class SearchFragment : Fragment() {
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
         viewModel.search(query)
+    }
+
+    private fun updateSearchActionState(query: String) {
+        binding.btnClear.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+        binding.btnSearch.isEnabled = query.isNotEmpty()
+        binding.btnSearch.alpha = if (query.isNotEmpty()) 1f else 0.4f
     }
 
     private fun observeData() {

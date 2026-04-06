@@ -8,6 +8,12 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Notification
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
+import retrofit2.Response
+
+data class NotificationActionEvent(
+    val message: String,
+    val isError: Boolean = false
+)
 
 class NotificationViewModel : ViewModel() {
 
@@ -22,6 +28,12 @@ class NotificationViewModel : ViewModel() {
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _isActionLoading = MutableLiveData(false)
+    val isActionLoading: LiveData<Boolean> = _isActionLoading
+
+    private val _actionEvent = MutableLiveData<NotificationActionEvent?>()
+    val actionEvent: LiveData<NotificationActionEvent?> = _actionEvent
 
     fun loadNotifications() {
         viewModelScope.launch {
@@ -56,35 +68,51 @@ class NotificationViewModel : ViewModel() {
     }
 
     fun markAllRead() {
-        viewModelScope.launch {
-            try {
-                val response = ApiClient.getService().markAllNotificationsRead()
-                if (response.isSuccessful) {
-                    loadNotifications()
-                }
-            } catch (_: Exception) { }
+        runAction(successFallback = "已全部标为已读") {
+            ApiClient.getService().markAllNotificationsRead()
         }
     }
 
     fun deleteAllNotifications() {
-        viewModelScope.launch {
-            try {
-                val response = ApiClient.getService().deleteAllNotifications()
-                if (response.isSuccessful) {
-                    loadNotifications()
-                }
-            } catch (_: Exception) { }
+        runAction(successFallback = "已清空全部通知") {
+            ApiClient.getService().deleteAllNotifications()
         }
     }
 
     fun deleteNotification(notificationId: Long) {
+        runAction(successFallback = "删除成功") {
+            ApiClient.getService().deleteNotification(notificationId)
+        }
+    }
+
+    fun onActionEventHandled() {
+        _actionEvent.value = null
+    }
+
+    private fun runAction(
+        successFallback: String,
+        request: suspend () -> Response<com.sknote.app.data.model.MessageResponse>
+    ) {
+        if (_isActionLoading.value == true) return
         viewModelScope.launch {
+            _isActionLoading.value = true
             try {
-                val response = ApiClient.getService().deleteNotification(notificationId)
+                val response = request()
                 if (response.isSuccessful) {
+                    val message = response.body()?.message.orEmpty().ifBlank { successFallback }
+                    _actionEvent.value = NotificationActionEvent(message)
                     loadNotifications()
+                } else {
+                    _actionEvent.value = NotificationActionEvent(
+                        response.body()?.error ?: "操作失败: ${response.code()}",
+                        isError = true
+                    )
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                _actionEvent.value = NotificationActionEvent(ErrorUtil.friendlyMessage(e), isError = true)
+            } finally {
+                _isActionLoading.value = false
+            }
         }
     }
 }

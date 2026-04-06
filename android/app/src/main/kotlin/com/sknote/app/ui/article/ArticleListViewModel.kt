@@ -20,7 +20,7 @@ class ArticleListViewModel : ViewModel() {
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    fun loadArticles(categoryId: Long) {
+    fun loadArticles(categoryId: Long? = null) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

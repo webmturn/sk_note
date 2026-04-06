@@ -12,6 +12,7 @@ import com.sknote.app.util.TimeUtil
 
 class NotificationAdapter(
     private val onClick: (Notification) -> Unit = {},
+    private val onDeleteClick: (Notification) -> Unit = {},
     private val onLongClick: (Notification) -> Unit = {}
 ) : ListAdapter<Notification, NotificationAdapter.ViewHolder>(DiffCallback) {
 
@@ -49,6 +50,7 @@ class NotificationAdapter(
         holder.binding.cardNotification.setCardBackgroundColor(typedValue.data)
 
         holder.binding.root.setOnClickListener { onClick(item) }
+        holder.binding.btnDelete.setOnClickListener { onDeleteClick(item) }
         holder.binding.root.setOnLongClickListener {
             onLongClick(item)
             true

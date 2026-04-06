@@ -9,6 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentHomeBinding
@@ -38,6 +39,24 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerViews()
         observeData()
+
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_shares")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    viewModel.loadData(force = true)
+                    navHandle.remove<Boolean>("refresh_shares")
+                }
+            }
+
+        navHandle?.getLiveData<String>("share_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("share_result_message")
+                }
+            }
+
         viewModel.loadData()
 
         binding.swipeRefresh.setOnRefreshListener {
@@ -52,7 +71,10 @@ class HomeFragment : Fragment() {
         }
 
         binding.tvViewAll.setOnClickListener {
-            findNavController().navigate(R.id.searchFragment)
+            val bundle = Bundle().apply {
+                putString("category_name", "全部文章")
+            }
+            findNavController().navigate(R.id.action_home_to_articleList, bundle)
         }
 
         binding.cardAnalyzer.setOnClickListener {

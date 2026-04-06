@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.BuildConfig
 import com.sknote.app.R
@@ -23,6 +22,7 @@ class FeedbackFragment : Fragment() {
 
     private var _binding: FragmentFeedbackBinding? = null
     private val binding get() = _binding!!
+    private var isLoggedIn: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedbackBinding.inflate(inflater, container, false)
@@ -42,6 +42,9 @@ class FeedbackFragment : Fragment() {
 
         // 提交反馈
         binding.btnSubmit.setOnClickListener { submitFeedback() }
+        binding.btnGoLogin.setOnClickListener {
+            findNavController().navigate(R.id.loginFragment)
+        }
 
         // GitHub Issues
         binding.rowGithub.setOnClickListener {
@@ -51,6 +54,15 @@ class FeedbackFragment : Fragment() {
         // 讨论区
         binding.rowDiscussion.setOnClickListener {
             findNavController().navigate(R.id.discussionListFragment)
+        }
+
+        refreshLoginState()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            refreshLoginState()
         }
     }
 
@@ -72,7 +84,27 @@ class FeedbackFragment : Fragment() {
         }
     }
 
+    private fun refreshLoginState() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            if (_binding == null) return@launch
+            renderLoginState()
+        }
+    }
+
+    private fun renderLoginState() {
+        binding.layoutLoginHint.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
+        binding.btnSubmit.text = if (isLoggedIn) "提交到讨论区" else "登录后提交到讨论区"
+    }
+
     private fun submitFeedback() {
+        if (!isLoggedIn) {
+            Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
+                .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
+                .show()
+            return
+        }
+
         val title = binding.etTitle.text.toString().trim()
         val content = binding.etContent.text.toString().trim()
         val contact = binding.etContact.text.toString().trim()
@@ -93,16 +125,9 @@ class FeedbackFragment : Fragment() {
             binding.tilContent.error = "内容不能超过 1000 字"
             return
         }
+        binding.tilContent.error = null
 
-        // 由于没有后端 API，使用讨论区发帖方式提交反馈
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("提交反馈")
-            .setMessage("将通过讨论区发帖的方式提交反馈，是否继续？")
-            .setNegativeButton("取消", null)
-            .setPositiveButton("继续") { _, _ ->
-                postFeedbackAsDiscussion(title, content, contact)
-            }
-            .show()
+        postFeedbackAsDiscussion(title, content, contact)
     }
 
     private fun postFeedbackAsDiscussion(title: String, content: String, contact: String) {
@@ -111,8 +136,9 @@ class FeedbackFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+                isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
                 if (!isLoggedIn) {
+                    renderLoginState()
                     Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
                         .show()
@@ -143,12 +169,22 @@ class FeedbackFragment : Fragment() {
                 )
                 val response = ApiClient.getService().createDiscussion(request)
                 if (response.isSuccessful) {
-                    Snackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()
-                    binding.etTitle.text?.clear()
-                    binding.etContent.text?.clear()
-                    binding.etContact.text?.clear()
+                    val createdId = response.body()?.id
+                    if (createdId != null && createdId > 0) {
+                        val bundle = Bundle().apply { putLong("discussion_id", createdId) }
+                        findNavController().navigate(R.id.discussionDetailFragment, bundle)
+                    } else {
+                        Snackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()
+                        binding.etTitle.text?.clear()
+                        binding.etContent.text?.clear()
+                        binding.etContact.text?.clear()
+                    }
                 } else {
-                    Snackbar.make(binding.root, "提交失败: ${response.message()}", Snackbar.LENGTH_SHORT).show()
+                    Snackbar.make(
+                        binding.root,
+                        response.body()?.error ?: "提交失败: ${response.message()}",
+                        Snackbar.LENGTH_SHORT
+                    ).show()
                 }
             } catch (e: Exception) {
                 Snackbar.make(binding.root, "提交失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
@@ -156,6 +192,7 @@ class FeedbackFragment : Fragment() {
                 if (_binding != null) {
                     binding.progressSubmit.visibility = View.GONE
                     binding.btnSubmit.isEnabled = true
+                    renderLoginState()
                 }
             }
         }

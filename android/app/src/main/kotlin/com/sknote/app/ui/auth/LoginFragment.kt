@@ -1,6 +1,9 @@
 package com.sknote.app.ui.auth
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +22,8 @@ class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
     private val viewModel: AuthViewModel by viewModels()
+    private var isLoginMode = true
+    private var pendingAuthAction: String? = null
 
     private fun isFragmentUsable(): Boolean {
         return _binding != null && isAdded && context != null
@@ -33,14 +38,16 @@ class LoginFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         checkLoginState()
+        setupFieldValidation()
+        updateModeUi()
 
         binding.btnLogin.setOnClickListener {
             val username = binding.etUsername.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
-            if (username.isEmpty() || password.isEmpty()) {
-                Snackbar.make(binding.root, "请填写用户名和密码", Snackbar.LENGTH_SHORT).show()
+            if (!validateLogin(username, password)) {
                 return@setOnClickListener
             }
+            pendingAuthAction = "login"
             viewModel.login(username, password)
         }
 
@@ -49,10 +56,10 @@ class LoginFragment : Fragment() {
             val nickname = binding.etNickname.text.toString().trim()
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
-            if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                Snackbar.make(binding.root, "请填写账号、邮箱和密码", Snackbar.LENGTH_SHORT).show()
+            if (!validateRegister(username, email, password)) {
                 return@setOnClickListener
             }
+            pendingAuthAction = "register"
             viewModel.register(username, email, password, nickname)
         }
 
@@ -61,15 +68,85 @@ class LoginFragment : Fragment() {
         }
 
         binding.tvToggleMode.setOnClickListener {
-            val isLogin = binding.layoutEmail.visibility == View.GONE
-            binding.layoutNickname.visibility = if (isLogin) View.VISIBLE else View.GONE
-            binding.layoutEmail.visibility = if (isLogin) View.VISIBLE else View.GONE
-            binding.btnLogin.visibility = if (isLogin) View.GONE else View.VISIBLE
-            binding.btnRegister.visibility = if (isLogin) View.VISIBLE else View.GONE
-            binding.tvToggleMode.text = if (isLogin) "已有账号？点击登录" else "没有账号？点击注册"
+            isLoginMode = !isLoginMode
+            clearFieldErrors()
+            updateModeUi()
         }
 
         observeData()
+    }
+
+    private fun setupFieldValidation() {
+        binding.etUsername.addTextChangedListener(simpleWatcher { binding.layoutUsername.error = null })
+        binding.etNickname.addTextChangedListener(simpleWatcher { binding.layoutNickname.error = null })
+        binding.etEmail.addTextChangedListener(simpleWatcher { binding.layoutEmail.error = null })
+        binding.etPassword.addTextChangedListener(simpleWatcher { binding.layoutPassword.error = null })
+    }
+
+    private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                onChanged()
+            }
+        }
+    }
+
+    private fun updateModeUi() {
+        binding.layoutNickname.visibility = if (isLoginMode) View.GONE else View.VISIBLE
+        binding.layoutEmail.visibility = if (isLoginMode) View.GONE else View.VISIBLE
+        binding.btnLogin.visibility = if (isLoginMode) View.VISIBLE else View.GONE
+        binding.btnRegister.visibility = if (isLoginMode) View.GONE else View.VISIBLE
+        binding.tvToggleMode.text = if (isLoginMode) "没有账号？点击注册" else "已有账号？点击登录"
+        binding.tvAuthModeTitle.text = if (isLoginMode) "登录账号" else "注册账号"
+        binding.tvAuthModeSubtitle.text = if (isLoginMode) {
+            "使用已有账号继续参与讨论和交流"
+        } else {
+            "创建账号后即可发布内容、参与讨论和接收通知"
+        }
+    }
+
+    private fun clearFieldErrors() {
+        binding.layoutUsername.error = null
+        binding.layoutNickname.error = null
+        binding.layoutEmail.error = null
+        binding.layoutPassword.error = null
+    }
+
+    private fun validateLogin(username: String, password: String): Boolean {
+        clearFieldErrors()
+        var valid = true
+        if (username.isEmpty()) {
+            binding.layoutUsername.error = "请输入账号"
+            valid = false
+        }
+        if (password.isEmpty()) {
+            binding.layoutPassword.error = "请输入密码"
+            valid = false
+        }
+        return valid
+    }
+
+    private fun validateRegister(username: String, email: String, password: String): Boolean {
+        clearFieldErrors()
+        var valid = true
+        if (username.isEmpty()) {
+            binding.layoutUsername.error = "请输入账号"
+            valid = false
+        }
+        if (email.isEmpty()) {
+            binding.layoutEmail.error = "请输入邮箱"
+            valid = false
+        } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            binding.layoutEmail.error = "请输入有效邮箱"
+            valid = false
+        }
+        if (password.isEmpty()) {
+            binding.layoutPassword.error = "请输入密码"
+            valid = false
+        }
+        return valid
     }
 
     private fun checkLoginState() {
@@ -93,13 +170,19 @@ class LoginFragment : Fragment() {
     private fun showLoggedOutState() {
         binding.layoutLogin.visibility = View.VISIBLE
         binding.layoutLoggedIn.visibility = View.GONE
+        updateModeUi()
     }
 
     private fun observeData() {
         viewModel.authResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.token != null && result.user != null) {
-                Snackbar.make(binding.root, "登录成功", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(
+                    binding.root,
+                    if (pendingAuthAction == "register") "注册成功" else "登录成功",
+                    Snackbar.LENGTH_SHORT
+                ).show()
+                pendingAuthAction = null
                 findNavController().popBackStack()
             } else if (result.error != null) {
                 Snackbar.make(binding.root, result.error, Snackbar.LENGTH_SHORT).show()
@@ -109,6 +192,8 @@ class LoginFragment : Fragment() {
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.btnLogin.isEnabled = !isLoading
             binding.btnRegister.isEnabled = !isLoading
+            binding.tvToggleMode.isEnabled = !isLoading
+            binding.tvToggleMode.alpha = if (isLoading) 0.5f else 1f
         }
 
         viewModel.loggedOut.observe(viewLifecycleOwner) { loggedOut ->

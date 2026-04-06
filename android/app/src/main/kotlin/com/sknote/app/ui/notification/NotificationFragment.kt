@@ -34,40 +34,33 @@ class NotificationFragment : Fragment() {
             when (menuItem.itemId) {
                 R.id.action_read_all -> {
                     viewModel.markAllRead()
-                    Snackbar.make(binding.root, "已全部标为已读", Snackbar.LENGTH_SHORT).show()
                     true
                 }
                 R.id.action_delete_all -> {
-                    MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("删除全部通知")
-                        .setMessage("确定删除所有通知吗？此操作不可恢复。")
-                        .setPositiveButton("删除") { _, _ ->
-                            viewModel.deleteAllNotifications()
-                            Snackbar.make(binding.root, "已删除全部通知", Snackbar.LENGTH_SHORT).show()
-                        }
-                        .setNegativeButton("取消", null)
-                        .show()
+                    confirmDeleteAllNotifications()
                     true
                 }
                 else -> false
             }
         }
 
+        binding.btnReadAll.setOnClickListener {
+            viewModel.markAllRead()
+        }
+
+        binding.btnDeleteAll.setOnClickListener {
+            confirmDeleteAllNotifications()
+        }
+
         adapter = NotificationAdapter(
             onClick = { notification ->
-                viewModel.markRead(notification.id)
-                if (notification.relatedType == "discussion" && notification.relatedId != null) {
-                    val bundle = Bundle().apply { putLong("discussion_id", notification.relatedId) }
-                    findNavController().navigate(R.id.discussionDetailFragment, bundle)
-                }
+                handleNotificationClick(notification)
+            },
+            onDeleteClick = { notification ->
+                confirmDeleteNotification(notification)
             },
             onLongClick = { notification ->
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("删除通知")
-                    .setMessage("确定删除这条通知吗？")
-                    .setPositiveButton("删除") { _, _ -> viewModel.deleteNotification(notification.id) }
-                    .setNegativeButton("取消", null)
-                    .show()
+                confirmDeleteNotification(notification)
             }
         )
 
@@ -86,9 +79,19 @@ class NotificationFragment : Fragment() {
         viewModel.notifications.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
             binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            binding.layoutActionBar.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+            updateQuickActionState()
+        }
+
+        viewModel.unreadCount.observe(viewLifecycleOwner) {
+            updateQuickActionState()
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
+
+        viewModel.isActionLoading.observe(viewLifecycleOwner) {
+            updateQuickActionState()
+        }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
@@ -99,10 +102,82 @@ class NotificationFragment : Fragment() {
             }
         }
 
+        viewModel.actionEvent.observe(viewLifecycleOwner) { event ->
+            event ?: return@observe
+            Snackbar.make(
+                binding.root,
+                event.message,
+                if (event.isError) Snackbar.LENGTH_LONG else Snackbar.LENGTH_SHORT
+            ).show()
+            viewModel.onActionEventHandled()
+        }
+
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
             viewModel.loadNotifications()
         }
+    }
+
+    private fun updateQuickActionState() {
+        val notifications = viewModel.notifications.value.orEmpty()
+        val unreadCount = viewModel.unreadCount.value ?: 0
+        val actionLoading = viewModel.isActionLoading.value == true
+        val hasItems = notifications.isNotEmpty()
+
+        binding.layoutActionBar.visibility = if (hasItems) View.VISIBLE else View.GONE
+        binding.tvUnreadSummary.text = if (unreadCount > 0) {
+            "还有 $unreadCount 条未读通知"
+        } else {
+            "全部通知已读"
+        }
+        binding.btnReadAll.isEnabled = hasItems && unreadCount > 0 && !actionLoading
+        binding.btnDeleteAll.isEnabled = hasItems && !actionLoading
+    }
+
+    private fun handleNotificationClick(notification: com.sknote.app.data.model.Notification) {
+        if (notification.isRead == 0) {
+            viewModel.markRead(notification.id)
+        }
+
+        val relatedId = notification.relatedId
+        when (notification.relatedType) {
+            "discussion" -> if (relatedId != null) {
+                val bundle = Bundle().apply { putLong("discussion_id", relatedId) }
+                findNavController().navigate(R.id.discussionDetailFragment, bundle)
+            }
+            "article" -> if (relatedId != null) {
+                val bundle = Bundle().apply { putLong("article_id", relatedId) }
+                findNavController().navigate(R.id.articleDetailFragment, bundle)
+            }
+            "share" -> if (relatedId != null) {
+                val bundle = Bundle().apply { putLong("share_id", relatedId) }
+                findNavController().navigate(R.id.shareDetailFragment, bundle)
+            }
+            "snippet" -> if (relatedId != null) {
+                val bundle = Bundle().apply { putLong("snippet_id", relatedId) }
+                findNavController().navigate(R.id.snippetDetailFragment, bundle)
+            }
+        }
+    }
+
+    private fun confirmDeleteNotification(notification: com.sknote.app.data.model.Notification) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("删除通知")
+            .setMessage("确定删除这条通知吗？")
+            .setPositiveButton("删除") { _, _ -> viewModel.deleteNotification(notification.id) }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun confirmDeleteAllNotifications() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("删除全部通知")
+            .setMessage("确定删除所有通知吗？此操作不可恢复。")
+            .setPositiveButton("删除") { _, _ ->
+                viewModel.deleteAllNotifications()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     override fun onDestroyView() {

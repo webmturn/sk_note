@@ -55,7 +55,27 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
+                <TextView
+                    android:id="@+id/tv_auth_mode_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="登录账号"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_auth_mode_subtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:text="使用已有账号继续参与讨论和交流"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="13sp" />
+
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="账号"
@@ -104,6 +124,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layout_password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"

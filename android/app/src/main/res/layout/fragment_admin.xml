@@ -234,17 +234,28 @@
                 app:cornerRadius="24dp" />
         </LinearLayout>
 
-        <!-- tvFunctionHeader / tvAdminHeader: 隐藏占位，保持 AdminFragment.kt 兼容 -->
         <TextView
             android:id="@+id/tvFunctionHeader"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="20dp"
+            android:text="常用功能"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"
+            android:textStyle="bold"
             android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvAdminHeader"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="20dp"
+            android:text="管理入口"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"
+            android:textStyle="bold"
             android:visibility="gone" />
 
         <!-- ========== 功能菜单列表 ========== -->
