@@ -12,6 +12,7 @@ import com.sknote.app.util.TimeUtil
 
 class DiscussionManageAdapter(
     private val onView: (Discussion) -> Unit,
+    private val onEdit: (Discussion) -> Unit,
     private val onDelete: (Discussion) -> Unit
 ) : ListAdapter<Discussion, DiscussionManageAdapter.ViewHolder>(DiffCallback()) {
 
@@ -34,6 +35,7 @@ class DiscussionManageAdapter(
         holder.binding.tvBadgePinned.visibility = if (item.isPinned == 1) View.VISIBLE else View.GONE
         holder.binding.tvBadgeClosed.visibility = if (item.isClosed == 1) View.VISIBLE else View.GONE
         holder.binding.btnView.setOnClickListener { onView(item) }
+        holder.binding.btnEdit.setOnClickListener { onEdit(item) }
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
     }
 }

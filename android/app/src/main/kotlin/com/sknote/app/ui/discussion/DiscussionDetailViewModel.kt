@@ -13,8 +13,8 @@ import kotlinx.coroutines.launch
 
 class DiscussionDetailViewModel : ViewModel() {
 
-    private val _discussion = MutableLiveData<Discussion>()
-    val discussion: LiveData<Discussion> = _discussion
+    private val _discussion = MutableLiveData<Discussion?>()
+    val discussion: LiveData<Discussion?> = _discussion
 
     private val _comments = MutableLiveData<List<Comment>>()
     val comments: LiveData<List<Comment>> = _comments
@@ -44,9 +44,12 @@ class DiscussionDetailViewModel : ViewModel() {
             try {
                 val response = ApiClient.getService().getDiscussion(id)
                 if (response.isSuccessful) {
-                    val body = response.body()
-                    _discussion.value = body?.discussion
-                    _comments.value = threadedSort(body?.comments ?: emptyList())
+                    val body = response.body() ?: run {
+                        _error.value = "讨论数据为空"
+                        return@launch
+                    }
+                    _discussion.value = body.discussion
+                    _comments.value = threadedSort(body.comments)
                 } else {
                     _error.value = "加载失败"
                 }

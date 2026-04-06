@@ -3,6 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_edit"
+        android:icon="@drawable/ic_edit"
+        android:title="编辑"
+        android:visible="false"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_copy_link"
         android:icon="@drawable/ic_copy"
         android:title="复制链接"

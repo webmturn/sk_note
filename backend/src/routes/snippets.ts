@@ -77,6 +77,9 @@ snippetRoutes.get('/:id', async (c) => {
   ).bind(viewerKey, 'snippet', id).run();
   if (viewResult.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE snippets SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
+    if (typeof (snippet as any).view_count === 'number') {
+      (snippet as any).view_count += 1;
+    }
   }
   return c.json({ snippet });
 });
@@ -119,6 +122,48 @@ snippetRoutes.post('/', authMiddleware(), rateLimit({ key: 'snippet:create', max
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '创建成功', id: result.meta.last_row_id }, 201);
+});
+
+// 更新代码片段（作者或管理员）
+snippetRoutes.put('/:id', authMiddleware(), async (c) => {
+  const id = c.req.param('id');
+
+  const snippet = await c.env.DB.prepare('SELECT author_id FROM snippets WHERE id = ?').bind(id).first<{ author_id: number }>();
+  if (!snippet) return c.json({ error: '未找到' }, 404);
+  if (!(await isOwnerOrAdmin(c, snippet.author_id))) {
+    return c.json({ error: '无权限' }, 403);
+  }
+
+  const { title, description, code, language, category, tags } = await c.req.json();
+
+  if (!title || !code) {
+    return c.json({ error: '标题和代码不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (code.length > 50000) {
+    return c.json({ error: '代码最长50000个字符' }, 400);
+  }
+  if (description && description.length > 2000) {
+    return c.json({ error: '描述最长2000个字符' }, 400);
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE snippets SET title = ?, description = ?, code = ?, language = ?, category = ?, tags = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(
+    title,
+    description || '',
+    code,
+    language || 'java',
+    category || 'general',
+    tags || '',
+    id
+  ).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/snippets`, `${baseUrl}/api/snippets/${id}`, `${baseUrl}/api/snippets/categories`]);
+  return c.json({ message: '更新成功' });
 });
 
 // 删除代码片段（作者或管理员）

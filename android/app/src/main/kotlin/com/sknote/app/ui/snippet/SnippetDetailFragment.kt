@@ -13,7 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
+import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
+import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetDetailBinding
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.SyntaxHighlightUtil
@@ -28,6 +30,9 @@ class SnippetDetailFragment : Fragment() {
     private var snippetId: Long = 0
     private var codeText: String = ""
     private var isLiking = false
+    private var currentSnippet: Snippet? = null
+    private var currentUserId: Long = -1
+    private var currentUserRole: String = "user"
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSnippetDetailBinding.inflate(inflater, container, false)
@@ -40,8 +45,48 @@ class SnippetDetailFragment : Fragment() {
         snippetId = arguments?.getLong("snippet_id", 0L) ?: 0L
         if (snippetId <= 0L) return
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        binding.toolbar.inflateMenu(R.menu.menu_snippet_detail)
+
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_snippet_detail")
+            ?.observe(viewLifecycleOwner) { refresh ->
+                if (refresh == true) {
+                    loadSnippet(showProgress = false)
+                    findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_snippets", true)
+                    navHandle.remove<Boolean>("refresh_snippet_detail")
+                }
+            }
+
+        navHandle?.getLiveData<String>("snippet_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("snippet_result_message")
+                }
+            }
+
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_edit -> {
+                    val bundle = Bundle().apply { putLong("snippet_id", snippetId) }
+                    findNavController().navigate(R.id.createSnippetFragment, bundle)
+                    true
+                }
+                else -> false
+            }
+        }
 
         binding.btnCopy.setOnClickListener { copyCode() }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            if (isLoggedIn) {
+                currentUserId = ApiClient.getTokenManager().getUserId().first() ?: -1
+                currentUserRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
+            }
+            binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = false
+            loadSnippet()
+        }
 
         binding.btnLike.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -70,7 +115,6 @@ class SnippetDetailFragment : Fragment() {
             }
         }
 
-        loadSnippet()
     }
 
     private fun loadSnippet(showProgress: Boolean = true) {
@@ -81,7 +125,10 @@ class SnippetDetailFragment : Fragment() {
                 if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val snippet = response.body()?.snippet ?: return@launch
+                    currentSnippet = snippet
                     codeText = snippet.code.orEmpty()
+                    val displayLanguage = snippet.language.orEmpty().trim().ifEmpty { "other" }
+                    val displayCode = codeText.ifEmpty { "暂无代码" }
 
                     binding.tvTitle.text = snippet.title
                     if (snippet.description.orEmpty().isNotEmpty()) {
@@ -91,16 +138,24 @@ class SnippetDetailFragment : Fragment() {
                         binding.tvDescription.visibility = View.GONE
                     }
                     val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                    binding.tvCode.text = SyntaxHighlightUtil.highlight(snippet.code.orEmpty(), snippet.language.orEmpty(), isDark)
-                    binding.tvLanguage.text = snippet.language.orEmpty().uppercase()
+                    binding.tvCode.text = if (codeText.isEmpty()) {
+                        displayCode
+                    } else {
+                        SyntaxHighlightUtil.highlight(codeText, displayLanguage, isDark)
+                    }
+                    binding.tvLanguage.text = displayLanguage.uppercase()
                     binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())
                     binding.tvAuthor.text = snippet.authorName.orEmpty().ifEmpty { "系统" }
                     binding.tvTime.text = TimeUtil.formatRelative(snippet.createdAt)
                     binding.tvViews.text = "${snippet.viewCount} 浏览"
                     binding.btnLike.text = "点赞 (${snippet.likeCount})"
+                    binding.btnCopy.isEnabled = codeText.isNotEmpty()
+                    binding.btnCopy.alpha = if (codeText.isNotEmpty()) 1f else 0.5f
                     bindTags(snippet.tags.orEmpty())
 
                     binding.toolbar.title = snippet.title
+                    val canEdit = snippet.authorId == currentUserId || currentUserRole == "admin"
+                    binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
                 } else {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
@@ -140,7 +195,10 @@ class SnippetDetailFragment : Fragment() {
     }
 
     private fun copyCode() {
-        if (codeText.isEmpty()) return
+        if (codeText.isEmpty()) {
+            Snackbar.make(binding.root, "暂无可复制内容", Snackbar.LENGTH_SHORT).show()
+            return
+        }
         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("code", codeText))
         Snackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()

@@ -66,6 +66,24 @@
                         android:imeOptions="actionSearch"
                         android:maxLines="1" />
 
+                    <ImageButton
+                        android:id="@+id/btnClear"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_close"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="清除"
+                        android:visibility="gone" />
+
+                    <ImageButton
+                        android:id="@+id/btnSearch"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_search"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="搜索"
+                        android:enabled="false" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -136,6 +154,7 @@
                     android:layout_marginBottom="12dp" />
 
                 <TextView
+                    android:id="@+id/tvEmpty"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="暂无文件分享"

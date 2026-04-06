@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.CreateDiscussionRequest
+import com.sknote.app.data.model.Discussion
 import com.sknote.app.data.model.DiscussionCategory
+import com.sknote.app.data.model.UpdateDiscussionRequest
 import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
@@ -16,8 +18,11 @@ class CreateDiscussionViewModel : ViewModel() {
     private val _categories = MutableLiveData<List<DiscussionCategory>>()
     val categories: LiveData<List<DiscussionCategory>> = _categories
 
-    private val _success = MutableLiveData<Boolean>()
-    val success: LiveData<Boolean> = _success
+    private val _discussion = MutableLiveData<Discussion?>()
+    val discussion: LiveData<Discussion?> = _discussion
+
+    private val _success = MutableLiveData<Boolean?>()
+    val success: LiveData<Boolean?> = _success
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
@@ -37,17 +42,60 @@ class CreateDiscussionViewModel : ViewModel() {
         }
     }
 
-    fun createDiscussion(title: String, content: String, category: String) {
+    fun loadDiscussion(id: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val response = ApiClient.getService().getDiscussion(id)
+                if (response.isSuccessful) {
+                    _discussion.value = response.body()?.discussion
+                } else {
+                    _error.value = "加载失败: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = ErrorUtil.friendlyMessage(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun onSuccessHandled() { _success.value = null }
+
+    fun onErrorHandled() { _error.value = null }
+
+    fun createDiscussion(title: String, content: String, category: String, articleId: Long?) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = ApiClient.getService().createDiscussion(
-                    CreateDiscussionRequest(title, content, category)
+                    CreateDiscussionRequest(title, content, category, articleId)
                 )
                 if (response.isSuccessful) {
                     _success.value = true
                 } else {
                     _error.value = "发布失败: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = ErrorUtil.friendlyMessage(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateDiscussion(id: Long, title: String, content: String, category: String, articleId: Long?) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val response = ApiClient.getService().updateDiscussion(
+                    id,
+                    UpdateDiscussionRequest(title, content, category, articleId)
+                )
+                if (response.isSuccessful) {
+                    _success.value = true
+                } else {
+                    _error.value = "更新失败: ${response.code()}"
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)

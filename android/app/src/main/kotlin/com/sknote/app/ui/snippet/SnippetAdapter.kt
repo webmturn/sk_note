@@ -1,5 +1,6 @@
 package com.sknote.app.ui.snippet
 
+import android.view.View
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -33,7 +34,13 @@ class SnippetAdapter(
     inner class ViewHolder(private val binding: ItemSnippetBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(snippet: Snippet) {
             binding.tvTitle.text = snippet.title
-            binding.tvDescription.text = snippet.description.orEmpty()
+            val description = snippet.description.orEmpty().trim()
+            if (description.isEmpty()) {
+                binding.tvDescription.visibility = View.GONE
+            } else {
+                binding.tvDescription.visibility = View.VISIBLE
+                binding.tvDescription.text = description
+            }
             binding.tvCodePreview.text = snippet.code.orEmpty().take(200)
             binding.tvLanguage.text = snippet.language.orEmpty().uppercase()
             binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())

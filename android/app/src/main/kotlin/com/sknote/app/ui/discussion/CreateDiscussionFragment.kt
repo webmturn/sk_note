@@ -33,8 +33,11 @@ class CreateDiscussionFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: CreateDiscussionViewModel by viewModels()
 
+    private var discussionId: Long? = null
     private var discussionCategories: List<DiscussionCategory> = emptyList()
     private var selectedCategory = "general"
+    private var linkedArticleId: Long? = null
+    private var hasBoundExistingDiscussion = false
     private var blockJson: JSONObject? = null
     private var paletteJson: JSONObject? = null
 
@@ -54,20 +57,27 @@ class CreateDiscussionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        discussionId = arguments?.getLong("discussion_id")?.takeIf { it > 0L }
+        linkedArticleId = arguments?.getLong("article_id")?.takeIf { it > 0L }
+
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        binding.toolbar.title = if (discussionId == null) "发起讨论" else "编辑讨论"
 
         binding.spinnerCategory.setOnItemClickListener { _, _, position, _ ->
             selectedCategory = discussionCategories.getOrNull(position)?.slug ?: selectedCategory
         }
 
         setupImagePicker()
-        setupBlockShare()
-        setupPaletteShare()
+        if (discussionId == null) {
+            setupBlockShare()
+            setupPaletteShare()
+        }
 
         binding.btnSubmit.setOnClickListener { submitDiscussion() }
 
         observeData()
         viewModel.loadCategories()
+        discussionId?.let { viewModel.loadDiscussion(it) }
     }
 
     private fun bindCategories(categories: List<DiscussionCategory>) {
@@ -79,6 +89,20 @@ class CreateDiscussionFragment : Fragment() {
         selected?.let {
             selectedCategory = it.slug
             binding.spinnerCategory.setText(it.name, false)
+        }
+    }
+
+    private fun bindExistingDiscussion(discussion: com.sknote.app.data.model.Discussion) {
+        if (hasBoundExistingDiscussion) return
+        hasBoundExistingDiscussion = true
+        linkedArticleId = discussion.articleId
+        selectedCategory = discussion.category.orEmpty().ifEmpty { selectedCategory }
+        binding.etTitle.setText(discussion.title)
+        binding.etContent.setText(discussion.content.orEmpty())
+
+        val selected = discussionCategories.firstOrNull { it.slug == selectedCategory }
+        if (selected != null) {
+            binding.spinnerCategory.setText(selected.name, false)
         }
     }
 
@@ -256,27 +280,49 @@ class CreateDiscussionFragment : Fragment() {
 
         val finalContent = parts.joinToString("\n\n")
 
-        viewModel.createDiscussion(title, finalContent, selectedCategory)
+        val editingId = discussionId
+        if (editingId != null) {
+            viewModel.updateDiscussion(editingId, title, finalContent, selectedCategory, linkedArticleId)
+        } else {
+            viewModel.createDiscussion(title, finalContent, selectedCategory, linkedArticleId)
+        }
     }
 
     private fun observeData() {
         viewModel.categories.observe(viewLifecycleOwner) { bindCategories(it) }
 
+        viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
+            discussion?.let { bindExistingDiscussion(it) }
+        }
+
         viewModel.success.observe(viewLifecycleOwner) { success ->
-            if (success) {
-                Snackbar.make(binding.root, "发布成功", Snackbar.LENGTH_SHORT).show()
+            if (success == true) {
+                viewModel.onSuccessHandled()
                 findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
+                findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussion_detail", true)
+                findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                    "discussion_result_message",
+                    if (discussionId == null) "讨论发布成功" else "讨论更新成功"
+                )
                 findNavController().navigateUp()
             }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
-            error?.let { Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show() }
+            error?.let {
+                viewModel.onErrorHandled()
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.btnSubmit.isEnabled = !isLoading
-            binding.btnSubmit.text = if (isLoading) "发布中..." else "发布讨论"
+            binding.btnSubmit.text = when {
+                isLoading && discussionId != null -> "保存中..."
+                isLoading -> "发布中..."
+                discussionId != null -> "保存修改"
+                else -> "发布讨论"
+            }
         }
     }
 

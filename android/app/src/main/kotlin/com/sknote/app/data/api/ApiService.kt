@@ -104,6 +104,12 @@ interface ApiService {
     @POST("api/discussions")
     suspend fun createDiscussion(@Body request: CreateDiscussionRequest): Response<MessageResponse>
 
+    @PUT("api/discussions/{id}")
+    suspend fun updateDiscussion(
+        @Path("id") id: Long,
+        @Body request: UpdateDiscussionRequest
+    ): Response<MessageResponse>
+
     @POST("api/discussions/{id}/comments")
     suspend fun createComment(
         @Path("id") discussionId: Long,
@@ -216,6 +222,9 @@ interface ApiService {
     @POST("api/snippets")
     suspend fun createSnippet(@Body request: CreateSnippetRequest): Response<MessageResponse>
 
+    @PUT("api/snippets/{id}")
+    suspend fun updateSnippet(@Path("id") id: Long, @Body request: UpdateSnippetRequest): Response<MessageResponse>
+
     @DELETE("api/snippets/{id}")
     suspend fun deleteSnippet(@Path("id") id: Long): Response<MessageResponse>
 
@@ -240,6 +249,9 @@ interface ApiService {
 
     @POST("api/shares")
     suspend fun createShare(@Body request: CreateShareRequest): Response<MessageResponse>
+
+    @PUT("api/shares/{id}")
+    suspend fun updateShare(@Path("id") id: Long, @Body request: UpdateShareRequest): Response<MessageResponse>
 
     @DELETE("api/shares/{id}")
     suspend fun deleteShare(@Path("id") id: Long): Response<MessageResponse>

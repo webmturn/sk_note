@@ -77,6 +77,9 @@ shareRoutes.get('/:id', async (c) => {
   ).bind(viewerKey, 'share', id).run();
   if (viewResult.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE shares SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
+    if (typeof (share as any).view_count === 'number') {
+      (share as any).view_count += 1;
+    }
   }
   return c.json({ share });
 });
@@ -84,7 +87,7 @@ shareRoutes.get('/:id', async (c) => {
 // 记录下载次数（IP 去重）
 shareRoutes.post('/:id/download', async (c) => {
   const id = c.req.param('id');
-  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ?').bind(id).first();
+  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ? AND is_approved = 1').bind(id).first();
   if (!share) return c.json({ error: '分享不存在' }, 404);
 
   const viewerKey = 'dl:' + (
@@ -144,6 +147,53 @@ shareRoutes.post('/', authMiddleware(), rateLimit({ key: 'share:create', maxRequ
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '分享成功', id: result.meta.last_row_id }, 201);
+});
+
+// 更新分享（作者或管理员）
+shareRoutes.put('/:id', authMiddleware(), async (c) => {
+  const id = c.req.param('id');
+
+  const share = await c.env.DB.prepare('SELECT author_id FROM shares WHERE id = ?').bind(id).first<{ author_id: number }>();
+  if (!share) return c.json({ error: '未找到' }, 404);
+  if (!(await isOwnerOrAdmin(c, share.author_id))) {
+    return c.json({ error: '无权限' }, 403);
+  }
+
+  const { title, description, category, download_url, download_pwd, file_size } = await c.req.json();
+
+  if (!title || !download_url) {
+    return c.json({ error: '标题和下载链接不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (download_url.length > 500) {
+    return c.json({ error: '下载链接最长500个字符' }, 400);
+  }
+  if (description && description.length > 2000) {
+    return c.json({ error: '描述最长2000个字符' }, 400);
+  }
+
+  const validCategories = ['general', 'apk', 'mod', 'resource', 'plugin', 'tool', 'other'];
+  if (category && !validCategories.includes(category)) {
+    return c.json({ error: `无效的分类，可选: ${validCategories.join(', ')}` }, 400);
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE shares SET title = ?, description = ?, category = ?, download_url = ?, download_pwd = ?, file_size = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(
+    title,
+    description || '',
+    category || 'general',
+    download_url,
+    download_pwd || '',
+    file_size || '',
+    id
+  ).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`]);
+  return c.json({ message: '更新成功' });
 });
 
 // 删除分享（作者或管理员）

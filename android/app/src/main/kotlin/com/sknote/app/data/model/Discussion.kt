@@ -73,6 +73,13 @@ data class CreateDiscussionRequest(
     @SerializedName("article_id") val articleId: Long? = null
 )
 
+data class UpdateDiscussionRequest(
+    val title: String,
+    val content: String,
+    val category: String = "general",
+    @SerializedName("article_id") val articleId: Long? = null
+)
+
 data class CreateCommentRequest(
     val content: String,
     @SerializedName("parent_id") val parentId: Long? = null

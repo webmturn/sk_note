@@ -44,3 +44,12 @@ data class CreateShareRequest(
     @SerializedName("download_pwd") val downloadPwd: String = "",
     @SerializedName("file_size") val fileSize: String = ""
 )
+
+data class UpdateShareRequest(
+    val title: String,
+    val description: String = "",
+    val category: String = "general",
+    @SerializedName("download_url") val downloadUrl: String,
+    @SerializedName("download_pwd") val downloadPwd: String = "",
+    @SerializedName("file_size") val fileSize: String = ""
+)

@@ -31,6 +31,15 @@ class SnippetManageFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_snippets")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    viewModel.loadSnippets(force = true)
+                    navHandle.remove<Boolean>("refresh_snippets")
+                }
+            }
+
         adapter = SnippetManageAdapter(
             onView = { snippet ->
                 val bundle = Bundle().apply { putLong("snippet_id", snippet.id) }

@@ -27,6 +27,7 @@ class DiscussionListFragment : Fragment() {
     private val viewModel: DiscussionListViewModel by viewModels()
     private lateinit var adapter: DiscussionAdapter
     private var currentCategory: String? = null
+    private var currentArticleId: Long? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDiscussionListBinding.inflate(inflater, container, false)
@@ -35,6 +36,8 @@ class DiscussionListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        currentArticleId = arguments?.getLong("article_id")?.takeIf { it > 0L }
 
         adapter = DiscussionAdapter(
             onClick = { discussion ->
@@ -54,13 +57,16 @@ class DiscussionListFragment : Fragment() {
             adapter = this@DiscussionListFragment.adapter
         }
 
-        binding.swipeRefresh.setOnRefreshListener { viewModel.loadDiscussions(currentCategory, force = true) }
+        binding.swipeRefresh.setOnRefreshListener { viewModel.loadDiscussions(currentCategory, currentArticleId, force = true) }
 
         binding.fabNewDiscussion.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
                 if (isLoggedIn) {
-                    findNavController().navigate(R.id.action_discussions_to_create)
+                    val bundle = Bundle().apply {
+                        currentArticleId?.let { putLong("article_id", it) }
+                    }
+                    findNavController().navigate(R.id.action_discussions_to_create, bundle)
                 } else {
                     Snackbar.make(binding.root, "请先登录后再发帖", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
@@ -82,14 +88,23 @@ class DiscussionListFragment : Fragment() {
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.invalidateCache()
-                    viewModel.loadDiscussions(currentCategory, force = true)
+                    viewModel.loadDiscussions(currentCategory, currentArticleId, force = true)
                     findNavController().currentBackStackEntry?.savedStateHandle?.remove<Boolean>("refresh_discussions")
+                }
+            }
+
+        findNavController().currentBackStackEntry?.savedStateHandle
+            ?.getLiveData<String>("discussion_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>("discussion_result_message")
                 }
             }
 
         observeData()
         viewModel.loadCategories()
-        viewModel.loadDiscussions()
+        viewModel.loadDiscussions(articleId = currentArticleId)
     }
 
     private fun renderCategoryChips(categories: List<DiscussionCategory>) {
@@ -114,8 +129,12 @@ class DiscussionListFragment : Fragment() {
                     chipIconTint = textColors
                 }
                 setOnClickListener {
+                    for (i in 0 until binding.chipGroup.childCount) {
+                        (binding.chipGroup.getChildAt(i) as? Chip)?.isChecked = false
+                    }
+                    isChecked = true
                     currentCategory = category
-                    viewModel.loadDiscussions(category)
+                    viewModel.loadDiscussions(category, currentArticleId)
                 }
             }
             binding.chipGroup.addView(chip)
@@ -146,7 +165,7 @@ class DiscussionListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
-            viewModel.loadDiscussions(currentCategory)
+            viewModel.loadDiscussions(currentCategory, currentArticleId)
         }
     }
 

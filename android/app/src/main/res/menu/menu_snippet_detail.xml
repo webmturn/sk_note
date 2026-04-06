@@ -3,15 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/action_share"
-        android:icon="@drawable/ic_share"
-        android:title="分享"
-        app:showAsAction="ifRoom" />
-
-    <item
         android:id="@+id/action_edit"
         android:icon="@drawable/ic_edit"
         android:title="编辑"
         android:visible="false"
-        app:showAsAction="never" />
+        app:showAsAction="ifRoom" />
 </menu>

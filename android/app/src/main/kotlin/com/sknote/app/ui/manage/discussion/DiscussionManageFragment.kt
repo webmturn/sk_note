@@ -44,6 +44,10 @@ class DiscussionManageFragment : Fragment() {
                 val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
                 findNavController().navigate(R.id.discussionDetailFragment, bundle)
             },
+            onEdit = { discussion ->
+                val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
+                findNavController().navigate(R.id.createDiscussionFragment, bundle)
+            },
             onDelete = { discussion -> showDeleteConfirm(discussion) }
         )
         binding.rvDiscussions.layoutManager = LinearLayoutManager(context)
@@ -58,6 +62,24 @@ class DiscussionManageFragment : Fragment() {
     }
 
     private fun observeData() {
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+
+        navHandle?.getLiveData<Boolean>("refresh_discussions")
+            ?.observe(viewLifecycleOwner) { refresh ->
+                if (refresh == true) {
+                    viewModel.loadDiscussions(force = true)
+                    navHandle.remove<Boolean>("refresh_discussions")
+                }
+            }
+
+        navHandle?.getLiveData<String>("discussion_result_message")
+            ?.observe(viewLifecycleOwner) { msg ->
+                if (!msg.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("discussion_result_message")
+                }
+            }
+
         viewModel.discussions.observe(viewLifecycleOwner) { discussions ->
             adapter.submitList(discussions)
             binding.tvEmpty.visibility = if (discussions.isEmpty()) View.VISIBLE else View.GONE

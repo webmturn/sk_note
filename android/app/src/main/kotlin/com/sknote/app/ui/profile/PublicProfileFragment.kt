@@ -52,6 +52,41 @@ class PublicProfileFragment : Fragment() {
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_shares")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    loadProfile()
+                    loadContent()
+                    navHandle.remove<Boolean>("refresh_shares")
+                }
+            }
+
+        navHandle?.getLiveData<Boolean>("refresh_snippets")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    loadProfile()
+                    loadContent()
+                    navHandle.remove<Boolean>("refresh_snippets")
+                }
+            }
+
+        navHandle?.getLiveData<String>("share_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("share_result_message")
+                }
+            }
+
+        navHandle?.getLiveData<String>("snippet_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("snippet_result_message")
+                }
+            }
+
         binding.rvContent.layoutManager = LinearLayoutManager(context)
 
         binding.btnFollow.setOnClickListener { toggleFollow() }

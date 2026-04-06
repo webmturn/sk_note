@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
@@ -28,8 +29,16 @@ class UserProfileFragment : Fragment() {
     private var currentTab = 0
     private var isInitialLoad = true
 
+    private fun roleLabel(role: String?): String {
+        return when (role) {
+            "admin" -> "管理员"
+            "editor" -> "编辑"
+            else -> "普通用户"
+        }
+    }
+
     private fun isFragmentUsable(): Boolean {
-        return _binding != null && isAdded && context != null
+        return isAdded && _binding != null && view != null
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -41,6 +50,39 @@ class UserProfileFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_shares")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    loadContent()
+                    navHandle.remove<Boolean>("refresh_shares")
+                }
+            }
+
+        navHandle?.getLiveData<Boolean>("refresh_snippets")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    loadContent()
+                    navHandle.remove<Boolean>("refresh_snippets")
+                }
+            }
+
+        navHandle?.getLiveData<String>("share_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("share_result_message")
+                }
+            }
+
+        navHandle?.getLiveData<String>("snippet_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("snippet_result_message")
+                }
+            }
 
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setEnterAnim(R.anim.slide_in_right)
@@ -112,7 +154,7 @@ class UserProfileFragment : Fragment() {
 
             binding.tvUsername.text = nickname.ifEmpty { username }
             binding.tvHandle.text = "@$username"
-            binding.chipRole.text = if (role == "admin") "管理员" else "普通用户"
+            binding.chipRole.text = roleLabel(role)
 
             // 立即加载Tab内容（不等其他请求）
             loadContent()
@@ -127,7 +169,7 @@ class UserProfileFragment : Fragment() {
                         binding.tvUsername.text = user.displayName
                         binding.tvHandle.text = "@${user.username}"
                         ApiClient.getTokenManager().updateNickname(user.displayName)
-                        binding.chipRole.text = if (user.role == "admin") "管理员" else "普通用户"
+                        binding.chipRole.text = roleLabel(user.role)
                         if (!user.bio.isNullOrEmpty()) {
                             binding.tvBio.text = user.bio.orEmpty()
                             binding.tvBio.visibility = View.VISIBLE

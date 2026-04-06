@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Article
 import com.sknote.app.util.ErrorUtil
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class ArticleManageViewModel : ViewModel() {
@@ -33,9 +34,16 @@ class ArticleManageViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                val currentUserId = ApiClient.getTokenManager().getUserId().first() ?: -1L
+                val currentRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
                 val response = ApiClient.getService().getArticles(page = 1, limit = 100)
                 if (response.isSuccessful) {
-                    _articles.value = response.body()?.articles ?: emptyList()
+                    val articles = response.body()?.articles ?: emptyList()
+                    _articles.value = if (currentRole == "admin") {
+                        articles
+                    } else {
+                        articles.filter { it.authorId == currentUserId }
+                    }
                     lastLoadTime = System.currentTimeMillis()
                 } else {
                     _message.value = "加载失败: ${response.code()}"

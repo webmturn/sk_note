@@ -93,6 +93,14 @@ export async function isOwnerOrAdmin(c: Context<AppEnv>, ownerId: number): Promi
   return role === 'admin';
 }
 
+export async function isOwnerOrEditorOrAdmin(c: Context<AppEnv>, ownerId: number): Promise<boolean> {
+  const user = c.get('user');
+  if (!user) return false;
+  if (user.id === ownerId) return true;
+  const role = await refreshCurrentUserRole(c);
+  return role === 'admin' || role === 'editor';
+}
+
 // 认证中间件
 export function authMiddleware(required = true) {
   return async (c: Context<AppEnv>, next: Next) => {

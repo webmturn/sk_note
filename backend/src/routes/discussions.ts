@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
-import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
+import { authMiddleware, isOwnerOrEditorOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
@@ -93,6 +93,9 @@ discussionRoutes.get('/:id', async (c) => {
     await c.env.DB.prepare(
       'UPDATE discussions SET view_count = view_count + 1 WHERE id = ?'
     ).bind(id).run();
+    if (typeof (discussion as any).view_count === 'number') {
+      (discussion as any).view_count += 1;
+    }
   }
 
   // 获取评论
@@ -172,6 +175,83 @@ discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]);
   return c.json({ id: result.meta.last_row_id, message: '发布成功' }, 201);
+});
+
+// 更新讨论（仅作者或管理员）
+discussionRoutes.put('/:id', authMiddleware(), async (c) => {
+  const id = c.req.param('id');
+  const { title, content, category, article_id } = await c.req.json();
+
+  if (!title || !content) {
+    return c.json({ error: '标题和内容不能为空' }, 400);
+  }
+  if (title.length > 200) {
+    return c.json({ error: '标题最长200个字符' }, 400);
+  }
+  if (content.length > 20000) {
+    return c.json({ error: '内容最长20000个字符' }, 400);
+  }
+
+  const discussion = await c.env.DB.prepare(
+    'SELECT author_id FROM discussions WHERE id = ?'
+  ).bind(id).first<{ author_id: number }>();
+
+  if (!discussion) {
+    return c.json({ error: '讨论不存在' }, 404);
+  }
+  if (!(await isOwnerOrEditorOrAdmin(c, discussion.author_id))) {
+    return c.json({ error: '无权编辑' }, 403);
+  }
+
+  let resolvedCategory = typeof category === 'string' && category.trim().length > 0
+    ? category.trim()
+    : '';
+
+  if (resolvedCategory) {
+    const existingCategory = await c.env.DB.prepare(
+      'SELECT slug FROM discussion_categories WHERE slug = ?'
+    ).bind(resolvedCategory).first<{ slug: string }>();
+
+    if (!existingCategory) {
+      return c.json({ error: '讨论分类不存在' }, 400);
+    }
+  } else {
+    const defaultCategory = await c.env.DB.prepare(
+      'SELECT slug FROM discussion_categories ORDER BY sort_order ASC, id ASC LIMIT 1'
+    ).first<{ slug: string }>();
+
+    if (!defaultCategory) {
+      return c.json({ error: '暂无可用的讨论分类，请先创建分类' }, 400);
+    }
+    resolvedCategory = defaultCategory.slug;
+  }
+
+  let articleIdForUpdate: number | null = null;
+  if (article_id !== undefined && article_id !== null && String(article_id).trim() !== '') {
+    const articleIdNum = Number.parseInt(String(article_id), 10);
+    if (!Number.isInteger(articleIdNum) || articleIdNum <= 0) {
+      return c.json({ error: '无效的关联文章ID' }, 400);
+    }
+
+    const article = await c.env.DB.prepare(
+      'SELECT id FROM articles WHERE id = ?'
+    ).bind(articleIdNum).first();
+    if (!article) {
+      return c.json({ error: '关联文章不存在' }, 404);
+    }
+
+    articleIdForUpdate = articleIdNum;
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE discussions
+    SET title = ?, content = ?, category = ?, article_id = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(title, content, resolvedCategory, articleIdForUpdate, id).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
+  return c.json({ message: '更新成功' });
 });
 
 // 回复讨论
@@ -271,6 +351,8 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
     console.error('通知发送失败:', e);
   }
 
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`]);
   return c.json({ id: result.meta.last_row_id, message: '回复成功' }, 201);
 });
 
@@ -283,7 +365,7 @@ discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
   ).bind(id).first<{ author_id: number }>();
 
   if (!discussion) return c.json({ error: '讨论不存在' }, 404);
-  if (!(await isOwnerOrAdmin(c, discussion.author_id))) {
+  if (!(await isOwnerOrEditorOrAdmin(c, discussion.author_id))) {
     return c.json({ error: '无权删除' }, 403);
   }
 
@@ -303,7 +385,7 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
   ).bind(commentId).first<{ author_id: number }>();
 
   if (!comment) return c.json({ error: '评论不存在' }, 404);
-  if (!(await isOwnerOrAdmin(c, comment.author_id))) {
+  if (!(await isOwnerOrEditorOrAdmin(c, comment.author_id))) {
     return c.json({ error: '无权删除' }, 403);
   }
 
@@ -323,6 +405,8 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
     'UPDATE discussions SET reply_count = MAX(0, reply_count - ?) WHERE id = ?'
   ).bind(deleteCount, discussionId).run();
 
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`]);
   return c.json({ message: '删除成功' });
 });
 

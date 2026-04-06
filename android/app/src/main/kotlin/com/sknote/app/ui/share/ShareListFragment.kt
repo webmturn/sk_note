@@ -1,10 +1,14 @@
 package com.sknote.app.ui.share
 
+import android.content.Context
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -51,7 +55,7 @@ class ShareListFragment : Fragment() {
         }
 
         binding.swipeRefresh.setOnRefreshListener {
-            viewModel.loadShares(currentCategory, force = true)
+            viewModel.loadShares(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
             viewModel.loadCategories()
         }
 
@@ -75,12 +79,27 @@ class ShareListFragment : Fragment() {
             }
         })
 
+        binding.btnSearch.setOnClickListener { performSearch() }
+
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateSearchActionState(s?.toString()?.trim().orEmpty())
+            }
+        })
+
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val query = binding.etSearch.text.toString().trim()
-                viewModel.loadShares(currentCategory, if (query.isNotEmpty()) query else null, force = true)
+                performSearch()
                 true
             } else false
+        }
+
+        binding.btnClear.setOnClickListener {
+            binding.etSearch.text?.clear()
+            viewModel.loadShares(currentCategory, force = true)
+            updateSearchActionState("")
         }
 
         navController.currentBackStackEntry?.savedStateHandle
@@ -88,22 +107,56 @@ class ShareListFragment : Fragment() {
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.invalidateCache()
-                    viewModel.loadShares(currentCategory, force = true)
+                    viewModel.loadShares(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
                     viewModel.loadCategories()
                     navController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("refresh_shares")
                 }
             }
 
+        navController.currentBackStackEntry?.savedStateHandle
+            ?.getLiveData<String>("share_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navController.currentBackStackEntry?.savedStateHandle?.remove<String>("share_result_message")
+                }
+            }
+
+        updateSearchActionState(currentSearchQuery())
         observeData()
         viewModel.loadShares()
         viewModel.loadCategories()
     }
 
+    private fun currentSearchQuery(): String {
+        return binding.etSearch.text?.toString()?.trim().orEmpty()
+    }
+
+    private fun performSearch() {
+        val query = currentSearchQuery()
+        if (query.isEmpty()) return
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+        viewModel.loadShares(currentCategory, query, force = true)
+    }
+
+    private fun updateSearchActionState(query: String) {
+        binding.btnClear.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+        binding.btnSearch.isEnabled = query.isNotEmpty()
+        binding.btnSearch.alpha = if (query.isNotEmpty()) 1f else 0.4f
+    }
+
     private fun observeData() {
         viewModel.shares.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
+            val query = currentSearchQuery()
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
-            binding.tvShareCount.text = if (list.isNotEmpty()) "${list.size} 个分享" else ""
+            binding.tvEmpty.text = if (query.isEmpty()) "暂无文件分享" else "未找到「$query」相关分享"
+            binding.tvShareCount.text = if (list.isNotEmpty()) {
+                if (query.isEmpty()) "${list.size} 个分享" else "找到 ${list.size} 个结果"
+            } else {
+                ""
+            }
         }
 
         viewModel.categories.observe(viewLifecycleOwner) { cats ->
@@ -117,14 +170,14 @@ class ShareListFragment : Fragment() {
                     isCheckable = true
                     setOnClickListener {
                         currentCategory = cat.category
-                        viewModel.loadShares(cat.category, force = true)
+                        viewModel.loadShares(cat.category, currentSearchQuery().ifEmpty { null }, force = true)
                     }
                 }
                 chipGroup.addView(chip)
             }
             binding.chipAll.setOnClickListener {
                 currentCategory = null
-                viewModel.loadShares(null, force = true)
+                viewModel.loadShares(null, currentSearchQuery().ifEmpty { null }, force = true)
             }
         }
 
@@ -140,7 +193,7 @@ class ShareListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
-            viewModel.loadShares(currentCategory, force = true)
+            viewModel.loadShares(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
     }
 

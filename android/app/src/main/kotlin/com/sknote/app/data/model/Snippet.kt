@@ -43,3 +43,12 @@ data class CreateSnippetRequest(
     val category: String = "general",
     val tags: String = ""
 )
+
+data class UpdateSnippetRequest(
+    val title: String,
+    val description: String = "",
+    val code: String,
+    val language: String = "java",
+    val category: String = "general",
+    val tags: String = ""
+)

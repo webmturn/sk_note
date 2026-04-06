@@ -54,16 +54,44 @@ class ShareDetailFragment : Fragment() {
         }
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_share_detail")
+            ?.observe(viewLifecycleOwner) { refresh ->
+                if (refresh == true) {
+                    loadShare(showProgress = false)
+                    findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_shares", true)
+                    navHandle.remove<Boolean>("refresh_share_detail")
+                }
+            }
+
+        navHandle?.getLiveData<String>("share_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("share_result_message")
+                }
+            }
+
         binding.toolbar.inflateMenu(R.menu.menu_share_detail)
         binding.toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                R.id.action_edit -> {
+                    val bundle = Bundle().apply { putLong("share_id", shareId) }
+                    findNavController().navigate(R.id.createShareFragment, bundle)
+                    true
+                }
                 R.id.action_copy_link -> {
                     currentShare?.let { copyShareLink(it) }
                     true
                 }
                 R.id.action_open_browser -> {
                     currentShare?.let {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.downloadUrl.orEmpty())))
+                        val uri = buildBrowsableUri(normalizedDownloadUrl(it))
+                        if (uri != null) {
+                            openUri(uri)
+                        } else {
+                            Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+                        }
                     }
                     true
                 }
@@ -77,8 +105,13 @@ class ShareDetailFragment : Fragment() {
 
         binding.btnCopyUrl.setOnClickListener {
             currentShare?.let { share ->
+                val downloadUrl = normalizedDownloadUrl(share)
+                if (downloadUrl.isEmpty()) {
+                    Snackbar.make(binding.root, "暂无可复制的链接", Snackbar.LENGTH_SHORT).show()
+                    return@let
+                }
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("url", share.downloadUrl.orEmpty()))
+                clipboard.setPrimaryClip(ClipData.newPlainText("url", downloadUrl))
                 Snackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -98,6 +131,10 @@ class ShareDetailFragment : Fragment() {
                 currentUserRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
             }
             if (!isFragmentUsable()) return@launch
+            binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = false
+            binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
+            binding.toolbar.menu.findItem(R.id.action_copy_link)?.isVisible = false
+            binding.toolbar.menu.findItem(R.id.action_open_browser)?.isVisible = false
             loadShare()
         }
 
@@ -143,6 +180,8 @@ class ShareDetailFragment : Fragment() {
                 if (response.isSuccessful) {
                     val share = response.body()?.share ?: return@launch
                     currentShare = share
+                    val downloadUrl = normalizedDownloadUrl(share)
+                    val browsableUri = buildBrowsableUri(downloadUrl)
 
                     binding.tvTitle.text = share.title
                     binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
@@ -151,9 +190,13 @@ class ShareDetailFragment : Fragment() {
                     binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
                     binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
                     binding.tvViews.text = "${share.viewCount} 浏览"
-                    binding.tvDownloadUrl.text = share.downloadUrl.orEmpty()
+                    binding.tvDownloadUrl.text = downloadUrl.ifEmpty { "暂无链接" }
                     binding.tvDownloadCount.text = "${share.downloadCount}"
                     binding.btnLike.text = "点赞 (${share.likeCount})"
+                    binding.btnCopyUrl.isEnabled = downloadUrl.isNotEmpty()
+                    binding.btnCopyUrl.alpha = if (downloadUrl.isNotEmpty()) 1f else 0.5f
+                    binding.btnDownload.isEnabled = browsableUri != null
+                    binding.btnDownload.alpha = if (browsableUri != null) 1f else 0.5f
 
                     if (!share.downloadPwd.isNullOrEmpty()) {
                         binding.layoutPassword.visibility = View.VISIBLE
@@ -164,8 +207,12 @@ class ShareDetailFragment : Fragment() {
 
                     binding.toolbar.title = share.title
 
-                    val canDelete = share.authorId == currentUserId || currentUserRole == "admin"
+                    val canEdit = share.authorId == currentUserId || currentUserRole == "admin"
+                    val canDelete = canEdit
+                    binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
                     binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
+                    binding.toolbar.menu.findItem(R.id.action_copy_link)?.isVisible = downloadUrl.isNotEmpty()
+                    binding.toolbar.menu.findItem(R.id.action_open_browser)?.isVisible = browsableUri != null
                 } else {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
@@ -180,7 +227,14 @@ class ShareDetailFragment : Fragment() {
 
 
     private fun startDownload(share: Share) {
-        if (LanzouParser.isLanzouUrl(share.downloadUrl.orEmpty())) {
+        val downloadUrl = normalizedDownloadUrl(share)
+        val browsableUri = buildBrowsableUri(downloadUrl)
+        if (browsableUri == null) {
+            Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        if (LanzouParser.isLanzouUrl(downloadUrl)) {
             // 蓝奏云链接：尝试解析直链
             binding.btnDownload.isEnabled = false
             binding.btnDownload.text = "解析中..."
@@ -190,12 +244,15 @@ class ShareDetailFragment : Fragment() {
                     // 记录下载次数
                     try { ApiClient.getService().recordShareDownload(shareId) } catch (_: Exception) {}
 
-                    val result = LanzouParser.parse(share.downloadUrl.orEmpty(), share.downloadPwd.orEmpty())
+                    val result = LanzouParser.parse(downloadUrl, share.downloadPwd.orEmpty())
                     if (!isFragmentUsable()) return@launch
                     if (result.success) {
-                        // 用浏览器打开真实下载链接
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result.downloadUrl))
-                        startActivity(intent)
+                        val resolvedUri = buildBrowsableUri(result.downloadUrl)
+                        if (resolvedUri != null) {
+                            openUri(resolvedUri)
+                        } else {
+                            showDownloadFallbackDialog(share, "解析后的链接无效")
+                        }
                     } else {
                         // 解析失败，提供备选方案
                         showDownloadFallbackDialog(share, result.error)
@@ -213,8 +270,7 @@ class ShareDetailFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 try { ApiClient.getService().recordShareDownload(shareId) } catch (_: Exception) {}
             }
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl.orEmpty()))
-            startActivity(intent)
+            openUri(browsableUri)
         }
     }
 
@@ -226,8 +282,12 @@ class ShareDetailFragment : Fragment() {
             .setMessage("原因：$error\n\n你可以手动在浏览器中打开链接下载。$pwd")
             .setPositiveButton("在浏览器中打开") { _, _ ->
                 if (!isFragmentUsable()) return@setPositiveButton
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(share.downloadUrl.orEmpty()))
-                startActivity(intent)
+                val uri = buildBrowsableUri(normalizedDownloadUrl(share))
+                if (uri != null) {
+                    openUri(uri)
+                } else {
+                    Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+                }
             }
             .setNeutralButton("复制链接") { _, _ ->
                 if (!isFragmentUsable()) return@setNeutralButton
@@ -255,6 +315,28 @@ class ShareDetailFragment : Fragment() {
         Snackbar.make(binding.root, "链接已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
     }
 
+    private fun normalizedDownloadUrl(share: Share): String {
+        return share.downloadUrl.orEmpty().trim()
+    }
+
+    private fun buildBrowsableUri(rawUrl: String?): Uri? {
+        val normalizedUrl = rawUrl.orEmpty().trim()
+        if (normalizedUrl.isEmpty()) return null
+        val uri = Uri.parse(normalizedUrl)
+        val scheme = uri.scheme?.lowercase()
+        return if (scheme == "http" || scheme == "https") uri else null
+    }
+
+    private fun openUri(uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        val packageManager = context?.packageManager ?: return
+        if (intent.resolveActivity(packageManager) != null) {
+            startActivity(intent)
+        } else if (isFragmentUsable()) {
+            Snackbar.make(binding.root, "没有可用的应用打开该链接", Snackbar.LENGTH_SHORT).show()
+        }
+    }
+
     private fun confirmDelete() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("删除分享")
@@ -270,7 +352,7 @@ class ShareDetailFragment : Fragment() {
                 val response = ApiClient.getService().deleteShare(shareId)
                 if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
-                    Snackbar.make(binding.root, "已删除", Snackbar.LENGTH_SHORT).show()
+                    findNavController().previousBackStackEntry?.savedStateHandle?.set("share_result_message", "已删除")
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_shares", true)
                     findNavController().navigateUp()
                 } else {

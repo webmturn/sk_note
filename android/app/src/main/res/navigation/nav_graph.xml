@@ -76,6 +76,11 @@
         android:label="讨论"
         tools:layout="@layout/fragment_discussion_list">
 
+        <argument
+            android:name="article_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+
         <action
             android:id="@+id/action_discussions_to_detail"
             app:destination="@id/discussionDetailFragment"
@@ -109,6 +114,16 @@
         android:name="com.sknote.app.ui.discussion.CreateDiscussionFragment"
         android:label="发起讨论"
         tools:layout="@layout/fragment_create_discussion">
+
+        <argument
+            android:name="discussion_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+
+        <argument
+            android:name="article_id"
+            app:argType="long"
+            android:defaultValue="0L" />
 
         <argument
             android:name="block_json"
@@ -193,7 +208,13 @@
         android:id="@+id/createSnippetFragment"
         android:name="com.sknote.app.ui.snippet.CreateSnippetFragment"
         android:label="分享代码片段"
-        tools:layout="@layout/fragment_create_snippet" />
+        tools:layout="@layout/fragment_create_snippet">
+
+        <argument
+            android:name="snippet_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+    </fragment>
 
     <fragment
         android:id="@+id/shareListFragment"
@@ -233,7 +254,13 @@
         android:id="@+id/createShareFragment"
         android:name="com.sknote.app.ui.share.CreateShareFragment"
         android:label="发布分享"
-        tools:layout="@layout/fragment_create_share" />
+        tools:layout="@layout/fragment_create_share">
+
+        <argument
+            android:name="share_id"
+            app:argType="long"
+            android:defaultValue="0L" />
+    </fragment>
 
     <fragment
         android:id="@+id/searchFragment"

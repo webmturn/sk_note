@@ -30,9 +30,12 @@ class ArticleDetailFragment : Fragment() {
     private var currentArticleTitle: String = ""
     private var currentArticleSummary: String = ""
     private var currentArticleContent: String = ""
+    private var currentArticleAuthorId: Long = -1L
     private var isBookmarked = false
     private var isLiking = false
     private var isBookmarking = false
+    private var cachedUserId: Long = -1L
+    private var cachedRole: String = "user"
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleDetailBinding.inflate(inflater, container, false)
@@ -45,18 +48,68 @@ class ArticleDetailFragment : Fragment() {
             .usePlugin(GlideImagesPlugin.create(requireContext()))
             .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        binding.toolbar.inflateMenu(R.menu.menu_article_detail)
 
         val articleId = arguments?.getLong("article_id", 0L) ?: 0L
         if (articleId <= 0L) return
 
+        val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
+        navHandle?.getLiveData<Boolean>("refresh_articles")
+            ?.observe(viewLifecycleOwner) { refresh ->
+                if (refresh == true) {
+                    viewModel.loadArticle(articleId)
+                    findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_articles", true)
+                    navHandle.remove<Boolean>("refresh_articles")
+                }
+            }
+
+        navHandle?.getLiveData<String>("article_manage_message")
+            ?.observe(viewLifecycleOwner) { msg ->
+                if (!msg.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("article_manage_message")
+                }
+            }
+
         setupScrollProgress()
         viewModel.loadArticle(articleId)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            cachedUserId = ApiClient.getTokenManager().getUserId().first() ?: -1L
+            cachedRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
+            updateEditVisibility()
+        }
+
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_share -> {
+                    if (currentArticleTitle.isNotEmpty()) {
+                        val shareText = "$currentArticleTitle\n\n${currentArticleSummary.ifEmpty { currentArticleContent.take(200) }}"
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, currentArticleTitle)
+                            putExtra(Intent.EXTRA_TEXT, shareText)
+                        }
+                        startActivity(Intent.createChooser(intent, "分享文章"))
+                    }
+                    true
+                }
+                R.id.action_edit -> {
+                    val bundle = Bundle().apply { putLong("article_id", articleId) }
+                    findNavController().navigate(R.id.articleEditorFragment, bundle)
+                    true
+                }
+                else -> false
+            }
+        }
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
             article ?: return@observe
             currentArticleTitle = article.title
             currentArticleSummary = article.summary.orEmpty()
             currentArticleContent = article.content.orEmpty()
+            currentArticleAuthorId = article.authorId
+            updateEditVisibility()
 
             binding.tvTitle.text = article.title
             binding.tvAuthor.text = article.authorName ?: "Unknown"
@@ -118,15 +171,7 @@ class ArticleDetailFragment : Fragment() {
         }
 
         binding.btnShare.setOnClickListener {
-            if (currentArticleTitle.isNotEmpty()) {
-                val shareText = "$currentArticleTitle\n\n${currentArticleSummary.ifEmpty { currentArticleContent.take(200) }}"
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, currentArticleTitle)
-                    putExtra(Intent.EXTRA_TEXT, shareText)
-                }
-                startActivity(Intent.createChooser(intent, "分享文章"))
-            }
+            binding.toolbar.menu.performIdentifierAction(R.id.action_share, 0)
         }
 
         val navOptions = androidx.navigation.NavOptions.Builder()
@@ -202,6 +247,11 @@ class ArticleDetailFragment : Fragment() {
             requireContext().theme.resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, tv, true)
             binding.tvBookmarkLabel.setTextColor(resources.getColor(tv.resourceId, null))
         }
+    }
+
+    private fun updateEditVisibility() {
+        val canEdit = cachedRole == "admin" || currentArticleAuthorId == cachedUserId
+        _binding?.toolbar?.menu?.findItem(R.id.action_edit)?.isVisible = canEdit
     }
 
     private fun setupScrollProgress() {

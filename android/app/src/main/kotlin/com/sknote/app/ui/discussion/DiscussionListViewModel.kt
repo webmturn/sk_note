@@ -27,6 +27,7 @@ class DiscussionListViewModel : ViewModel() {
 
     private var lastLoadTime = 0L
     private var lastCategory: String? = null
+    private var lastArticleId: Long? = null
     private val cacheDuration = 60_000L
 
     fun invalidateCache() {
@@ -45,17 +46,18 @@ class DiscussionListViewModel : ViewModel() {
         }
     }
 
-    fun loadDiscussions(category: String? = null, force: Boolean = false) {
+    fun loadDiscussions(category: String? = null, articleId: Long? = null, force: Boolean = false) {
         val now = System.currentTimeMillis()
-        if (!force && category == lastCategory && now - lastLoadTime < cacheDuration && _discussions.value != null) {
+        if (!force && category == lastCategory && articleId == lastArticleId && now - lastLoadTime < cacheDuration && _discussions.value != null) {
             return
         }
         lastCategory = category
+        lastArticleId = articleId
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response = ApiClient.getService().getDiscussions(category = category)
+                val response = ApiClient.getService().getDiscussions(category = category, articleId = articleId)
                 if (response.isSuccessful) {
                     _discussions.value = response.body()?.discussions ?: emptyList()
                     lastLoadTime = System.currentTimeMillis()

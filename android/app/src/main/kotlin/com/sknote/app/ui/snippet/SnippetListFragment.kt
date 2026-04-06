@@ -1,10 +1,14 @@
 package com.sknote.app.ui.snippet
 
+import android.content.Context
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -49,7 +53,7 @@ class SnippetListFragment : Fragment() {
         }
 
         binding.swipeRefresh.setOnRefreshListener {
-            viewModel.loadSnippets(currentCategory, force = true)
+            viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
             viewModel.loadCategories()
         }
 
@@ -73,12 +77,27 @@ class SnippetListFragment : Fragment() {
             }
         })
 
+        binding.btnSearch.setOnClickListener { performSearch() }
+
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateSearchActionState(s?.toString()?.trim().orEmpty())
+            }
+        })
+
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val query = binding.etSearch.text.toString().trim()
-                viewModel.loadSnippets(currentCategory, if (query.isNotEmpty()) query else null, force = true)
+                performSearch()
                 true
             } else false
+        }
+
+        binding.btnClear.setOnClickListener {
+            binding.etSearch.text?.clear()
+            viewModel.loadSnippets(currentCategory, force = true)
+            updateSearchActionState("")
         }
 
         navController.currentBackStackEntry?.savedStateHandle
@@ -86,22 +105,56 @@ class SnippetListFragment : Fragment() {
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.invalidateCache()
-                    viewModel.loadSnippets(currentCategory, force = true)
+                    viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
                     viewModel.loadCategories()
                     navController.currentBackStackEntry?.savedStateHandle?.remove<Boolean>("refresh_snippets")
                 }
             }
 
+        navController.currentBackStackEntry?.savedStateHandle
+            ?.getLiveData<String>("snippet_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navController.currentBackStackEntry?.savedStateHandle?.remove<String>("snippet_result_message")
+                }
+            }
+
+        updateSearchActionState(currentSearchQuery())
         observeData()
         viewModel.loadSnippets()
         viewModel.loadCategories()
     }
 
+    private fun currentSearchQuery(): String {
+        return binding.etSearch.text?.toString()?.trim().orEmpty()
+    }
+
+    private fun performSearch() {
+        val query = currentSearchQuery()
+        if (query.isEmpty()) return
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
+        viewModel.loadSnippets(currentCategory, query, force = true)
+    }
+
+    private fun updateSearchActionState(query: String) {
+        binding.btnClear.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
+        binding.btnSearch.isEnabled = query.isNotEmpty()
+        binding.btnSearch.alpha = if (query.isNotEmpty()) 1f else 0.4f
+    }
+
     private fun observeData() {
         viewModel.snippets.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
+            val query = currentSearchQuery()
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
-            binding.tvSnippetCount.text = if (list.isNotEmpty()) "${list.size} 个片段" else ""
+            binding.tvEmpty.text = if (query.isEmpty()) "暂无代码片段" else "未找到「$query」相关代码片段"
+            binding.tvSnippetCount.text = if (list.isNotEmpty()) {
+                if (query.isEmpty()) "${list.size} 个片段" else "找到 ${list.size} 个结果"
+            } else {
+                ""
+            }
         }
 
         viewModel.categories.observe(viewLifecycleOwner) { cats ->
@@ -115,15 +168,24 @@ class SnippetListFragment : Fragment() {
                     text = SnippetCategories.getLabel(cat.category) + " (${cat.count})"
                     isCheckable = true
                     setOnClickListener {
+                        binding.chipAll.isChecked = false
+                        for (i in 0 until chipGroup.childCount) {
+                            (chipGroup.getChildAt(i) as? Chip)?.isChecked = false
+                        }
+                        isChecked = true
                         currentCategory = cat.category
-                        viewModel.loadSnippets(cat.category, force = true)
+                        viewModel.loadSnippets(cat.category, currentSearchQuery().ifEmpty { null }, force = true)
                     }
                 }
                 chipGroup.addView(chip)
             }
             binding.chipAll.setOnClickListener {
+                for (i in 0 until chipGroup.childCount) {
+                    (chipGroup.getChildAt(i) as? Chip)?.isChecked = false
+                }
+                binding.chipAll.isChecked = true
                 currentCategory = null
-                viewModel.loadSnippets(null, force = true)
+                viewModel.loadSnippets(null, currentSearchQuery().ifEmpty { null }, force = true)
             }
         }
 
@@ -139,7 +201,7 @@ class SnippetListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
-            viewModel.loadSnippets(currentCategory, force = true)
+            viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
     }
 

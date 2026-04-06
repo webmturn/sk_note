@@ -99,6 +99,9 @@ articleRoutes.get('/:id', authMiddleware(false), async (c) => {
     await c.env.DB.prepare(
       'UPDATE articles SET view_count = view_count + 1 WHERE id = ?'
     ).bind(id).run();
+    if (typeof article.view_count === 'number') {
+      article.view_count += 1;
+    }
   }
 
   return c.json({ article });
@@ -138,6 +141,7 @@ articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
 // 更新文章
 articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   const id = c.req.param('id');
+  const user = c.get('user')!;
   const { title, content, summary, category_id, sort_order, is_published } = await c.req.json();
 
   if (!title || !content || !category_id) {
@@ -145,10 +149,15 @@ articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   }
 
   const existing = await c.env.DB.prepare(
-    'SELECT id FROM articles WHERE id = ?'
-  ).bind(id).first();
+    'SELECT id, author_id FROM articles WHERE id = ?'
+  ).bind(id).first<{ id: number; author_id: number }>();
   if (!existing) {
     return c.json({ error: '文章不存在' }, 404);
+  }
+
+  const role = await refreshCurrentUserRole(c);
+  if (role !== 'admin' && existing.author_id !== user.id) {
+    return c.json({ error: '无权编辑他人的文章' }, 403);
   }
 
   const categoryIdNum = Number.parseInt(String(category_id), 10);
@@ -176,6 +185,17 @@ articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
 // 删除文章
 articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => {
   const id = c.req.param('id');
+  const user = c.get('user')!;
+  const existing = await c.env.DB.prepare(
+    'SELECT author_id FROM articles WHERE id = ?'
+  ).bind(id).first<{ author_id: number }>();
+  if (!existing) {
+    return c.json({ error: '文章不存在' }, 404);
+  }
+  const role = await refreshCurrentUserRole(c);
+  if (role !== 'admin' && existing.author_id !== user.id) {
+    return c.json({ error: '无权删除他人的文章' }, 403);
+  }
   const result = await c.env.DB.prepare('DELETE FROM articles WHERE id = ?').bind(id).run();
   if (result.meta.changes === 0) {
     return c.json({ error: '文章不存在' }, 404);
