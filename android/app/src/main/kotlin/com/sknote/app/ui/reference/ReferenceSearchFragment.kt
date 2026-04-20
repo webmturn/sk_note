@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentReferenceSearchBinding
+import com.sknote.app.util.slideNavOptions
 
 class ReferenceSearchFragment : Fragment() {
 
@@ -46,9 +47,11 @@ class ReferenceSearchFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         ReferenceData.init(requireContext())
 
+        val navOptions = slideNavOptions()
+
         adapter = ReferenceAdapter(onClick = { item ->
             val bundle = Bundle().apply { putLong("reference_id", item.id) }
-            findNavController().navigate(R.id.referenceDetailFragment, bundle)
+            findNavController().navigate(R.id.referenceDetailFragment, bundle, navOptions)
         })
         binding.rvResults.apply {
             layoutManager = LinearLayoutManager(context)

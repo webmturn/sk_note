@@ -20,6 +20,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSnippetListBinding
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -41,10 +42,11 @@ class SnippetListFragment : Fragment() {
 
         val navController = parentFragment?.view?.let { Navigation.findNavController(it) }
             ?: findNavController()
+        val navOptions = slideNavOptions()
 
         adapter = SnippetAdapter { snippet ->
             val bundle = Bundle().apply { putLong("snippet_id", snippet.id) }
-            navController.navigate(R.id.snippetDetailFragment, bundle)
+            navController.navigate(R.id.snippetDetailFragment, bundle, navOptions)
         }
 
         binding.rvSnippets.apply {
@@ -61,10 +63,10 @@ class SnippetListFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
                 if (isLoggedIn) {
-                    navController.navigate(R.id.createSnippetFragment)
+                    navController.navigate(R.id.createSnippetFragment, null, navOptions)
                 } else {
                     Snackbar.make(binding.root, "请先登录后再分享代码", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { navController.navigate(R.id.loginFragment) }
+                        .setAction("去登录") { navController.navigate(R.id.loginFragment, null, navOptions) }
                         .show()
                 }
             }

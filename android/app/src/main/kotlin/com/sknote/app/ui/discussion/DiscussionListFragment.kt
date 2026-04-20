@@ -17,6 +17,7 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentDiscussionListBinding
 import com.sknote.app.util.CategoryIconResolver
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -38,6 +39,7 @@ class DiscussionListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         currentArticleId = arguments?.getLong("article_id")?.takeIf { it > 0L }
+        val navOptions = slideNavOptions()
 
         adapter = DiscussionAdapter(
             onClick = { discussion ->
@@ -47,7 +49,7 @@ class DiscussionListFragment : Fragment() {
             onAuthorClick = { discussion ->
                 if (discussion.authorId > 0) {
                     val bundle = Bundle().apply { putLong("user_id", discussion.authorId) }
-                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                    findNavController().navigate(R.id.publicProfileFragment, bundle, navOptions)
                 }
             }
         )
@@ -69,7 +71,7 @@ class DiscussionListFragment : Fragment() {
                     findNavController().navigate(R.id.action_discussions_to_create, bundle)
                 } else {
                     Snackbar.make(binding.root, "请先登录后再发帖", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
+                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, navOptions) }
                         .show()
                 }
             }

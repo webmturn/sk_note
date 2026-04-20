@@ -20,6 +20,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentShareListBinding
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -41,6 +42,7 @@ class ShareListFragment : Fragment() {
 
         val navController = parentFragment?.view?.let { Navigation.findNavController(it) }
             ?: findNavController()
+        val navOptions = slideNavOptions()
 
         binding.toolbar.setNavigationOnClickListener { navController.navigateUp() }
 
@@ -66,7 +68,7 @@ class ShareListFragment : Fragment() {
                     navController.navigate(R.id.action_shares_to_create)
                 } else {
                     Snackbar.make(binding.root, "请先登录后再分享文件", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { navController.navigate(R.id.loginFragment) }
+                        .setAction("去登录") { navController.navigate(R.id.loginFragment, null, navOptions) }
                         .show()
                 }
             }

@@ -21,6 +21,7 @@ import com.sknote.app.databinding.FragmentShareDetailBinding
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.LanzouParser
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -45,6 +46,8 @@ class ShareDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val navOptions = slideNavOptions()
 
         shareId = arguments?.getLong("share_id", 0L) ?: 0L
         if (shareId <= 0L) {
@@ -77,7 +80,7 @@ class ShareDetailFragment : Fragment() {
             when (menuItem.itemId) {
                 R.id.action_edit -> {
                     val bundle = Bundle().apply { putLong("share_id", shareId) }
-                    findNavController().navigate(R.id.createShareFragment, bundle)
+                    findNavController().navigate(R.id.createShareFragment, bundle, navOptions)
                     true
                 }
                 R.id.action_copy_link -> {

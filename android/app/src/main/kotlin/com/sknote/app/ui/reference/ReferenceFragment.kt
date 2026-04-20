@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentReferenceBinding
+import com.sknote.app.util.slideNavOptions
 
 class ReferenceFragment : Fragment() {
 
@@ -39,9 +40,12 @@ class ReferenceFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val navController = Navigation.findNavController(requireParentFragment().requireView())
+        val navOptions = slideNavOptions()
+
         adapter = ReferenceAdapter(onClick = { item ->
             val bundle = Bundle().apply { putLong("reference_id", item.id) }
-            Navigation.findNavController(requireParentFragment().requireView()).navigate(R.id.referenceDetailFragment, bundle)
+            navController.navigate(R.id.referenceDetailFragment, bundle, navOptions)
         })
 
         binding.rvReferences.apply {
@@ -54,7 +58,7 @@ class ReferenceFragment : Fragment() {
         }
 
         binding.layoutSearchBar.setOnClickListener {
-            Navigation.findNavController(requireParentFragment().requireView()).navigate(R.id.referenceSearchFragment)
+            navController.navigate(R.id.referenceSearchFragment, null, navOptions)
         }
 
         ReferenceData.init(requireContext())

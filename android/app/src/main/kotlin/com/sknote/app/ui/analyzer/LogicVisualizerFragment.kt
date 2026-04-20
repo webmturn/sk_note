@@ -34,6 +34,7 @@ import com.sknote.app.R
 import com.sknote.app.databinding.FragmentLogicVisualizerBinding
 import com.sknote.app.ui.reference.BlockShapeView
 import com.sknote.app.ui.reference.ReferenceData
+import com.sknote.app.util.slideNavOptions
 import org.json.JSONObject
 import java.io.File
 
@@ -626,7 +627,7 @@ class LogicVisualizerFragment : Fragment() {
             if (refItem != null) {
                 blockView.setOnClickListener {
                     val bundle = Bundle().apply { putLong("reference_id", refItem.id) }
-                    findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                    findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
                 }
                 blockView.setOnLongClickListener {
                     showBlockInfo(block, refItem)
@@ -741,7 +742,7 @@ class LogicVisualizerFragment : Fragment() {
         if (refItem != null) {
             builder.setPositiveButton("查看详情") { _, _ ->
                 val bundle = Bundle().apply { putLong("reference_id", refItem.id) }
-                findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
             }
         }
         builder.show()

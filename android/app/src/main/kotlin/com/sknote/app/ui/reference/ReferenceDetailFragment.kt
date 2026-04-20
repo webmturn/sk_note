@@ -18,6 +18,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.model.ReferenceItem
 import com.sknote.app.databinding.FragmentReferenceDetailBinding
+import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
 
 class ReferenceDetailFragment : Fragment() {
@@ -84,6 +85,11 @@ class ReferenceDetailFragment : Fragment() {
                 else -> false
             }
         }
+    }
+
+    private fun navigateToReferenceDetail(targetId: Long) {
+        val bundle = Bundle().apply { putLong("reference_id", targetId) }
+        findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
     }
 
     private fun tryInSketchware() {
@@ -476,8 +482,7 @@ class ReferenceDetailFragment : Fragment() {
                         )
                         setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSecondaryContainer))
                         setOnClickListener {
-                            val bundle = Bundle().apply { putLong("reference_id", event.id) }
-                            findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                            navigateToReferenceDetail(event.id)
                         }
                     }
                     chipGroup.addView(chip)
@@ -518,8 +523,7 @@ class ReferenceDetailFragment : Fragment() {
                             )
                             setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnTertiaryContainer))
                             setOnClickListener {
-                                val bundle = Bundle().apply { putLong("reference_id", target.id) }
-                                findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                                navigateToReferenceDetail(target.id)
                             }
                         }
                         flowLayout.addView(chip)
@@ -719,8 +723,7 @@ class ReferenceDetailFragment : Fragment() {
                     )
                     setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSecondaryContainer))
                     setOnClickListener {
-                        val bundle = Bundle().apply { putLong("reference_id", event.id) }
-                        findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                        navigateToReferenceDetail(event.id)
                     }
                 }
                 chipGroup.addView(chip)
@@ -752,8 +755,7 @@ class ReferenceDetailFragment : Fragment() {
                     tvName.text = item.name
                     tvDesc.text = item.description.orEmpty().ifEmpty { "" }
                     itemView.setOnClickListener {
-                        val bundle = Bundle().apply { putLong("reference_id", item.id) }
-                        findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                        navigateToReferenceDetail(item.id)
                     }
                     binding.layoutManual.addView(itemView)
                 }
@@ -832,8 +834,7 @@ class ReferenceDetailFragment : Fragment() {
             tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
             itemView.setOnClickListener {
-                val bundle = Bundle().apply { putLong("reference_id", item.id) }
-                findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                navigateToReferenceDetail(item.id)
             }
             binding.layoutAssociatedBlocks.addView(itemView)
         }
@@ -879,8 +880,7 @@ class ReferenceDetailFragment : Fragment() {
                 tvDesc.text = item.description.orEmpty().ifEmpty { "" }
 
                 itemView.setOnClickListener {
-                    val bundle = Bundle().apply { putLong("reference_id", item.id) }
-                    findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                    navigateToReferenceDetail(item.id)
                 }
                 binding.layoutRelatedBlocks.addView(itemView)
             }

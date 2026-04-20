@@ -34,6 +34,7 @@ import com.sknote.app.R
 import com.sknote.app.databinding.FragmentProjectAnalyzerBinding
 import com.sknote.app.ui.reference.ReferenceData
 import com.sknote.app.util.AppIcons
+import com.sknote.app.util.slideNavOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -308,7 +309,7 @@ class ProjectAnalyzerFragment : Fragment() {
                         val items = ReferenceData.search(opCode)
                         if (items.isNotEmpty()) {
                             val bundle = Bundle().apply { putLong("reference_id", items[0].id) }
-                            findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                            findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
                         }
                     }
                 })
@@ -371,7 +372,7 @@ class ProjectAnalyzerFragment : Fragment() {
                         val items = ReferenceData.search(comp)
                         if (items.isNotEmpty()) {
                             val bundle = Bundle().apply { putLong("reference_id", items[0].id) }
-                            findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                            findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
                         }
                     }
                 }
@@ -1516,7 +1517,7 @@ class ProjectAnalyzerFragment : Fragment() {
                         val items = ReferenceData.search(name)
                         if (items.isNotEmpty()) {
                             val bundle = Bundle().apply { putLong("reference_id", items[0].id) }
-                            findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                            findNavController().navigate(R.id.referenceDetailFragment, bundle, slideNavOptions())
                         }
                     }
                 })

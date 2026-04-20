@@ -17,6 +17,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentSearchBinding
 import com.sknote.app.ui.home.ArticleAdapter
+import com.sknote.app.util.slideNavOptions
 
 class SearchFragment : Fragment() {
 
@@ -33,9 +34,11 @@ class SearchFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val navOptions = slideNavOptions()
+
         articleAdapter = ArticleAdapter { article ->
             val bundle = Bundle().apply { putLong("article_id", article.id) }
-            findNavController().navigate(R.id.articleDetailFragment, bundle)
+            findNavController().navigate(R.id.articleDetailFragment, bundle, navOptions)
         }
         binding.rvResults.apply {
             layoutManager = LinearLayoutManager(context)
