@@ -20,6 +20,7 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.User
 import com.sknote.app.databinding.FragmentUserManageBinding
+import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.flow.first
 
 class UserManageFragment : Fragment() {
@@ -39,6 +40,16 @@ class UserManageFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!requireRolesOrExit(setOf("admin"), "仅管理员可管理用户")) {
+                return@launch
+            }
+            setupManageUi()
+        }
+    }
+
+    private fun setupManageUi() {
 
         adapter = UserManageAdapter { user, anchorView ->
             showUserMenu(user, anchorView)

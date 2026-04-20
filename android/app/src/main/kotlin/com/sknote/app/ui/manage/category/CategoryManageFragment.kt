@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -19,6 +20,8 @@ import com.sknote.app.databinding.FragmentCategoryManageBinding
 import com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryEditorFragment
 import com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageAdapter
 import com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageViewModel
+import com.sknote.app.util.requireRolesOrExit
+import kotlinx.coroutines.launch
 
 class CategoryManageFragment : Fragment() {
 
@@ -48,6 +51,16 @@ class CategoryManageFragment : Fragment() {
 
         binding.toolbar.title = "分类管理"
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!requireRolesOrExit(setOf("admin"), "仅管理员可管理分类")) {
+                return@launch
+            }
+            setupManageUi(savedInstanceState)
+        }
+    }
+
+    private fun setupManageUi(savedInstanceState: Bundle?) {
 
         // --- adapters ---
         articleAdapter = CategoryManageAdapter(

@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.fragment.app.viewModels
@@ -51,7 +52,11 @@ class ArticleDetailFragment : Fragment() {
         binding.toolbar.inflateMenu(R.menu.menu_article_detail)
 
         val articleId = arguments?.getLong("article_id", 0L) ?: 0L
-        if (articleId <= 0L) return
+        if (articleId <= 0L) {
+            Toast.makeText(requireContext(), "无效的文章ID", Toast.LENGTH_SHORT).show()
+            findNavController().navigateUp()
+            return
+        }
 
         val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
         navHandle?.getLiveData<Boolean>("refresh_articles")
@@ -250,7 +255,7 @@ class ArticleDetailFragment : Fragment() {
     }
 
     private fun updateEditVisibility() {
-        val canEdit = cachedRole == "admin" || currentArticleAuthorId == cachedUserId
+        val canEdit = cachedRole == "admin" || cachedRole == "editor" || currentArticleAuthorId == cachedUserId
         _binding?.toolbar?.menu?.findItem(R.id.action_edit)?.isVisible = canEdit
     }
 

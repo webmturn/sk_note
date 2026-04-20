@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -18,6 +19,7 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetDetailBinding
 import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.util.SyntaxHighlightUtil
 import com.sknote.app.util.TimeUtil
 import kotlinx.coroutines.flow.first
@@ -42,8 +44,14 @@ class SnippetDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val navOptions = slideNavOptions()
+
         snippetId = arguments?.getLong("snippet_id", 0L) ?: 0L
-        if (snippetId <= 0L) return
+        if (snippetId <= 0L) {
+            Toast.makeText(requireContext(), "无效的代码片段ID", Toast.LENGTH_SHORT).show()
+            findNavController().navigateUp()
+            return
+        }
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_snippet_detail)
 
@@ -69,7 +77,7 @@ class SnippetDetailFragment : Fragment() {
             when (menuItem.itemId) {
                 R.id.action_edit -> {
                     val bundle = Bundle().apply { putLong("snippet_id", snippetId) }
-                    findNavController().navigate(R.id.createSnippetFragment, bundle)
+                    findNavController().navigate(R.id.createSnippetFragment, bundle, navOptions)
                     true
                 }
                 else -> false

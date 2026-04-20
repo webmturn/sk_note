@@ -29,6 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
+            android:fillViewport="true"
             android:overScrollMode="never">
 
             <LinearLayout
@@ -38,6 +39,43 @@
                 android:paddingHorizontal="20dp"
                 android:paddingTop="8dp"
                 android:paddingBottom="24dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDiscussionGuide"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                    app:cardCornerRadius="20dp"
+                    app:strokeColor="?attr/colorOutlineVariant"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp">
+
+                        <TextView
+                            android:id="@+id/tvScreenTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="发起讨论"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvScreenSubtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="尽量写清背景、现象和期望结果，别人更容易理解并回复。"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
                 <!-- Block/palette share preview (hidden by default) -->
                 <FrameLayout
@@ -49,6 +87,7 @@
 
                 <!-- Title -->
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="4dp"
@@ -58,6 +97,7 @@
                     app:boxStrokeWidth="0dp"
                     app:boxStrokeWidthFocused="0dp"
                     app:boxBackgroundMode="none"
+                    app:helperText="建议用一句话概括你的问题或观点"
                     app:hintTextAppearance="@style/TextAppearance.Material3.BodySmall">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -87,6 +127,7 @@
                     android:layout_marginBottom="6dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutCategory"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
@@ -102,6 +143,7 @@
 
                 <!-- Content -->
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="写下你的想法..."
@@ -111,6 +153,7 @@
                     app:boxCornerRadiusTopEnd="12dp"
                     app:boxCornerRadiusBottomStart="12dp"
                     app:boxCornerRadiusBottomEnd="12dp"
+                    app:helperText="支持 Markdown、图片，以及积木块/调色板分享内容"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -124,6 +167,14 @@
                         android:lineSpacingMultiplier="1.4"
                         android:maxLength="5000" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="建议补充问题背景、复现步骤、预期结果和已尝试过的方法，让回复更聚焦。"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
 
                 <!-- Image section -->
                 <LinearLayout
@@ -181,10 +232,12 @@
             android:elevation="4dp">
 
             <TextView
+                android:id="@+id/tvSubmitHint"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="分享你的想法、问题或反馈"
+                android:maxLines="2"
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 

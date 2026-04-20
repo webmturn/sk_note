@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -15,6 +16,8 @@ import com.sknote.app.R
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.FragmentDiscussionManageBinding
 import com.sknote.app.ui.manage.category.CategoryManageFragment
+import com.sknote.app.util.requireRolesOrExit
+import kotlinx.coroutines.launch
 
 class DiscussionManageFragment : Fragment() {
 
@@ -32,6 +35,16 @@ class DiscussionManageFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!requireRolesOrExit(setOf("admin", "editor"), "仅管理员或编辑可管理讨论")) {
+                return@launch
+            }
+            setupManageUi()
+        }
+    }
+
+    private fun setupManageUi() {
         binding.btnManageDiscussionCategories.setOnClickListener {
             findNavController().navigate(
                 R.id.categoryManageFragment,

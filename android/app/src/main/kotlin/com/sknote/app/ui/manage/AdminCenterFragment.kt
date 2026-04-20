@@ -5,9 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentAdminCenterBinding
+import com.sknote.app.util.requireRolesOrExit
+import kotlinx.coroutines.launch
 
 class AdminCenterFragment : Fragment() {
 
@@ -23,6 +26,16 @@ class AdminCenterFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!requireRolesOrExit(setOf("admin"), "仅管理员可进入管理中心")) {
+                return@launch
+            }
+            setupAdminEntries()
+        }
+    }
+
+    private fun setupAdminEntries() {
 
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setEnterAnim(R.anim.slide_in_right)

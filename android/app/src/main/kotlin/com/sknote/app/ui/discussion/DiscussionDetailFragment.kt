@@ -6,10 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import android.content.Intent
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -18,9 +20,11 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Comment
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
+import com.sknote.app.databinding.LayoutDiscussionDetailHeaderBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.TimeUtil
 import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
 import kotlinx.coroutines.flow.first
@@ -32,6 +36,7 @@ class DiscussionDetailFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: DiscussionDetailViewModel by viewModels()
     private lateinit var commentAdapter: CommentAdapter
+    private lateinit var headerAdapter: DiscussionHeaderAdapter
     private lateinit var markwon: Markwon
     private var discussionId: Long = 0
     private var cachedUserId: Long = -1
@@ -40,6 +45,9 @@ class DiscussionDetailFragment : Fragment() {
     private var currentDiscussionAuthorId: Long = -1
     private var replyParentCommentId: Long? = null
     private var replyTargetName: String = ""
+
+    private val hb: LayoutDiscussionDetailHeaderBinding?
+        get() = headerAdapter.headerBinding
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDiscussionDetailBinding.inflate(inflater, container, false)
@@ -50,7 +58,11 @@ class DiscussionDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         discussionId = arguments?.getLong("discussion_id", 0L) ?: 0L
-        if (discussionId <= 0L) return
+        if (discussionId <= 0L) {
+            Toast.makeText(requireContext(), "无效的讨论ID", Toast.LENGTH_SHORT).show()
+            findNavController().navigateUp()
+            return
+        }
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
             .build()
@@ -75,6 +87,7 @@ class DiscussionDetailFragment : Fragment() {
                 }
             }
 
+        headerAdapter = DiscussionHeaderAdapter()
         commentAdapter = CommentAdapter(
             onReplyClick = { comment ->
                 viewLifecycleOwner.lifecycleScope.launch {
@@ -106,17 +119,17 @@ class DiscussionDetailFragment : Fragment() {
             onAvatarClick = { comment ->
                 if (comment.authorId > 0) {
                     val bundle = Bundle().apply { putLong("user_id", comment.authorId) }
-                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                    findNavController().navigate(R.id.publicProfileFragment, bundle, slideNavOptions())
                 }
             }
         )
-        binding.rvComments.apply {
+        binding.rvMain.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = commentAdapter
+            adapter = ConcatAdapter(headerAdapter, commentAdapter)
         }
 
         binding.btnLoginReply.setOnClickListener {
-            findNavController().navigate(R.id.loginFragment)
+            findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
         }
 
         binding.btnSend.setOnClickListener {
@@ -145,61 +158,62 @@ class DiscussionDetailFragment : Fragment() {
     private fun observeData() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             discussion ?: return@observe
+            val h = hb ?: return@observe
             currentDiscussionAuthorId = discussion.authorId
-            binding.tvTitle.text = discussion.title
-            binding.tvAuthor.text = discussion.authorName ?: "匿名"
+            h.tvTitle.text = discussion.title
+            h.tvAuthor.text = discussion.authorName ?: "匿名"
             val navigateToAuthor = View.OnClickListener {
                 if (discussion.authorId > 0) {
                     val bundle = Bundle().apply { putLong("user_id", discussion.authorId) }
-                    findNavController().navigate(R.id.publicProfileFragment, bundle)
+                    findNavController().navigate(R.id.publicProfileFragment, bundle, slideNavOptions())
                 }
             }
-            binding.tvAuthor.setOnClickListener(navigateToAuthor)
-            binding.ivAuthorAvatar.setOnClickListener(navigateToAuthor)
-            binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
-            binding.tvViewCount.text = "${discussion.viewCount} 浏览"
-            binding.tvContent.visibility = View.VISIBLE
-            binding.chipCategory.text = discussion.categoryName.orEmpty().ifEmpty {
+            h.tvAuthor.setOnClickListener(navigateToAuthor)
+            h.ivAuthorAvatar.setOnClickListener(navigateToAuthor)
+            h.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
+            h.tvViewCount.text = "${discussion.viewCount} 浏览"
+            h.tvContent.visibility = View.VISIBLE
+            h.chipCategory.text = discussion.categoryName.orEmpty().ifEmpty {
                 DiscussionCategoryDefaults.label(discussion.category)
             }
 
             // Handle block/palette share preview
-            binding.blockPreviewContainer.removeAllViews()
+            h.blockPreviewContainer.removeAllViews()
             if (BlockShareHelper.containsAnyShare(discussion.content.orEmpty())) {
                 val cleanContent = BlockShareHelper.getCleanContent(discussion.content.orEmpty())
                 if (cleanContent.isNotEmpty()) {
-                    markwon.setMarkdown(binding.tvContent, cleanContent)
+                    markwon.setMarkdown(h.tvContent, preserveDiscussionLineBreaks(cleanContent))
                 } else {
-                    binding.tvContent.visibility = android.view.View.GONE
+                    h.tvContent.visibility = View.GONE
                 }
 
                 val blockJson = BlockShareHelper.extractBlockJson(discussion.content.orEmpty())
                 if (blockJson != null) {
                     val preview = BlockShareHelper.createPreviewView(
-                        requireContext(), binding.blockPreviewContainer, blockJson, showActions = true
+                        requireContext(), h.blockPreviewContainer, blockJson, showActions = true
                     )
-                    binding.blockPreviewContainer.addView(preview)
+                    h.blockPreviewContainer.addView(preview)
                 }
 
                 val paletteJson = BlockShareHelper.extractPaletteJson(discussion.content.orEmpty())
                 if (paletteJson != null) {
                     val preview = BlockShareHelper.createPalettePreviewView(
-                        requireContext(), binding.blockPreviewContainer, paletteJson, showActions = true
+                        requireContext(), h.blockPreviewContainer, paletteJson, showActions = true
                     ) {
                         val bundle = Bundle().apply {
                             putString("palette_json", paletteJson.toString())
                         }
-                        findNavController().navigate(R.id.paletteDetailFragment, bundle)
+                        findNavController().navigate(R.id.paletteDetailFragment, bundle, slideNavOptions())
                     }
-                    binding.blockPreviewContainer.addView(preview)
+                    h.blockPreviewContainer.addView(preview)
                 }
 
                 if (blockJson != null || paletteJson != null) {
-                    binding.blockPreviewContainer.visibility = android.view.View.VISIBLE
+                    h.blockPreviewContainer.visibility = View.VISIBLE
                 }
             } else {
-                markwon.setMarkdown(binding.tvContent, discussion.content.orEmpty())
-                binding.blockPreviewContainer.visibility = android.view.View.GONE
+                markwon.setMarkdown(h.tvContent, preserveDiscussionLineBreaks(discussion.content.orEmpty()))
+                h.blockPreviewContainer.visibility = View.GONE
             }
 
             val canEdit = discussion.authorId == cachedUserId || cachedRole == "admin" || cachedRole == "editor"
@@ -221,7 +235,7 @@ class DiscussionDetailFragment : Fragment() {
                     }
                     R.id.action_edit -> {
                         val bundle = Bundle().apply { putLong("discussion_id", discussionId) }
-                        findNavController().navigate(R.id.createDiscussionFragment, bundle)
+                        findNavController().navigate(R.id.createDiscussionFragment, bundle, slideNavOptions())
                         true
                     }
                     R.id.action_delete -> {
@@ -249,8 +263,8 @@ class DiscussionDetailFragment : Fragment() {
 
         viewModel.comments.observe(viewLifecycleOwner) { comments ->
             commentAdapter.submitList(comments)
-            binding.tvCommentsHeader.text = "评论 (${comments.size})"
-            binding.layoutNoComments.visibility = if (comments.isEmpty()) View.VISIBLE else View.GONE
+            hb?.tvCommentsHeader?.text = "评论 (${comments.size})"
+            hb?.layoutNoComments?.visibility = if (comments.isEmpty()) View.VISIBLE else View.GONE
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
@@ -286,6 +300,11 @@ class DiscussionDetailFragment : Fragment() {
                 Snackbar.make(binding.root, "评论成功", Snackbar.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun preserveDiscussionLineBreaks(text: String): String {
+        val normalized = text.replace("\r\n", "\n")
+        return normalized.replace(Regex("(?<!\\n)\\n(?!\\n)"), "  \n")
     }
 
     override fun onResume() {
@@ -343,7 +362,6 @@ class DiscussionDetailFragment : Fragment() {
         clipboard.setPrimaryClip(clip)
         Snackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
     }
-
 
     override fun onDestroyView() {
         super.onDestroyView()

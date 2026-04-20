@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -18,6 +19,7 @@ import com.sknote.app.data.model.Share
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentPublicProfileBinding
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -39,7 +41,8 @@ class PublicProfileFragment : Fragment() {
 
         userId = arguments?.getLong("user_id", 0) ?: 0
         if (userId == 0L) {
-            findNavController().popBackStack()
+            Toast.makeText(requireContext(), "无效的用户ID", Toast.LENGTH_SHORT).show()
+            findNavController().navigateUp()
             return
         }
 
@@ -125,6 +128,13 @@ class PublicProfileFragment : Fragment() {
         loadContent()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (userId > 0L) {
+            checkFollowStatus()
+        }
+    }
+
     private fun loadProfile() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -137,7 +147,7 @@ class PublicProfileFragment : Fragment() {
                     binding.chipRole.text = when (data.user.role) {
                         "admin" -> "管理员"
                         "editor" -> "编辑"
-                        else -> "用户"
+                        else -> "普通用户"
                     }
                     binding.toolbar.title = data.user.displayName
 
@@ -208,7 +218,7 @@ class PublicProfileFragment : Fragment() {
                 if (_binding == null) return@launch
                 if (!loggedIn) {
                     Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
+                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
                         .show()
                     return@launch
                 }
@@ -302,8 +312,8 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Discussion>(list, ProfileContentAdapter.TYPE_DISCUSSION) { item ->
-                    val bundle = Bundle().apply { putLong("discussion_id", (item as Discussion).id) }
-                    findNavController().navigate(R.id.discussionDetailFragment, bundle)
+                    val bundle = Bundle().apply { putLong("discussion_id", item.id) }
+                    findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter
             }
@@ -328,8 +338,8 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Snippet>(list, ProfileContentAdapter.TYPE_SNIPPET) { item ->
-                    val bundle = Bundle().apply { putLong("snippet_id", (item as Snippet).id) }
-                    findNavController().navigate(R.id.snippetDetailFragment, bundle)
+                    val bundle = Bundle().apply { putLong("snippet_id", item.id) }
+                    findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter
             }
@@ -354,8 +364,8 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Share>(list, ProfileContentAdapter.TYPE_SHARE) { item ->
-                    val bundle = Bundle().apply { putLong("share_id", (item as Share).id) }
-                    findNavController().navigate(R.id.shareDetailFragment, bundle)
+                    val bundle = Bundle().apply { putLong("share_id", item.id) }
+                    findNavController().navigate(R.id.shareDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter
             }

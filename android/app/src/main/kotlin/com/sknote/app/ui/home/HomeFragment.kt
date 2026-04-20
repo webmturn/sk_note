@@ -13,6 +13,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentHomeBinding
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -57,6 +58,8 @@ class HomeFragment : Fragment() {
                 }
             }
 
+        val navOptions = slideNavOptions()
+
         viewModel.loadData()
 
         binding.swipeRefresh.setOnRefreshListener {
@@ -67,18 +70,19 @@ class HomeFragment : Fragment() {
         updateGreeting()
 
         binding.layoutSearch.setOnClickListener {
-            findNavController().navigate(R.id.searchFragment)
+            findNavController().navigate(R.id.searchFragment, null, navOptions)
         }
 
         binding.tvViewAll.setOnClickListener {
             val bundle = Bundle().apply {
+                putLong("category_id", 0L)
                 putString("category_name", "全部文章")
             }
             findNavController().navigate(R.id.action_home_to_articleList, bundle)
         }
 
         binding.cardAnalyzer.setOnClickListener {
-            findNavController().navigate(R.id.swToolsFragment)
+            findNavController().navigate(R.id.swToolsFragment, null, navOptions)
         }
 
         binding.cardShares.setOnClickListener {
@@ -95,7 +99,7 @@ class HomeFragment : Fragment() {
             if (allItems.isNotEmpty()) {
                 val random = allItems.random()
                 val bundle = Bundle().apply { putLong("reference_id", random.id) }
-                findNavController().navigate(R.id.referenceDetailFragment, bundle)
+                findNavController().navigate(R.id.referenceDetailFragment, bundle, navOptions)
             }
         }
     }
