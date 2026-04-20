@@ -71,18 +71,11 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
 discussionRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
-  const discussion = await c.env.DB.prepare(`
-    SELECT d.*, COALESCE(dc.name, d.category) as category_name, COALESCE(dc.icon, '') as category_icon,
-    COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
-    FROM discussions d
-    LEFT JOIN users u ON d.author_id = u.id
-    LEFT JOIN discussion_categories dc ON d.category = dc.slug
-    WHERE d.id = ?
-  `).bind(id).first();
+  // 先检查是否存在
+  const exists = await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?').bind(id).first();
+  if (!exists) return c.json({ error: '讨论不存在' }, 404);
 
-  if (!discussion) return c.json({ error: '讨论不存在' }, 404);
-
-  // 增加阅读量（去重）
+  // 增加阅读量（去重） —— 在读取详情之前完成，确保返回值包含最新 view_count
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
     || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
@@ -93,10 +86,19 @@ discussionRoutes.get('/:id', async (c) => {
     await c.env.DB.prepare(
       'UPDATE discussions SET view_count = view_count + 1 WHERE id = ?'
     ).bind(id).run();
-    if (typeof (discussion as any).view_count === 'number') {
-      (discussion as any).view_count += 1;
-    }
   }
+
+  // 读取完整讨论（此时 view_count 已是最新值）
+  const discussion = await c.env.DB.prepare(`
+    SELECT d.*, COALESCE(dc.name, d.category) as category_name, COALESCE(dc.icon, '') as category_icon,
+    COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
+    FROM discussions d
+    LEFT JOIN users u ON d.author_id = u.id
+    LEFT JOIN discussion_categories dc ON d.category = dc.slug
+    WHERE d.id = ?
+  `).bind(id).first();
+
+  if (!discussion) return c.json({ error: '讨论不存在' }, 404);
 
   // 获取评论
   const comments = await c.env.DB.prepare(`
@@ -352,7 +354,7 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
   }
 
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/discussions`]);
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${discussionId}`]);
   return c.json({ id: result.meta.last_row_id, message: '回复成功' }, 201);
 });
 
@@ -406,7 +408,7 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
   ).bind(deleteCount, discussionId).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/discussions`]);
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${discussionId}`]);
   return c.json({ message: '删除成功' });
 });
 
