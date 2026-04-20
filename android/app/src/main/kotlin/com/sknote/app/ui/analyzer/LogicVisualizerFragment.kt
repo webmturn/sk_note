@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Parcelable
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
@@ -75,6 +76,20 @@ class LogicVisualizerFragment : Fragment() {
     private var selectedEventIndex = 0
     private var isInVisualization = false
     private var currentProject: SkProject? = null
+    private var currentProjectId: String? = null
+    private var projectListState: Parcelable? = null
+    private var eventListState: Parcelable? = null
+    private var blockScrollY: Int = 0
+
+    companion object {
+        private const val STATE_IS_IN_VISUALIZATION = "state_is_in_visualization"
+        private const val STATE_PROJECT_ID = "state_project_id"
+        private const val STATE_ACTIVITY_INDEX = "state_activity_index"
+        private const val STATE_EVENT_INDEX = "state_event_index"
+        private const val STATE_BLOCK_SCROLL_Y = "state_block_scroll_y"
+        private const val STATE_PROJECT_LIST = "state_project_list"
+        private const val STATE_EVENT_LIST = "state_event_list"
+    }
 
     // Sketchware event name → Chinese translation
     private val eventNameMap = mapOf(
@@ -163,6 +178,15 @@ class LogicVisualizerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         ReferenceData.init(requireContext())
+        savedInstanceState?.let {
+            isInVisualization = it.getBoolean(STATE_IS_IN_VISUALIZATION, false)
+            currentProjectId = it.getString(STATE_PROJECT_ID)
+            currentActivityIndex = it.getInt(STATE_ACTIVITY_INDEX, 0)
+            selectedEventIndex = it.getInt(STATE_EVENT_INDEX, 0)
+            blockScrollY = it.getInt(STATE_BLOCK_SCROLL_Y, 0)
+            projectListState = it.getParcelable(STATE_PROJECT_LIST)
+            eventListState = it.getParcelable(STATE_EVENT_LIST)
+        }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
         binding.toolbar.setNavigationOnClickListener {
@@ -173,6 +197,7 @@ class LogicVisualizerFragment : Fragment() {
 
         if (hasStoragePermission()) {
             loadProjects()
+            restoreUiStateAfterLoad()
         } else {
             showPermissionUI()
         }
@@ -183,6 +208,15 @@ class LogicVisualizerFragment : Fragment() {
         binding.rvProjects.visibility = View.VISIBLE
         binding.toolbar.subtitle = "找到 ${allProjects.size} 个项目"
         binding.toolbar.menu.clear()
+        currentProject = null
+        currentProjectId = null
+        allEvents = emptyList()
+        activities = emptyList()
+        currentEvents = emptyList()
+        currentActivityIndex = 0
+        selectedEventIndex = 0
+        eventListState = null
+        blockScrollY = 0
         isInVisualization = false
         backCallback.isEnabled = false
     }
@@ -257,6 +291,24 @@ class LogicVisualizerFragment : Fragment() {
         }
 
         binding.toolbar.subtitle = "找到 ${projects.size} 个项目"
+    }
+
+    private fun restoreUiStateAfterLoad() {
+        val restoredProjectId = currentProjectId
+        if (isInVisualization && !restoredProjectId.isNullOrEmpty()) {
+            val project = allProjects.firstOrNull { it.id == restoredProjectId }
+            if (project != null) {
+                binding.root.post { analyzeLogic(project, restoreState = true) }
+                return
+            }
+            currentProject = null
+            currentProjectId = null
+            isInVisualization = false
+        }
+        val listState = projectListState ?: return
+        binding.rvProjects.post {
+            binding.rvProjects.layoutManager?.onRestoreInstanceState(listState)
+        }
     }
 
     // ---- Logic file parsing ----
@@ -352,13 +404,14 @@ class LogicVisualizerFragment : Fragment() {
 
     // ---- Visualization ----
 
-    private fun analyzeLogic(project: SkProject) {
+    private fun analyzeLogic(project: SkProject, restoreState: Boolean = false) {
         binding.rvProjects.visibility = View.GONE
         binding.layoutVisualization.visibility = View.VISIBLE
         binding.toolbar.subtitle = project.name
         isInVisualization = true
         backCallback.isEnabled = true
         currentProject = project
+        currentProjectId = project.id
 
         // Add toolbar menu
         binding.toolbar.inflateMenu(R.menu.menu_logic_visualizer)
@@ -383,15 +436,19 @@ class LogicVisualizerFragment : Fragment() {
 
         // Group by activity
         activities = allEvents.map { it.activity }.distinct()
-        currentActivityIndex = 0
+        currentActivityIndex = if (restoreState) {
+            currentActivityIndex.coerceIn(0, activities.lastIndex)
+        } else {
+            0
+        }
         val totalBlocks = allEvents.sumOf { it.blocks.size }
         binding.tvStatsLabel.text = "${activities.size} Activity · ${allEvents.size} 事件 · $totalBlocks 积木"
 
         // Setup activity selector (tap to switch)
-        binding.tvActivityLabel.text = "▼ ${activities[0]}"
+        binding.tvActivityLabel.text = "▼ ${activities[currentActivityIndex]}"
         binding.tvActivityLabel.setOnClickListener { showActivityPicker() }
 
-        switchToActivity(0)
+        switchToActivity(currentActivityIndex, restoreState)
     }
 
     private fun showSearchDialog() {
@@ -469,15 +526,28 @@ class LogicVisualizerFragment : Fragment() {
             .show()
     }
 
-    private fun switchToActivity(index: Int) {
+    private fun switchToActivity(index: Int, restoreState: Boolean = false) {
         currentActivityIndex = index
         val actName = activities[index]
         binding.tvActivityLabel.text = "▼ $actName"
         currentEvents = allEvents.filter { it.activity == actName }
-        selectedEventIndex = 0
+        selectedEventIndex = if (restoreState && currentEvents.isNotEmpty()) {
+            selectedEventIndex.coerceIn(0, currentEvents.lastIndex)
+        } else {
+            0
+        }
         setupEventList()
         if (currentEvents.isNotEmpty()) {
-            renderEvent(currentEvents[0])
+            val eventIndex = selectedEventIndex.coerceIn(0, currentEvents.lastIndex)
+            renderEvent(currentEvents[eventIndex], restoreState)
+            binding.rvEvents.post {
+                val state = eventListState
+                if (restoreState && state != null) {
+                    binding.rvEvents.layoutManager?.onRestoreInstanceState(state)
+                } else {
+                    binding.rvEvents.scrollToPosition(eventIndex)
+                }
+            }
         }
     }
 
@@ -492,7 +562,7 @@ class LogicVisualizerFragment : Fragment() {
         }
     }
 
-    private fun renderEvent(event: LogicEvent) {
+    private fun renderEvent(event: LogicEvent, restoreState: Boolean = false) {
         val container = binding.layoutBlocks
         container.removeAllViews()
         val ctx = requireContext()
@@ -557,8 +627,11 @@ class LogicVisualizerFragment : Fragment() {
         // Render block chain
         renderBlockChain(container, event.blocks, event.rootId, 0, dp)
 
-        // Scroll to top
-        binding.scrollBlocks.scrollTo(0, 0)
+        if (restoreState) {
+            binding.scrollBlocks.post { binding.scrollBlocks.scrollTo(0, blockScrollY) }
+        } else {
+            binding.scrollBlocks.scrollTo(0, 0)
+        }
 
         if (container.childCount <= 1) {
             container.addView(TextView(ctx).apply {
@@ -1101,6 +1174,32 @@ class LogicVisualizerFragment : Fragment() {
         val tv = TypedValue()
         requireContext().theme.resolveAttribute(attr, tv, true)
         return tv.data
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        projectListState = currentBinding.rvProjects.layoutManager?.onSaveInstanceState()
+        if (isInVisualization) {
+            eventListState = currentBinding.rvEvents.layoutManager?.onSaveInstanceState()
+            blockScrollY = currentBinding.scrollBlocks.scrollY
+        }
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_IS_IN_VISUALIZATION, isInVisualization)
+        outState.putString(STATE_PROJECT_ID, currentProjectId)
+        outState.putInt(STATE_ACTIVITY_INDEX, currentActivityIndex)
+        outState.putInt(STATE_EVENT_INDEX, selectedEventIndex)
+        outState.putInt(STATE_BLOCK_SCROLL_Y, blockScrollY)
+        outState.putParcelable(STATE_PROJECT_LIST, projectListState)
+        outState.putParcelable(STATE_EVENT_LIST, eventListState)
     }
 
     override fun onDestroyView() {

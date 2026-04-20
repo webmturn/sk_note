@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Parcelable
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -44,6 +45,21 @@ class ProjectAnalyzerFragment : Fragment() {
     private var _binding: FragmentProjectAnalyzerBinding? = null
     private val binding get() = _binding!!
     private var allProjects = listOf<SkProject>()
+    private var currentProjectId: String? = null
+    private var isShowingGlobalStats = false
+    private var projectListState: Parcelable? = null
+    private var analysisScrollY: Int = 0
+    private var selectedViewSectionName: String? = null
+    private var isViewPreviewMode = false
+
+    companion object {
+        private const val STATE_PROJECT_ID = "state_project_id"
+        private const val STATE_SHOWING_GLOBAL_STATS = "state_showing_global_stats"
+        private const val STATE_PROJECT_LIST = "state_project_list"
+        private const val STATE_ANALYSIS_SCROLL_Y = "state_analysis_scroll_y"
+        private const val STATE_VIEW_SECTION_NAME = "state_view_section_name"
+        private const val STATE_VIEW_PREVIEW_MODE = "state_view_preview_mode"
+    }
 
     private val backCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -107,6 +123,14 @@ class ProjectAnalyzerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         ReferenceData.init(requireContext())
+        savedInstanceState?.let {
+            currentProjectId = it.getString(STATE_PROJECT_ID)
+            isShowingGlobalStats = it.getBoolean(STATE_SHOWING_GLOBAL_STATS, false)
+            projectListState = it.getParcelable(STATE_PROJECT_LIST)
+            analysisScrollY = it.getInt(STATE_ANALYSIS_SCROLL_Y, 0)
+            selectedViewSectionName = it.getString(STATE_VIEW_SECTION_NAME)
+            isViewPreviewMode = it.getBoolean(STATE_VIEW_PREVIEW_MODE, false)
+        }
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
@@ -115,7 +139,7 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_global_stats -> { showCrossProjectStats(); true }
-                R.id.action_custom_blocks -> { findNavController().navigate(R.id.customBlocksFragment); true }
+                R.id.action_custom_blocks -> { findNavController().navigate(R.id.customBlocksFragment, null, slideNavOptions()); true }
                 R.id.action_backup -> { showBackupDialog(); true }
                 R.id.action_launch_sw -> { launchSketchware(); true }
                 else -> false
@@ -126,13 +150,16 @@ class ProjectAnalyzerFragment : Fragment() {
 
         if (hasStoragePermission()) {
             loadProjects()
+            val restored = restoreUiStateAfterLoad()
             // Handle direct navigation from SwToolsFragment
-            val showGlobal = arguments?.getBoolean("show_global_stats", false) == true
-            val showBackup = arguments?.getBoolean("show_backup", false) == true
-            if (showGlobal) {
-                binding.root.post { showCrossProjectStats() }
-            } else if (showBackup) {
-                binding.root.post { showBackupDialog() }
+            if (!restored) {
+                val showGlobal = arguments?.getBoolean("show_global_stats", false) == true
+                val showBackup = arguments?.getBoolean("show_backup", false) == true
+                if (showGlobal) {
+                    binding.root.post { showCrossProjectStats() }
+                } else if (showBackup) {
+                    binding.root.post { showBackupDialog() }
+                }
             }
         } else {
             showPermissionUI()
@@ -216,15 +243,22 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.rvProjects.visibility = View.VISIBLE
         binding.toolbar.subtitle = "扫描 Sketchware 项目"
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        currentProjectId = null
+        isShowingGlobalStats = false
+        analysisScrollY = 0
+        selectedViewSectionName = null
+        isViewPreviewMode = false
         backCallback.isEnabled = false
     }
 
-    private fun analyzeProject(project: SkProject) {
+    private fun analyzeProject(project: SkProject, restoreState: Boolean = false) {
         binding.rvProjects.visibility = View.GONE
         binding.layoutAnalysis.visibility = View.VISIBLE
         binding.toolbar.subtitle = project.name
         backCallback.isEnabled = true
         binding.toolbar.setNavigationOnClickListener { goBackToProjectList() }
+        currentProjectId = project.id
+        isShowingGlobalStats = false
 
         val container = binding.layoutAnalysisContent
         container.removeAllViews()
@@ -478,35 +512,22 @@ class ProjectAnalyzerFragment : Fragment() {
             previewCard.addView(previewScroll)
             container.addView(previewCard, marginParams(dp(0), dp(0), dp(0), dp(12)))
 
-            var showingPreview = false
+            val initialSection = if (restoreState) {
+                viewSections.firstOrNull { it.name == selectedViewSectionName } ?: viewSections.first()
+            } else {
+                viewSections.first()
+            }
 
-            // Render a specific page
             fun renderPage(section: ViewSection) {
+                selectedViewSectionName = section.name
                 viewLayout.removeAllViews()
                 section.roots.forEach { root -> buildViewTree(viewLayout, root, 0, dp) }
                 previewContainer.removeAllViews()
                 section.roots.forEach { root -> previewContainer.addView(buildVisualPreview(root, dp)) }
             }
 
-            // Build page chips
-            viewSections.forEachIndexed { index, section ->
-                val chip = Chip(ctx).apply {
-                    text = section.name
-                    textSize = 12f
-                    isCheckable = true
-                    isChecked = (index == 0)
-                    setOnClickListener { renderPage(section) }
-                }
-                pageChipGroup.addView(chip)
-            }
-
-            // Render first page by default
-            if (viewSections.isNotEmpty()) renderPage(viewSections[0])
-
-            // Toggle logic
-            toggleBtn.setOnClickListener {
-                showingPreview = !showingPreview
-                if (showingPreview) {
+            fun applyPreviewMode() {
+                if (isViewPreviewMode) {
                     viewCard.visibility = View.GONE
                     previewCard.visibility = View.VISIBLE
                     toggleBtn.text = "文字树"
@@ -516,10 +537,34 @@ class ProjectAnalyzerFragment : Fragment() {
                     toggleBtn.text = "可视化预览"
                 }
             }
+
+            viewSections.forEach { section ->
+                val chip = Chip(ctx).apply {
+                    id = View.generateViewId()
+                    text = section.name
+                    textSize = 12f
+                    isCheckable = true
+                    isChecked = section.name == initialSection.name
+                    setOnClickListener { renderPage(section) }
+                }
+                pageChipGroup.addView(chip)
+            }
+
+            renderPage(initialSection)
+            if (!restoreState) {
+                isViewPreviewMode = false
+            }
+            applyPreviewMode()
+
+            toggleBtn.setOnClickListener {
+                isViewPreviewMode = !isViewPreviewMode
+                applyPreviewMode()
+            }
+        } else {
+            selectedViewSectionName = null
+            isViewPreviewMode = false
         }
 
-        // Suggestions
-        container.addView(createSectionTitle("建议"))
         val sugCard = createCard()
         val sugLayout = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -569,6 +614,11 @@ class ProjectAnalyzerFragment : Fragment() {
         }
         sugCard.addView(sugLayout)
         container.addView(sugCard, marginParams(dp(0), dp(0), dp(0), dp(16)))
+        if (restoreState) {
+            binding.layoutAnalysis.post { binding.layoutAnalysis.scrollTo(0, analysisScrollY) }
+        } else {
+            binding.layoutAnalysis.scrollTo(0, 0)
+        }
     }
 
     private val componentTypeMap = mapOf(
@@ -1413,7 +1463,7 @@ class ProjectAnalyzerFragment : Fragment() {
         node.children.forEach { child -> buildViewTree(container, child, depth + 1, dp) }
     }
 
-    private fun showCrossProjectStats() {
+    private fun showCrossProjectStats(restoreState: Boolean = false) {
         if (allProjects.isEmpty()) {
             Snackbar.make(binding.root, "没有找到项目", Snackbar.LENGTH_SHORT).show()
             return
@@ -1422,12 +1472,12 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.rvProjects.visibility = View.GONE
         binding.layoutAnalysis.visibility = View.VISIBLE
         binding.toolbar.subtitle = "全局统计 (${allProjects.size} 个项目)"
-        binding.toolbar.setNavigationOnClickListener {
-            binding.layoutAnalysis.visibility = View.GONE
-            binding.rvProjects.visibility = View.VISIBLE
-            binding.toolbar.subtitle = "找到 ${allProjects.size} 个项目"
-            binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        }
+        currentProjectId = null
+        isShowingGlobalStats = true
+        selectedViewSectionName = null
+        isViewPreviewMode = false
+        backCallback.isEnabled = true
+        binding.toolbar.setNavigationOnClickListener { goBackToProjectList() }
 
         val container = binding.layoutAnalysisContent
         container.removeAllViews()
@@ -1559,6 +1609,56 @@ class ProjectAnalyzerFragment : Fragment() {
             compCard.addView(compLayout)
             container.addView(compCard, marginParams(dp(0), dp(0), dp(0), dp(16)))
         }
+        if (restoreState) {
+            binding.layoutAnalysis.post { binding.layoutAnalysis.scrollTo(0, analysisScrollY) }
+        } else {
+            binding.layoutAnalysis.scrollTo(0, 0)
+        }
+    }
+
+    private fun restoreUiStateAfterLoad(): Boolean {
+        if (isShowingGlobalStats) {
+            binding.root.post { showCrossProjectStats(restoreState = true) }
+            return true
+        }
+        val restoredProjectId = currentProjectId
+        if (!restoredProjectId.isNullOrEmpty()) {
+            val project = allProjects.firstOrNull { it.id == restoredProjectId }
+            if (project != null) {
+                binding.root.post { analyzeProject(project, restoreState = true) }
+                return true
+            }
+            currentProjectId = null
+        }
+        val listState = projectListState ?: return false
+        binding.rvProjects.post {
+            binding.rvProjects.layoutManager?.onRestoreInstanceState(listState)
+        }
+        return false
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        projectListState = currentBinding.rvProjects.layoutManager?.onSaveInstanceState()
+        if (currentBinding.layoutAnalysis.visibility == View.VISIBLE) {
+            analysisScrollY = currentBinding.layoutAnalysis.scrollY
+        }
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_PROJECT_ID, currentProjectId)
+        outState.putBoolean(STATE_SHOWING_GLOBAL_STATS, isShowingGlobalStats)
+        outState.putParcelable(STATE_PROJECT_LIST, projectListState)
+        outState.putInt(STATE_ANALYSIS_SCROLL_Y, analysisScrollY)
+        outState.putString(STATE_VIEW_SECTION_NAME, selectedViewSectionName)
+        outState.putBoolean(STATE_VIEW_PREVIEW_MODE, isViewPreviewMode)
     }
 
     private fun launchSketchware() {

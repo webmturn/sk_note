@@ -13,6 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentArticleDetailBinding
 import com.sknote.app.util.requireLoggedIn
@@ -101,7 +102,7 @@ class ArticleDetailFragment : Fragment() {
                 }
                 R.id.action_edit -> {
                     val bundle = Bundle().apply { putLong("article_id", articleId) }
-                    findNavController().navigate(R.id.articleEditorFragment, bundle)
+                    findNavController().navigate(R.id.articleEditorFragment, bundle, slideNavOptions())
                     true
                 }
                 else -> false
@@ -255,7 +256,7 @@ class ArticleDetailFragment : Fragment() {
     }
 
     private fun updateEditVisibility() {
-        val canEdit = cachedRole == "admin" || cachedRole == "editor" || currentArticleAuthorId == cachedUserId
+        val canEdit = cachedRole == "admin" || currentArticleAuthorId == cachedUserId
         _binding?.toolbar?.menu?.findItem(R.id.action_edit)?.isVisible = canEdit
     }
 
