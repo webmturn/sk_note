@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentAdminCenterBinding
 import com.sknote.app.util.requireRolesOrExit
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.launch
 
 class AdminCenterFragment : Fragment() {
@@ -36,32 +37,24 @@ class AdminCenterFragment : Fragment() {
     }
 
     private fun setupAdminEntries() {
-
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setEnterAnim(R.anim.slide_in_right)
-            .setExitAnim(R.anim.slide_out_left)
-            .setPopEnterAnim(R.anim.slide_in_left)
-            .setPopExitAnim(R.anim.slide_out_right)
-            .build()
-
         binding.cardUsers.setOnClickListener {
-            findNavController().navigate(R.id.userManageFragment, null, navOptions)
+            findNavController().navigate(R.id.userManageFragment, null, slideNavOptions())
         }
 
         binding.cardCategories.setOnClickListener {
-            findNavController().navigate(R.id.categoryManageFragment, null, navOptions)
+            findNavController().navigate(R.id.categoryManageFragment, null, slideNavOptions())
         }
 
         binding.cardArticles.setOnClickListener {
-            findNavController().navigate(R.id.articleManageFragment, null, navOptions)
+            findNavController().navigate(R.id.articleManageFragment, null, slideNavOptions())
         }
 
         binding.cardDiscussions.setOnClickListener {
-            findNavController().navigate(R.id.discussionManageFragment, null, navOptions)
+            findNavController().navigate(R.id.discussionManageFragment, null, slideNavOptions())
         }
 
         binding.cardSnippets.setOnClickListener {
-            findNavController().navigate(R.id.snippetManageFragment, null, navOptions)
+            findNavController().navigate(R.id.snippetManageFragment, null, slideNavOptions())
         }
     }
 

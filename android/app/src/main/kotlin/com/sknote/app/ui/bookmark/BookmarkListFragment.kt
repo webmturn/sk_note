@@ -13,6 +13,9 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.BookmarkItem
 import com.sknote.app.databinding.FragmentBookmarkListBinding
 import com.sknote.app.util.ErrorUtil
+import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.fadeIn
+import com.sknote.app.util.fadeOut
 import com.sknote.app.util.TimeUtil
 import com.sknote.app.databinding.ItemArticleSimpleBinding
 import androidx.recyclerview.widget.DiffUtil
@@ -37,7 +40,7 @@ class BookmarkListFragment : Fragment() {
 
         adapter = BookmarkAdapter { item ->
             val bundle = Bundle().apply { putLong("article_id", item.articleId) }
-            findNavController().navigate(R.id.articleDetailFragment, bundle)
+            findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
         }
         binding.rvBookmarks.layoutManager = LinearLayoutManager(context)
         binding.rvBookmarks.adapter = adapter
@@ -56,11 +59,11 @@ class BookmarkListFragment : Fragment() {
                 if (response.isSuccessful) {
                     val list = response.body()?.bookmarks ?: emptyList()
                     adapter.submitList(list)
-                    binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+                    if (list.isEmpty()) binding.layoutEmpty.fadeIn() else binding.layoutEmpty.fadeOut()
                 }
             } catch (e: Exception) {
                 binding.errorState.tvError.text = ErrorUtil.friendlyMessage(e)
-                binding.errorState.layoutError.visibility = View.VISIBLE
+                binding.errorState.layoutError.fadeIn()
             }
             binding.swipeRefresh.isRefreshing = false
         }

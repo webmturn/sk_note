@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.sknote.app.util.slideNavOptions
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -405,7 +406,7 @@ class CustomEventsFragment : Fragment() {
             putString("lis_name", listenerName)
             putInt("event_index", eventIndex)
         }
-        findNavController().navigate(R.id.eventEditorFragment, bundle)
+        findNavController().navigate(R.id.eventEditorFragment, bundle, slideNavOptions())
     }
 
     override fun onResume() {

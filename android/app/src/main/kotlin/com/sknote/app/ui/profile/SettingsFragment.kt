@@ -17,6 +17,7 @@ import com.sknote.app.SkNoteApp
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSettingsBinding
 import com.sknote.app.util.AppUpdateManager
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
@@ -43,13 +44,6 @@ class SettingsFragment : Fragment() {
         binding.tvVersion.text = "v${BuildConfig.VERSION_NAME}"
         refreshUpdateSummary()
 
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setEnterAnim(R.anim.slide_in_right)
-            .setExitAnim(R.anim.slide_out_left)
-            .setPopEnterAnim(R.anim.slide_in_left)
-            .setPopExitAnim(R.anim.slide_out_right)
-            .build()
-
         // Theme mode -> navigate to theme selection page
         viewLifecycleOwner.lifecycleScope.launch {
             val mode = ApiClient.getTokenManager().getThemeMode().first()
@@ -57,18 +51,18 @@ class SettingsFragment : Fragment() {
             binding.tvThemeMode.text = SkNoteApp.themeModeLabel(mode)
         }
         binding.rowThemeMode.setOnClickListener {
-            findNavController().navigate(R.id.themeSelectionFragment, null, navOptions)
+            findNavController().navigate(R.id.themeSelectionFragment, null, slideNavOptions())
         }
 
         // Cache -> navigate to cache manage page
         binding.tvCacheSize.text = getCacheSize()
         binding.rowCacheManage.setOnClickListener {
-            findNavController().navigate(R.id.cacheManageFragment, null, navOptions)
+            findNavController().navigate(R.id.cacheManageFragment, null, slideNavOptions())
         }
 
         // Feedback -> navigate to feedback page
         binding.rowFeedback.setOnClickListener {
-            findNavController().navigate(R.id.feedbackFragment, null, navOptions)
+            findNavController().navigate(R.id.feedbackFragment, null, slideNavOptions())
         }
 
         // Update
@@ -76,7 +70,7 @@ class SettingsFragment : Fragment() {
 
         // About -> navigate to about page
         binding.rowAbout.setOnClickListener {
-            findNavController().navigate(R.id.aboutFragment, null, navOptions)
+            findNavController().navigate(R.id.aboutFragment, null, slideNavOptions())
         }
     }
 

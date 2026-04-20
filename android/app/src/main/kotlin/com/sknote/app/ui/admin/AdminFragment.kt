@@ -19,6 +19,7 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.local.TokenManager
 import com.sknote.app.databinding.FragmentAdminBinding
 import com.sknote.app.util.AppUpdateManager
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
@@ -37,47 +38,40 @@ class AdminFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val navOptions = androidx.navigation.NavOptions.Builder()
-            .setEnterAnim(R.anim.slide_in_right)
-            .setExitAnim(R.anim.slide_out_left)
-            .setPopEnterAnim(R.anim.slide_in_left)
-            .setPopExitAnim(R.anim.slide_out_right)
-            .build()
-
         binding.cardUserProfile.setOnClickListener {
-            findNavController().navigate(R.id.userProfileFragment, null, navOptions)
+            findNavController().navigate(R.id.userProfileFragment, null, slideNavOptions())
         }
 
         binding.btnGoLogin.setOnClickListener {
-            findNavController().navigate(R.id.loginFragment, null, navOptions)
+            findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
         }
 
         binding.cardNotifications.setOnClickListener {
-            findNavController().navigate(R.id.notificationFragment, null, navOptions)
+            findNavController().navigate(R.id.notificationFragment, null, slideNavOptions())
         }
 
         binding.cardBookmarks.setOnClickListener {
-            findNavController().navigate(R.id.bookmarkListFragment, null, navOptions)
+            findNavController().navigate(R.id.bookmarkListFragment, null, slideNavOptions())
         }
 
         binding.cardHistory.setOnClickListener {
-            findNavController().navigate(R.id.readingHistoryFragment, null, navOptions)
+            findNavController().navigate(R.id.readingHistoryFragment, null, slideNavOptions())
         }
 
         binding.cardProfileEdit.setOnClickListener {
-            findNavController().navigate(R.id.profileEditFragment, null, navOptions)
+            findNavController().navigate(R.id.profileEditFragment, null, slideNavOptions())
         }
 
         binding.cardShares.setOnClickListener {
-            findNavController().navigate(R.id.shareListFragment, null, navOptions)
+            findNavController().navigate(R.id.shareListFragment, null, slideNavOptions())
         }
 
         binding.rowAdminCenter.setOnClickListener {
-            findNavController().navigate(R.id.adminCenterFragment, null, navOptions)
+            findNavController().navigate(R.id.adminCenterFragment, null, slideNavOptions())
         }
 
         binding.rowSettings.setOnClickListener {
-            findNavController().navigate(R.id.settingsFragment, null, navOptions)
+            findNavController().navigate(R.id.settingsFragment, null, slideNavOptions())
         }
 
         binding.btnLogout.setOnClickListener {

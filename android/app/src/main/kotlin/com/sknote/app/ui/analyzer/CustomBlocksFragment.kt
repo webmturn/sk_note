@@ -18,6 +18,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.sknote.app.util.slideNavOptions
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -408,7 +409,7 @@ class CustomBlocksFragment : Fragment() {
         val bundle = Bundle().apply {
             putString("block_json", shareJson.toString())
         }
-        findNavController().navigate(R.id.createDiscussionFragment, bundle)
+        findNavController().navigate(R.id.createDiscussionFragment, bundle, slideNavOptions())
     }
 
     private fun sharePaletteToCommunity(paletteIdx: Int) {
@@ -451,7 +452,7 @@ class CustomBlocksFragment : Fragment() {
         val bundle = Bundle().apply {
             putString("palette_json", shareJson.toString())
         }
-        findNavController().navigate(R.id.createDiscussionFragment, bundle)
+        findNavController().navigate(R.id.createDiscussionFragment, bundle, slideNavOptions())
     }
 
     private fun showRecycleBinPopup(anchor: View, blockIndex: Int) {
@@ -624,7 +625,7 @@ class CustomBlocksFragment : Fragment() {
             putInt("paletteIndex", paletteIndex)
             putString("paletteColor", palColor)
         }
-        findNavController().navigate(R.id.blockEditorFragment, bundle)
+        findNavController().navigate(R.id.blockEditorFragment, bundle, slideNavOptions())
     }
 
     override fun onResume() {

@@ -15,6 +15,7 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.sknote.app.util.slideNavOptions
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -199,7 +200,7 @@ class CustomComponentsFragment : Fragment() {
 
     private fun navigateToEditor(index: Int) {
         val bundle = Bundle().apply { putInt("pos", index) }
-        findNavController().navigate(R.id.componentEditorFragment, bundle)
+        findNavController().navigate(R.id.componentEditorFragment, bundle, slideNavOptions())
     }
 
     override fun onResume() {

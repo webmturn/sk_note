@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetManageBinding
 import com.sknote.app.util.requireRolesOrExit
@@ -56,7 +57,7 @@ class SnippetManageFragment : Fragment() {
         adapter = SnippetManageAdapter(
             onView = { snippet ->
                 val bundle = Bundle().apply { putLong("snippet_id", snippet.id) }
-                findNavController().navigate(R.id.snippetDetailFragment, bundle)
+                findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
             },
             onDelete = { snippet -> showDeleteConfirm(snippet) }
         )

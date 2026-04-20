@@ -11,6 +11,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentArticleListBinding
+import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.fadeIn
+import com.sknote.app.util.fadeOut
 import com.sknote.app.ui.home.ArticleAdapter
 
 class ArticleListFragment : Fragment() {
@@ -38,7 +41,7 @@ class ArticleListFragment : Fragment() {
 
         adapter = ArticleAdapter { article ->
             val bundle = Bundle().apply { putLong("article_id", article.id) }
-            findNavController().navigate(R.id.articleDetailFragment, bundle)
+            findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
         }
         binding.rvArticles.layoutManager = LinearLayoutManager(context)
         binding.rvArticles.adapter = adapter
@@ -54,16 +57,16 @@ class ArticleListFragment : Fragment() {
     private fun observeData() {
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
             adapter.submitList(articles)
-            binding.layoutEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE
+            if (articles.isEmpty()) binding.layoutEmpty.fadeIn() else binding.layoutEmpty.fadeOut()
         }
         viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
-                binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
-                binding.layoutEmpty.visibility = View.GONE
+                binding.layoutError.fadeIn()
+                binding.layoutEmpty.fadeOut()
             } else {
-                binding.layoutError.visibility = View.GONE
+                binding.layoutError.fadeOut()
             }
         }
 

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Article
 import com.sknote.app.databinding.FragmentArticleManageBinding
 import com.sknote.app.util.requireRolesOrExit
@@ -47,7 +48,7 @@ class ArticleManageFragment : Fragment() {
         adapter = ArticleManageAdapter(
             onEdit = { article ->
                 val bundle = Bundle().apply { putLong("article_id", article.id) }
-                findNavController().navigate(R.id.articleEditorFragment, bundle)
+                findNavController().navigate(R.id.articleEditorFragment, bundle, slideNavOptions())
             },
             onDelete = { article -> showDeleteConfirm(article) }
         )
@@ -55,7 +56,7 @@ class ArticleManageFragment : Fragment() {
         binding.rvArticles.adapter = adapter
 
         binding.fabAdd.setOnClickListener {
-            findNavController().navigate(R.id.articleEditorFragment)
+            findNavController().navigate(R.id.articleEditorFragment, null, slideNavOptions())
         }
 
         binding.swipeRefresh.setOnRefreshListener {

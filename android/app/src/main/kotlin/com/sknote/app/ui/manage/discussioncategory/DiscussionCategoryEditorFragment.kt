@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.CreateDiscussionCategoryRequest
 import com.sknote.app.databinding.FragmentCategoryEditorBinding
@@ -40,7 +41,7 @@ class DiscussionCategoryEditorFragment : Fragment() {
         binding.btnSave.text = if (categoryId == 0L) "创建讨论分类" else "保存讨论分类"
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.cardIconPreview.setOnClickListener {
-            findNavController().navigate(R.id.categoryIconPickerFragment, CategoryIconPickerFragment.createArgs(selectedIconKey))
+            findNavController().navigate(R.id.categoryIconPickerFragment, CategoryIconPickerFragment.createArgs(selectedIconKey), slideNavOptions())
         }
         binding.btnSave.setOnClickListener { saveCategory() }
 

@@ -15,6 +15,7 @@ import com.sknote.app.BuildConfig
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentFeedbackBinding
+import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -43,7 +44,7 @@ class FeedbackFragment : Fragment() {
         // 提交反馈
         binding.btnSubmit.setOnClickListener { submitFeedback() }
         binding.btnGoLogin.setOnClickListener {
-            findNavController().navigate(R.id.loginFragment)
+            findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
         }
 
         // GitHub Issues
@@ -53,7 +54,7 @@ class FeedbackFragment : Fragment() {
 
         // 讨论区
         binding.rowDiscussion.setOnClickListener {
-            findNavController().navigate(R.id.discussionListFragment)
+            findNavController().navigate(R.id.discussionListFragment, null, slideNavOptions())
         }
 
         refreshLoginState()
@@ -100,7 +101,7 @@ class FeedbackFragment : Fragment() {
     private fun submitFeedback() {
         if (!isLoggedIn) {
             Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
-                .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
+                .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
                 .show()
             return
         }
@@ -140,8 +141,8 @@ class FeedbackFragment : Fragment() {
                 if (!isLoggedIn) {
                     renderLoginState()
                     Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
-                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment) }
-                        .show()
+                        .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
+                    .show()
                     return@launch
                 }
 
@@ -172,7 +173,7 @@ class FeedbackFragment : Fragment() {
                     val createdId = response.body()?.id
                     if (createdId != null && createdId > 0) {
                         val bundle = Bundle().apply { putLong("discussion_id", createdId) }
-                        findNavController().navigate(R.id.discussionDetailFragment, bundle)
+                        findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                     } else {
                         Snackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()
                         binding.etTitle.text?.clear()

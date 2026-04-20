@@ -12,6 +12,9 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentNotificationsBinding
+import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.fadeIn
+import com.sknote.app.util.fadeOut
 
 class NotificationFragment : Fragment() {
 
@@ -78,8 +81,8 @@ class NotificationFragment : Fragment() {
     private fun observeData() {
         viewModel.notifications.observe(viewLifecycleOwner) { list ->
             adapter.submitList(list)
-            binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            binding.layoutActionBar.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+            if (list.isEmpty()) { binding.layoutEmpty.fadeIn(); binding.layoutActionBar.fadeOut() }
+            else { binding.layoutEmpty.fadeOut(); binding.layoutActionBar.fadeIn() }
             updateQuickActionState()
         }
 
@@ -95,10 +98,10 @@ class NotificationFragment : Fragment() {
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
-                binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
+                binding.layoutError.fadeIn()
             } else {
-                binding.layoutError.visibility = View.GONE
+                binding.layoutError.fadeOut()
             }
         }
 
@@ -143,19 +146,19 @@ class NotificationFragment : Fragment() {
         when (notification.relatedType) {
             "discussion" -> if (relatedId != null) {
                 val bundle = Bundle().apply { putLong("discussion_id", relatedId) }
-                findNavController().navigate(R.id.discussionDetailFragment, bundle)
+                findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
             }
             "article" -> if (relatedId != null) {
                 val bundle = Bundle().apply { putLong("article_id", relatedId) }
-                findNavController().navigate(R.id.articleDetailFragment, bundle)
+                findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
             }
             "share" -> if (relatedId != null) {
                 val bundle = Bundle().apply { putLong("share_id", relatedId) }
-                findNavController().navigate(R.id.shareDetailFragment, bundle)
+                findNavController().navigate(R.id.shareDetailFragment, bundle, slideNavOptions())
             }
             "snippet" -> if (relatedId != null) {
                 val bundle = Bundle().apply { putLong("snippet_id", relatedId) }
-                findNavController().navigate(R.id.snippetDetailFragment, bundle)
+                findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
             }
         }
     }

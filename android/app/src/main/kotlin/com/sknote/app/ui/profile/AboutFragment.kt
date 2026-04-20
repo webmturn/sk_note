@@ -13,6 +13,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.BuildConfig
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentAboutBinding
+import com.sknote.app.util.slideNavOptions
 
 class AboutFragment : Fragment() {
 
@@ -36,7 +37,7 @@ class AboutFragment : Fragment() {
         }
 
         binding.rowFeedback.setOnClickListener {
-            findNavController().navigate(R.id.feedbackFragment)
+            findNavController().navigate(R.id.feedbackFragment, null, slideNavOptions())
         }
 
         binding.rowLicense.setOnClickListener {

@@ -16,6 +16,9 @@ import com.sknote.app.data.model.HistoryItem
 import com.sknote.app.databinding.FragmentReadingHistoryBinding
 import com.sknote.app.databinding.ItemArticleSimpleBinding
 import com.sknote.app.util.ErrorUtil
+import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.fadeIn
+import com.sknote.app.util.fadeOut
 import com.sknote.app.util.TimeUtil
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -51,7 +54,7 @@ class ReadingHistoryFragment : Fragment() {
 
         adapter = HistoryAdapter { item ->
             val bundle = Bundle().apply { putLong("article_id", item.articleId) }
-            findNavController().navigate(R.id.articleDetailFragment, bundle)
+            findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
         }
         binding.rvHistory.layoutManager = LinearLayoutManager(context)
         binding.rvHistory.adapter = adapter
@@ -70,11 +73,11 @@ class ReadingHistoryFragment : Fragment() {
                 if (response.isSuccessful) {
                     val list = response.body()?.history ?: emptyList()
                     adapter.submitList(list)
-                    binding.layoutEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+                    if (list.isEmpty()) binding.layoutEmpty.fadeIn() else binding.layoutEmpty.fadeOut()
                 }
             } catch (e: Exception) {
                 binding.errorState.tvError.text = ErrorUtil.friendlyMessage(e)
-                binding.errorState.layoutError.visibility = View.VISIBLE
+                binding.errorState.layoutError.fadeIn()
             }
             binding.swipeRefresh.isRefreshing = false
         }
@@ -86,7 +89,7 @@ class ReadingHistoryFragment : Fragment() {
                 val response = ApiClient.getService().clearHistory()
                 if (response.isSuccessful) {
                     adapter.submitList(emptyList())
-                    binding.layoutEmpty.visibility = View.VISIBLE
+                    binding.layoutEmpty.fadeIn()
                     Snackbar.make(binding.root, "已清空", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (_: Exception) {

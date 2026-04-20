@@ -14,6 +14,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Category
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentCategoryManageBinding
@@ -189,14 +190,16 @@ class CategoryManageFragment : Fragment() {
     private fun openArticleCategoryEditor(categoryId: Long = 0L) {
         findNavController().navigate(
             R.id.categoryEditorFragment,
-            bundleOf(CategoryEditorFragment.ARG_CATEGORY_ID to categoryId)
+            bundleOf(CategoryEditorFragment.ARG_CATEGORY_ID to categoryId),
+            slideNavOptions()
         )
     }
 
     private fun openDiscussionCategoryEditor(categoryId: Long = 0L) {
         findNavController().navigate(
             R.id.discussionCategoryEditorFragment,
-            bundleOf(DiscussionCategoryEditorFragment.ARG_CATEGORY_ID to categoryId)
+            bundleOf(DiscussionCategoryEditorFragment.ARG_CATEGORY_ID to categoryId),
+            slideNavOptions()
         )
     }
 

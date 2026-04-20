@@ -13,6 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import androidx.core.os.bundleOf
 import com.sknote.app.R
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.FragmentDiscussionManageBinding
 import com.sknote.app.ui.manage.category.CategoryManageFragment
@@ -48,18 +49,19 @@ class DiscussionManageFragment : Fragment() {
         binding.btnManageDiscussionCategories.setOnClickListener {
             findNavController().navigate(
                 R.id.categoryManageFragment,
-                bundleOf(CategoryManageFragment.ARG_INITIAL_TAB to 1)
+                bundleOf(CategoryManageFragment.ARG_INITIAL_TAB to 1),
+                slideNavOptions()
             )
         }
 
         adapter = DiscussionManageAdapter(
             onView = { discussion ->
                 val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
-                findNavController().navigate(R.id.discussionDetailFragment, bundle)
+                findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
             },
             onEdit = { discussion ->
                 val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
-                findNavController().navigate(R.id.createDiscussionFragment, bundle)
+                findNavController().navigate(R.id.createDiscussionFragment, bundle, slideNavOptions())
             },
             onDelete = { discussion -> showDeleteConfirm(discussion) }
         )
