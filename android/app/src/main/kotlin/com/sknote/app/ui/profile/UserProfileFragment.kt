@@ -1,6 +1,7 @@
 package com.sknote.app.ui.profile
 
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +29,16 @@ class UserProfileFragment : Fragment() {
     private var myId: Long = 0
     private var currentTab = 0
     private var isInitialLoad = true
+    private var discussionListState: Parcelable? = null
+    private var snippetListState: Parcelable? = null
+    private var shareListState: Parcelable? = null
+
+    companion object {
+        private const val STATE_CURRENT_TAB = "state_current_tab"
+        private const val STATE_DISCUSSION_LIST = "state_discussion_list"
+        private const val STATE_SNIPPET_LIST = "state_snippet_list"
+        private const val STATE_SHARE_LIST = "state_share_list"
+    }
 
     private fun roleLabel(role: String?): String {
         return when (role) {
@@ -48,6 +59,11 @@ class UserProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        currentTab = savedInstanceState?.getInt(STATE_CURRENT_TAB) ?: currentTab
+        discussionListState = savedInstanceState?.getParcelable(STATE_DISCUSSION_LIST) ?: discussionListState
+        snippetListState = savedInstanceState?.getParcelable(STATE_SNIPPET_LIST) ?: snippetListState
+        shareListState = savedInstanceState?.getParcelable(STATE_SHARE_LIST) ?: shareListState
 
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
@@ -121,8 +137,11 @@ class UserProfileFragment : Fragment() {
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText("代码片段"))
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText("分享"))
 
+        binding.tabLayout.getTabAt(currentTab)?.select()
+
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                captureCurrentListState()
                 currentTab = tab?.position ?: 0
                 loadContent()
             }
@@ -131,6 +150,20 @@ class UserProfileFragment : Fragment() {
         })
 
         loadData()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureCurrentListState()
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CURRENT_TAB, currentTab)
+        outState.putParcelable(STATE_DISCUSSION_LIST, discussionListState)
+        outState.putParcelable(STATE_SNIPPET_LIST, snippetListState)
+        outState.putParcelable(STATE_SHARE_LIST, shareListState)
+    }
+
+    override fun onPause() {
+        captureCurrentListState()
+        super.onPause()
     }
 
     override fun onResume() {
@@ -248,6 +281,7 @@ class UserProfileFragment : Fragment() {
                     val bundle = Bundle().apply { putLong("discussion_id", item.id) }
                     findNavController().navigate(R.id.discussionDetailFragment, bundle, navOptions)
                 }
+                restoreListStateForTab(0)
             }
         } else {
             binding.rvContent.adapter = null
@@ -275,6 +309,7 @@ class UserProfileFragment : Fragment() {
                     val bundle = Bundle().apply { putLong("snippet_id", item.id) }
                     findNavController().navigate(R.id.snippetDetailFragment, bundle, navOptions)
                 }
+                restoreListStateForTab(1)
             }
         } else {
             binding.rvContent.adapter = null
@@ -302,11 +337,39 @@ class UserProfileFragment : Fragment() {
                     val bundle = Bundle().apply { putLong("share_id", item.id) }
                     findNavController().navigate(R.id.shareDetailFragment, bundle, navOptions)
                 }
+                restoreListStateForTab(2)
             }
         } else {
             binding.rvContent.adapter = null
             binding.tvEmpty.text = "加载分享失败"
             binding.tvEmpty.visibility = View.VISIBLE
+        }
+    }
+
+    private fun captureCurrentListState() {
+        val currentBinding = _binding ?: return
+        val state = currentBinding.rvContent.layoutManager?.onSaveInstanceState()
+        when (currentTab) {
+            0 -> discussionListState = state
+            1 -> snippetListState = state
+            2 -> shareListState = state
+        }
+    }
+
+    private fun restoreListStateForTab(tab: Int) {
+        val pendingState = when (tab) {
+            0 -> discussionListState
+            1 -> snippetListState
+            2 -> shareListState
+            else -> null
+        } ?: return
+        binding.rvContent.post {
+            binding.rvContent.layoutManager?.onRestoreInstanceState(pendingState)
+            when (tab) {
+                0 -> discussionListState = null
+                1 -> snippetListState = null
+                2 -> shareListState = null
+            }
         }
     }
 
