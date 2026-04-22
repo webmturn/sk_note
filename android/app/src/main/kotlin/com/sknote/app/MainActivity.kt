@@ -3,8 +3,11 @@ package com.sknote.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -26,6 +29,21 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Ensure every fragment root view has an opaque background for slide transitions
+        val bgValue = TypedValue()
+        theme.resolveAttribute(android.R.attr.windowBackground, bgValue, true)
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentViewCreated(
+                    fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?
+                ) {
+                    if (v.background == null) {
+                        v.setBackgroundResource(bgValue.resourceId)
+                    }
+                }
+            }, true
+        )
+
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
@@ -40,10 +58,20 @@ class MainActivity : AppCompatActivity() {
         )
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            binding.bottomNavWrapper.visibility = if (destination.id in topLevelDestinations) {
-                View.VISIBLE
+            val wrapper = binding.bottomNavWrapper
+            if (destination.id in topLevelDestinations) {
+                if (wrapper.visibility != View.VISIBLE) {
+                    wrapper.translationY = wrapper.height.toFloat()
+                    wrapper.visibility = View.VISIBLE
+                    wrapper.animate().translationY(0f).setDuration(250).start()
+                }
             } else {
-                View.GONE
+                if (wrapper.visibility == View.VISIBLE) {
+                    wrapper.animate().translationY(wrapper.height.toFloat())
+                        .setDuration(250)
+                        .withEndAction { wrapper.visibility = View.GONE }
+                        .start()
+                }
             }
         }
 
