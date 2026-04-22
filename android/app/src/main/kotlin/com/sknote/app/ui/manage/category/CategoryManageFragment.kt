@@ -95,6 +95,8 @@ class CategoryManageFragment : Fragment() {
 
         val initialTab = (
             savedInstanceState?.getInt(STATE_SELECTED_TAB)
+                ?: currentTab
+                .takeIf { it != 0 }
                 ?: arguments?.getInt(ARG_INITIAL_TAB, 0)
                 ?: 0
             ).coerceIn(0, binding.tabLayout.tabCount - 1)

@@ -17,6 +17,11 @@ class AdminCenterFragment : Fragment() {
 
     private var _binding: FragmentAdminCenterBinding? = null
     private val binding get() = _binding!!
+    private var currentScrollY = 0
+
+    companion object {
+        private const val STATE_SCROLL_Y = "state_scroll_y"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAdminCenterBinding.inflate(inflater, container, false)
@@ -26,6 +31,8 @@ class AdminCenterFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        currentScrollY = savedInstanceState?.getInt(STATE_SCROLL_Y) ?: currentScrollY
+
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -33,7 +40,19 @@ class AdminCenterFragment : Fragment() {
                 return@launch
             }
             setupAdminEntries()
+            restoreUiState()
         }
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_SCROLL_Y, currentScrollY)
     }
 
     private fun setupAdminEntries() {
@@ -55,6 +74,20 @@ class AdminCenterFragment : Fragment() {
 
         binding.cardSnippets.setOnClickListener {
             findNavController().navigate(R.id.snippetManageFragment, null, slideNavOptions())
+        }
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentScrollY = currentBinding.root.scrollY
+    }
+
+    private fun restoreUiState() {
+        if (currentScrollY == 0) return
+        val currentBinding = _binding ?: return
+        val targetScrollY = currentScrollY
+        currentBinding.root.post {
+            currentBinding.root.scrollTo(0, targetScrollY)
         }
     }
 

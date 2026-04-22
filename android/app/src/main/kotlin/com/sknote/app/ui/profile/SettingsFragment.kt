@@ -26,6 +26,11 @@ class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
+    private var currentScrollY = 0
+
+    companion object {
+        private const val STATE_SCROLL_Y = "state_scroll_y"
+    }
 
     private fun isFragmentUsable(): Boolean {
         return _binding != null && isAdded && context != null && activity != null
@@ -39,10 +44,13 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        currentScrollY = savedInstanceState?.getInt(STATE_SCROLL_Y) ?: currentScrollY
+
         binding.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         binding.tvVersion.text = "v${BuildConfig.VERSION_NAME}"
         refreshUpdateSummary()
+        restoreUiState()
 
         // Theme mode -> navigate to theme selection page
         viewLifecycleOwner.lifecycleScope.launch {
@@ -72,6 +80,17 @@ class SettingsFragment : Fragment() {
         binding.rowAbout.setOnClickListener {
             findNavController().navigate(R.id.aboutFragment, null, slideNavOptions())
         }
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_SCROLL_Y, currentScrollY)
     }
 
     private fun setUpdateBusyState(isBusy: Boolean) {
@@ -200,6 +219,20 @@ class SettingsFragment : Fragment() {
         return size
     }
 
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentScrollY = currentBinding.root.scrollY
+    }
+
+    private fun restoreUiState() {
+        if (currentScrollY == 0) return
+        val currentBinding = _binding ?: return
+        val targetScrollY = currentScrollY
+        currentBinding.root.post {
+            currentBinding.root.scrollTo(0, targetScrollY)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         // Refresh theme label and cache size when returning from sub-pages
@@ -211,6 +244,7 @@ class SettingsFragment : Fragment() {
         if (isFragmentUsable()) {
             binding.tvCacheSize.text = getCacheSize()
             refreshUpdateSummary()
+            restoreUiState()
         }
     }
 

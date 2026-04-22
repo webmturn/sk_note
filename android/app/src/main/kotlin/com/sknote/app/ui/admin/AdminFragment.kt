@@ -22,21 +22,36 @@ import com.sknote.app.util.AppUpdateManager
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import android.util.Log
 import java.io.File
+
+private const val TAG = "FLICKER_DBG"
 
 class AdminFragment : Fragment() {
 
     private var _binding: FragmentAdminBinding? = null
     private val binding get() = _binding!!
     private var isInitialLoad = true
+    private var isFirstRefresh = true
+    private var currentScrollY = 0
+
+    companion object {
+        private const val STATE_SCROLL_Y = "state_scroll_y"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        Log.d(TAG, "AdminFragment.onCreateView")
+        isInitialLoad = true
+        isFirstRefresh = true
         _binding = FragmentAdminBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "AdminFragment.onViewCreated savedState=${savedInstanceState != null}")
+
+        currentScrollY = savedInstanceState?.getInt(STATE_SCROLL_Y) ?: currentScrollY
 
         binding.cardUserProfile.setOnClickListener {
             findNavController().navigate(R.id.userProfileFragment, null, slideNavOptions())
@@ -92,8 +107,26 @@ class AdminFragment : Fragment() {
         refreshLoginState()
     }
 
+    override fun onStart() {
+        super.onStart()
+        Log.d(TAG, "AdminFragment.onStart")
+    }
+
+    override fun onPause() {
+        Log.d(TAG, "AdminFragment.onPause")
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_SCROLL_Y, currentScrollY)
+    }
+
     override fun onResume() {
         super.onResume()
+        Log.d(TAG, "AdminFragment.onResume isInitialLoad=$isInitialLoad")
         if (isInitialLoad) {
             isInitialLoad = false
             return
@@ -110,8 +143,12 @@ class AdminFragment : Fragment() {
     }
 
     private fun refreshLoginState() {
+        Log.d(TAG, "AdminFragment.refreshLoginState START isFirstRefresh=$isFirstRefresh")
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
+            val animate = !isFirstRefresh
+            isFirstRefresh = false
+            Log.d(TAG, "AdminFragment.refreshLoginState isLoggedIn=$isLoggedIn animate=$animate")
             if (isLoggedIn) {
                 val nickname = ApiClient.getTokenManager().getNickname().first() ?: ""
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
@@ -122,15 +159,16 @@ class AdminFragment : Fragment() {
 
                 // 先立即显示所有卡片（不等网络）
                 val isAdmin = role == "admin"
-                animateVisibility(binding.cardGuestLogin, false)
-                animateVisibility(binding.cardUserProfile, true)
-                animateVisibility(binding.tvFunctionHeader, true)
-                animateVisibility(binding.cardFunctionGroup, true)
-                animateVisibility(binding.cardLogout, true)
-                animateVisibility(binding.tvAdminHeader, isAdmin)
-                animateVisibility(binding.cardAdminGroup, isAdmin)
+                setVisibility(binding.cardGuestLogin, false, animate)
+                setVisibility(binding.cardUserProfile, true, animate)
+                setVisibility(binding.tvFunctionHeader, true, animate)
+                setVisibility(binding.cardFunctionGroup, true, animate)
+                setVisibility(binding.cardLogout, true, animate)
+                setVisibility(binding.tvAdminHeader, isAdmin, animate)
+                setVisibility(binding.cardAdminGroup, isAdmin, animate)
 
                 loadStats()
+                restoreUiState()
 
                 // 异步加载头像和最新用户名（不阻塞UI）
                 launch {
@@ -144,8 +182,8 @@ class AdminFragment : Fragment() {
                                 ApiClient.getTokenManager().updateUserRole(user.role)
                                 binding.tvRole.text = roleLabel(user.role)
                                 val latestIsAdmin = user.role == "admin"
-                                animateVisibility(binding.tvAdminHeader, latestIsAdmin)
-                                animateVisibility(binding.cardAdminGroup, latestIsAdmin)
+                                setVisibility(binding.tvAdminHeader, latestIsAdmin, true)
+                                setVisibility(binding.cardAdminGroup, latestIsAdmin, true)
                                 if (!user.avatarUrl.isNullOrEmpty()) {
                                     Glide.with(this@AdminFragment)
                                         .load(user.avatarUrl.orEmpty())
@@ -153,25 +191,46 @@ class AdminFragment : Fragment() {
                                         .placeholder(R.drawable.ic_account_circle)
                                         .into(binding.ivAvatar)
                                 }
+                                restoreUiState()
                             }
                         }
                     } catch (_: Exception) { }
                 }
             } else {
-                animateVisibility(binding.cardUserProfile, false)
-                animateVisibility(binding.tvFunctionHeader, false)
-                animateVisibility(binding.cardFunctionGroup, false)
-                animateVisibility(binding.tvAdminHeader, false)
-                animateVisibility(binding.cardAdminGroup, false)
-                animateVisibility(binding.cardLogout, false)
-                animateVisibility(binding.cardGuestLogin, true)
+                setVisibility(binding.cardUserProfile, false, animate)
+                setVisibility(binding.tvFunctionHeader, false, animate)
+                setVisibility(binding.cardFunctionGroup, false, animate)
+                setVisibility(binding.tvAdminHeader, false, animate)
+                setVisibility(binding.cardAdminGroup, false, animate)
+                setVisibility(binding.cardLogout, false, animate)
+                setVisibility(binding.cardGuestLogin, true, animate)
+                restoreUiState()
             }
         }
     }
 
-    private fun animateVisibility(view: View, show: Boolean) {
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentScrollY = currentBinding.root.scrollY
+    }
+
+    private fun restoreUiState() {
+        if (currentScrollY == 0) return
+        val currentBinding = _binding ?: return
+        val targetScrollY = currentScrollY
+        currentBinding.root.post {
+            currentBinding.root.scrollTo(0, targetScrollY)
+        }
+    }
+
+    private fun setVisibility(view: View, show: Boolean, animate: Boolean) {
         val target = if (show) View.VISIBLE else View.GONE
         if (view.visibility == target) return
+        if (!animate) {
+            view.alpha = 1f
+            view.visibility = target
+            return
+        }
         if (show) {
             view.alpha = 0f
             view.visibility = View.VISIBLE
@@ -216,7 +275,13 @@ class AdminFragment : Fragment() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        Log.d(TAG, "AdminFragment.onStop")
+    }
+
     override fun onDestroyView() {
+        Log.d(TAG, "AdminFragment.onDestroyView")
         super.onDestroyView()
         _binding = null
     }
