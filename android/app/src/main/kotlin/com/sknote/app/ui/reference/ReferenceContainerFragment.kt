@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.sknote.app.R
@@ -28,9 +29,9 @@ class ReferenceContainerFragment : Fragment() {
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 1
 
-        // 减少 ViewPager2 灵敏度，避免与子 Fragment 水平滚动冲突
-        val recyclerView = binding.viewPager.getChildAt(0) as? androidx.recyclerview.widget.RecyclerView
+        val recyclerView = binding.viewPager.getChildAt(0) as? RecyclerView
         recyclerView?.overScrollMode = View.OVER_SCROLL_NEVER
+        recyclerView?.setScrollingTouchSlop(RecyclerView.TOUCH_SLOP_DEFAULT)
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             when (position) {

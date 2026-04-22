@@ -242,19 +242,23 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <HorizontalScrollView
+    <com.sknote.app.util.NestedScrollableHost
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="0dp">
+        android:layout_height="wrap_content">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroup"
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:singleSelection="true">
+            android:scrollbars="none"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="0dp">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipAll"
@@ -301,8 +305,9 @@
                 app:chipIconSize="18dp"
                 style="@style/Widget.Material3.Chip.Filter" />
 
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+    </com.sknote.app.util.NestedScrollableHost>
 
     <LinearLayout
         android:id="@+id/layoutDetailFilterSummary"
@@ -337,36 +342,43 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <HorizontalScrollView
-        android:id="@+id/subChipScroll"
+    <com.sknote.app.util.NestedScrollableHost
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:paddingHorizontal="12dp"
-        android:paddingBottom="4dp"
-        android:visibility="gone">
+        android:layout_height="wrap_content">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/subChipGroup"
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:id="@+id/subChipScroll"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:singleSelection="true" />
-    </HorizontalScrollView>
+            android:scrollbars="none"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="4dp">
 
-    <HorizontalScrollView
-        android:id="@+id/shapeChipScroll"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/subChipGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
+    </com.sknote.app.util.NestedScrollableHost>
+
+    <com.sknote.app.util.NestedScrollableHost
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:paddingHorizontal="12dp"
-        android:paddingBottom="4dp"
-        android:visibility="gone">
+        android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:id="@+id/shapeChipScroll"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:scrollbars="none"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -377,12 +389,13 @@
                 android:alpha="0.7"
                 android:paddingEnd="6dp" />
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/shapeChipGroup"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-    </HorizontalScrollView>
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/shapeChipGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </HorizontalScrollView>
+    </com.sknote.app.util.NestedScrollableHost>
 
     <FrameLayout
         android:layout_width="match_parent"

@@ -89,31 +89,36 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 
-            <HorizontalScrollView
+            <com.sknote.app.util.NestedScrollableHost
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:paddingHorizontal="12dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp">
+                android:layout_height="wrap_content">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroup"
-                    android:layout_width="wrap_content"
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:singleSelection="true"
-                    app:chipSpacingHorizontal="6dp">
+                    android:scrollbars="none"
+                    android:paddingHorizontal="12dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp">
 
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAll"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroup"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="全部"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:checked="true" />
+                        app:singleSelection="true"
+                        app:chipSpacingHorizontal="6dp">
 
-                </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipAll"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="全部"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:checked="true" />
+
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+            </com.sknote.app.util.NestedScrollableHost>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvSnippets"
