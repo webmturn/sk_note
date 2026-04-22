@@ -38,6 +38,8 @@ class CreateShareFragment : Fragment() {
     private var shareId: Long? = null
     private var isLoggedIn: Boolean = false
     private var hasLoadedInitialData = false
+    private var isLoadingInitialData = false
+    private var currentDraftState = ShareDraftState("", "", "general", "", "", "")
     private var initialDraftState = ShareDraftState("", "", "general", "", "", "")
 
     private fun isFragmentUsable(): Boolean {
@@ -48,6 +50,22 @@ class CreateShareFragment : Fragment() {
     private val categoryLabels get() = ShareCategories.labels
     private var selectedCategory = "general"
 
+    companion object {
+        private const val STATE_CURRENT_TITLE = "state_current_title"
+        private const val STATE_CURRENT_DESCRIPTION = "state_current_description"
+        private const val STATE_CURRENT_CATEGORY = "state_current_category"
+        private const val STATE_CURRENT_DOWNLOAD_URL = "state_current_download_url"
+        private const val STATE_CURRENT_PASSWORD = "state_current_password"
+        private const val STATE_CURRENT_FILE_SIZE = "state_current_file_size"
+        private const val STATE_INITIAL_TITLE = "state_initial_title"
+        private const val STATE_INITIAL_DESCRIPTION = "state_initial_description"
+        private const val STATE_INITIAL_CATEGORY = "state_initial_category"
+        private const val STATE_INITIAL_DOWNLOAD_URL = "state_initial_download_url"
+        private const val STATE_INITIAL_PASSWORD = "state_initial_password"
+        private const val STATE_INITIAL_FILE_SIZE = "state_initial_file_size"
+        private const val STATE_HAS_LOADED_INITIAL_DATA = "state_has_loaded_initial_data"
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCreateShareBinding.inflate(inflater, container, false)
         return binding.root
@@ -55,6 +73,27 @@ class CreateShareFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentDraftState = ShareDraftState(
+                title = it.getString(STATE_CURRENT_TITLE).orEmpty(),
+                description = it.getString(STATE_CURRENT_DESCRIPTION).orEmpty(),
+                category = it.getString(STATE_CURRENT_CATEGORY).orEmpty().ifEmpty { "general" },
+                downloadUrl = it.getString(STATE_CURRENT_DOWNLOAD_URL).orEmpty(),
+                password = it.getString(STATE_CURRENT_PASSWORD).orEmpty(),
+                fileSize = it.getString(STATE_CURRENT_FILE_SIZE).orEmpty()
+            )
+            initialDraftState = ShareDraftState(
+                title = it.getString(STATE_INITIAL_TITLE).orEmpty(),
+                description = it.getString(STATE_INITIAL_DESCRIPTION).orEmpty(),
+                category = it.getString(STATE_INITIAL_CATEGORY).orEmpty().ifEmpty { currentDraftState.category },
+                downloadUrl = it.getString(STATE_INITIAL_DOWNLOAD_URL).orEmpty(),
+                password = it.getString(STATE_INITIAL_PASSWORD).orEmpty(),
+                fileSize = it.getString(STATE_INITIAL_FILE_SIZE).orEmpty()
+            )
+            selectedCategory = currentDraftState.category
+            hasLoadedInitialData = it.getBoolean(STATE_HAS_LOADED_INITIAL_DATA, false)
+        }
 
         shareId = arguments?.getLong("share_id")?.takeIf { it > 0L }
         val navOptions = slideNavOptions()
@@ -70,7 +109,7 @@ class CreateShareFragment : Fragment() {
         )
 
         setupForm()
-        captureInitialDraftState()
+        applyDraftState(currentDraftState)
         refreshAuthState()
     }
 
@@ -84,7 +123,8 @@ class CreateShareFragment : Fragment() {
     private fun setupForm() {
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, categoryLabels)
         binding.spinnerCategory.setAdapter(adapter)
-        binding.spinnerCategory.setText(categoryLabels[0], false)
+        val initialIndex = categoryKeys.indexOf(selectedCategory).takeIf { it >= 0 } ?: 0
+        binding.spinnerCategory.setText(categoryLabels[initialIndex], false)
         binding.spinnerCategory.setOnItemClickListener { _, _, position, _ ->
             selectedCategory = categoryKeys[position]
             binding.layoutCategory.error = null
@@ -94,14 +134,30 @@ class CreateShareFragment : Fragment() {
         binding.btnSubmit.setOnClickListener { submit() }
     }
 
+    private fun applyDraftState(state: ShareDraftState) {
+        if (!isFragmentUsable()) return
+        binding.etTitle.setText(state.title)
+        binding.etDescription.setText(state.description)
+        binding.etDownloadUrl.setText(state.downloadUrl)
+        binding.etPassword.setText(state.password)
+        binding.etFileSize.setText(state.fileSize)
+        selectedCategory = state.category
+        val categoryIndex = categoryKeys.indexOf(state.category).takeIf { it >= 0 } ?: 0
+        binding.spinnerCategory.setText(categoryLabels[categoryIndex], false)
+    }
+
     private fun refreshAuthState() {
         viewLifecycleOwner.lifecycleScope.launch {
             isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (!isFragmentUsable()) return@launch
             renderAuthState()
-            if (isLoggedIn && !hasLoadedInitialData) {
-                shareId?.let { loadShare(it) }
-                hasLoadedInitialData = true
+            if (isLoggedIn && !hasLoadedInitialData && !isLoadingInitialData) {
+                val editingId = shareId
+                if (editingId != null) {
+                    loadShare(editingId)
+                } else {
+                    hasLoadedInitialData = true
+                }
             }
         }
     }
@@ -113,6 +169,7 @@ class CreateShareFragment : Fragment() {
     }
 
     private fun loadShare(id: Long) {
+        isLoadingInitialData = true
         binding.btnSubmit.isEnabled = false
         binding.btnSubmit.text = "加载中..."
         viewLifecycleOwner.lifecycleScope.launch {
@@ -129,6 +186,7 @@ class CreateShareFragment : Fragment() {
                     val categoryIndex = categoryKeys.indexOf(share.category.orEmpty()).takeIf { it >= 0 } ?: 0
                     selectedCategory = categoryKeys[categoryIndex]
                     binding.spinnerCategory.setText(categoryLabels[categoryIndex], false)
+                    hasLoadedInitialData = true
                     captureInitialDraftState()
                 } else {
                     Snackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
@@ -137,6 +195,7 @@ class CreateShareFragment : Fragment() {
                 if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
+                isLoadingInitialData = false
                 _binding?.btnSubmit?.isEnabled = true
                 _binding?.btnSubmit?.text = if (shareId == null) "发布分享" else "保存修改"
             }
@@ -275,6 +334,33 @@ class CreateShareFragment : Fragment() {
             .setPositiveButton("返回") { _, _ -> findNavController().navigateUp() }
             .setNegativeButton("继续编辑", null)
             .show()
+    }
+
+    override fun onPause() {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CURRENT_TITLE, currentDraftState.title)
+        outState.putString(STATE_CURRENT_DESCRIPTION, currentDraftState.description)
+        outState.putString(STATE_CURRENT_CATEGORY, currentDraftState.category)
+        outState.putString(STATE_CURRENT_DOWNLOAD_URL, currentDraftState.downloadUrl)
+        outState.putString(STATE_CURRENT_PASSWORD, currentDraftState.password)
+        outState.putString(STATE_CURRENT_FILE_SIZE, currentDraftState.fileSize)
+        outState.putString(STATE_INITIAL_TITLE, initialDraftState.title)
+        outState.putString(STATE_INITIAL_DESCRIPTION, initialDraftState.description)
+        outState.putString(STATE_INITIAL_CATEGORY, initialDraftState.category)
+        outState.putString(STATE_INITIAL_DOWNLOAD_URL, initialDraftState.downloadUrl)
+        outState.putString(STATE_INITIAL_PASSWORD, initialDraftState.password)
+        outState.putString(STATE_INITIAL_FILE_SIZE, initialDraftState.fileSize)
+        outState.putBoolean(STATE_HAS_LOADED_INITIAL_DATA, hasLoadedInitialData)
     }
 
     override fun onDestroyView() {

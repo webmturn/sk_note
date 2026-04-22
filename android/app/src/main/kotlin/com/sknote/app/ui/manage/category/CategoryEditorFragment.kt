@@ -23,6 +23,9 @@ class CategoryEditorFragment : Fragment() {
     private var _binding: FragmentCategoryEditorBinding? = null
     private val binding get() = _binding!!
     private var selectedIconKey: String = "default"
+    private var currentName: String = ""
+    private var currentDescription: String = ""
+    private var hasLoadedInitialData = false
     private val categoryId: Long by lazy { arguments?.getLong(ARG_CATEGORY_ID) ?: 0L }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -32,6 +35,13 @@ class CategoryEditorFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            selectedIconKey = it.getString(STATE_ICON_KEY).orEmpty().ifEmpty { "default" }
+            currentName = it.getString(STATE_NAME).orEmpty()
+            currentDescription = it.getString(STATE_DESCRIPTION).orEmpty()
+            hasLoadedInitialData = it.getBoolean(STATE_HAS_LOADED_INITIAL_DATA, false)
+        }
 
         binding.tilSlug.visibility = View.GONE
         binding.toolbar.title = if (categoryId == 0L) "添加分类" else "编辑分类"
@@ -51,9 +61,15 @@ class CategoryEditorFragment : Fragment() {
             }
 
         if (categoryId == 0L) {
+            binding.etName.setText(currentName)
+            binding.etDescription.setText(currentDescription)
             updateIconPreview()
-        } else {
+        } else if (!hasLoadedInitialData) {
             loadCategory()
+        } else {
+            binding.etName.setText(currentName)
+            binding.etDescription.setText(currentDescription)
+            updateIconPreview()
         }
     }
 
@@ -72,6 +88,9 @@ class CategoryEditorFragment : Fragment() {
                     binding.etName.setText(category.name)
                     binding.etDescription.setText(category.description.orEmpty())
                     selectedIconKey = CategoryIconCatalog.normalizeKey(category.icon, category.name)
+                    currentName = category.name
+                    currentDescription = category.description.orEmpty()
+                    hasLoadedInitialData = true
                     updateIconPreview()
                 } else {
                     Snackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
@@ -131,12 +150,36 @@ class CategoryEditorFragment : Fragment() {
         }
     }
 
+    override fun onPause() {
+        if (_binding != null) {
+            currentName = binding.etName.text?.toString().orEmpty()
+            currentDescription = binding.etDescription.text?.toString().orEmpty()
+        }
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (_binding != null) {
+            currentName = binding.etName.text?.toString().orEmpty()
+            currentDescription = binding.etDescription.text?.toString().orEmpty()
+        }
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_ICON_KEY, selectedIconKey)
+        outState.putString(STATE_NAME, currentName)
+        outState.putString(STATE_DESCRIPTION, currentDescription)
+        outState.putBoolean(STATE_HAS_LOADED_INITIAL_DATA, hasLoadedInitialData)
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 
     companion object {
+        private const val STATE_ICON_KEY = "state_icon_key"
+        private const val STATE_NAME = "state_name"
+        private const val STATE_DESCRIPTION = "state_description"
+        private const val STATE_HAS_LOADED_INITIAL_DATA = "state_has_loaded_initial_data"
         const val ARG_CATEGORY_ID = "category_id"
         const val RESULT_REFRESH_KEY = "refresh_categories"
         const val RESULT_MESSAGE_KEY = "category_manage_message"

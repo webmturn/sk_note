@@ -38,6 +38,8 @@ class CreateSnippetFragment : Fragment() {
     private var snippetId: Long? = null
     private var isLoggedIn: Boolean = false
     private var hasLoadedInitialData = false
+    private var isLoadingInitialData = false
+    private var currentDraftState = SnippetDraftState("", "", "general", "java", "", "")
     private var initialDraftState = SnippetDraftState("", "", "general", "java", "", "")
 
     private fun isFragmentUsable(): Boolean {
@@ -52,6 +54,22 @@ class CreateSnippetFragment : Fragment() {
     private val languageLabels = listOf("Java", "XML", "JSON", "Kotlin", "Python", "JavaScript", "HTML", "CSS", "其他")
     private var selectedLanguage = "java"
 
+    companion object {
+        private const val STATE_CURRENT_TITLE = "state_current_title"
+        private const val STATE_CURRENT_DESCRIPTION = "state_current_description"
+        private const val STATE_CURRENT_CATEGORY = "state_current_category"
+        private const val STATE_CURRENT_LANGUAGE = "state_current_language"
+        private const val STATE_CURRENT_CODE = "state_current_code"
+        private const val STATE_CURRENT_TAGS = "state_current_tags"
+        private const val STATE_INITIAL_TITLE = "state_initial_title"
+        private const val STATE_INITIAL_DESCRIPTION = "state_initial_description"
+        private const val STATE_INITIAL_CATEGORY = "state_initial_category"
+        private const val STATE_INITIAL_LANGUAGE = "state_initial_language"
+        private const val STATE_INITIAL_CODE = "state_initial_code"
+        private const val STATE_INITIAL_TAGS = "state_initial_tags"
+        private const val STATE_HAS_LOADED_INITIAL_DATA = "state_has_loaded_initial_data"
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCreateSnippetBinding.inflate(inflater, container, false)
         return binding.root
@@ -59,6 +77,28 @@ class CreateSnippetFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentDraftState = SnippetDraftState(
+                title = it.getString(STATE_CURRENT_TITLE).orEmpty(),
+                description = it.getString(STATE_CURRENT_DESCRIPTION).orEmpty(),
+                category = it.getString(STATE_CURRENT_CATEGORY).orEmpty().ifEmpty { "general" },
+                language = it.getString(STATE_CURRENT_LANGUAGE).orEmpty().ifEmpty { "java" },
+                code = it.getString(STATE_CURRENT_CODE).orEmpty(),
+                tags = it.getString(STATE_CURRENT_TAGS).orEmpty()
+            )
+            initialDraftState = SnippetDraftState(
+                title = it.getString(STATE_INITIAL_TITLE).orEmpty(),
+                description = it.getString(STATE_INITIAL_DESCRIPTION).orEmpty(),
+                category = it.getString(STATE_INITIAL_CATEGORY).orEmpty().ifEmpty { currentDraftState.category },
+                language = it.getString(STATE_INITIAL_LANGUAGE).orEmpty().ifEmpty { currentDraftState.language },
+                code = it.getString(STATE_INITIAL_CODE).orEmpty(),
+                tags = it.getString(STATE_INITIAL_TAGS).orEmpty()
+            )
+            selectedCategory = currentDraftState.category
+            selectedLanguage = currentDraftState.language
+            hasLoadedInitialData = it.getBoolean(STATE_HAS_LOADED_INITIAL_DATA, false)
+        }
 
         snippetId = arguments?.getLong("snippet_id")?.takeIf { it > 0L }
         val navOptions = slideNavOptions()
@@ -74,7 +114,7 @@ class CreateSnippetFragment : Fragment() {
         )
 
         setupForm()
-        captureInitialDraftState()
+        applyDraftState(currentDraftState)
         refreshAuthState()
     }
 
@@ -88,7 +128,8 @@ class CreateSnippetFragment : Fragment() {
     private fun setupForm() {
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, categoryLabels)
         binding.spinnerCategory.setAdapter(adapter)
-        binding.spinnerCategory.setText(categoryLabels[0], false)
+        val categoryIndex = categoryKeys.indexOf(selectedCategory).takeIf { it >= 0 } ?: 0
+        binding.spinnerCategory.setText(categoryLabels[categoryIndex], false)
         binding.spinnerCategory.setOnItemClickListener { _, _, position, _ ->
             selectedCategory = categoryKeys[position]
             binding.layoutCategory.error = null
@@ -96,7 +137,8 @@ class CreateSnippetFragment : Fragment() {
 
         val langAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, languageLabels)
         binding.spinnerLanguage.setAdapter(langAdapter)
-        binding.spinnerLanguage.setText(languageLabels[0], false)
+        val languageIndex = languageKeys.indexOf(selectedLanguage).takeIf { it >= 0 } ?: 0
+        binding.spinnerLanguage.setText(languageLabels[languageIndex], false)
         binding.spinnerLanguage.setOnItemClickListener { _, _, position, _ ->
             selectedLanguage = languageKeys[position]
             binding.layoutLanguage.error = null
@@ -106,14 +148,32 @@ class CreateSnippetFragment : Fragment() {
         binding.btnSubmit.setOnClickListener { submit() }
     }
 
+    private fun applyDraftState(state: SnippetDraftState) {
+        if (!isFragmentUsable()) return
+        binding.etTitle.setText(state.title)
+        binding.etDescription.setText(state.description)
+        binding.etCode.setText(state.code)
+        binding.etTags.setText(state.tags)
+        selectedCategory = state.category
+        selectedLanguage = state.language
+        val categoryIndex = categoryKeys.indexOf(state.category).takeIf { it >= 0 } ?: 0
+        binding.spinnerCategory.setText(categoryLabels[categoryIndex], false)
+        val languageIndex = languageKeys.indexOf(state.language).takeIf { it >= 0 } ?: 0
+        binding.spinnerLanguage.setText(languageLabels[languageIndex], false)
+    }
+
     private fun refreshAuthState() {
         viewLifecycleOwner.lifecycleScope.launch {
             isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (!isFragmentUsable()) return@launch
             renderAuthState()
-            if (isLoggedIn && !hasLoadedInitialData) {
-                snippetId?.let { loadSnippet(it) }
-                hasLoadedInitialData = true
+            if (isLoggedIn && !hasLoadedInitialData && !isLoadingInitialData) {
+                val editingId = snippetId
+                if (editingId != null) {
+                    loadSnippet(editingId)
+                } else {
+                    hasLoadedInitialData = true
+                }
             }
         }
     }
@@ -125,6 +185,7 @@ class CreateSnippetFragment : Fragment() {
     }
 
     private fun loadSnippet(id: Long) {
+        isLoadingInitialData = true
         binding.btnSubmit.isEnabled = false
         binding.btnSubmit.text = "加载中..."
         viewLifecycleOwner.lifecycleScope.launch {
@@ -145,6 +206,7 @@ class CreateSnippetFragment : Fragment() {
                     val languageIndex = languageKeys.indexOf(snippet.language.orEmpty()).takeIf { it >= 0 } ?: 0
                     selectedLanguage = languageKeys[languageIndex]
                     binding.spinnerLanguage.setText(languageLabels[languageIndex], false)
+                    hasLoadedInitialData = true
                     captureInitialDraftState()
                 } else {
                     Snackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
@@ -153,6 +215,7 @@ class CreateSnippetFragment : Fragment() {
                 if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
+                isLoadingInitialData = false
                 _binding?.btnSubmit?.isEnabled = true
                 _binding?.btnSubmit?.text = if (snippetId == null) "发布代码片段" else "保存修改"
             }
@@ -289,6 +352,33 @@ class CreateSnippetFragment : Fragment() {
             .setPositiveButton("返回") { _, _ -> findNavController().navigateUp() }
             .setNegativeButton("继续编辑", null)
             .show()
+    }
+
+    override fun onPause() {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CURRENT_TITLE, currentDraftState.title)
+        outState.putString(STATE_CURRENT_DESCRIPTION, currentDraftState.description)
+        outState.putString(STATE_CURRENT_CATEGORY, currentDraftState.category)
+        outState.putString(STATE_CURRENT_LANGUAGE, currentDraftState.language)
+        outState.putString(STATE_CURRENT_CODE, currentDraftState.code)
+        outState.putString(STATE_CURRENT_TAGS, currentDraftState.tags)
+        outState.putString(STATE_INITIAL_TITLE, initialDraftState.title)
+        outState.putString(STATE_INITIAL_DESCRIPTION, initialDraftState.description)
+        outState.putString(STATE_INITIAL_CATEGORY, initialDraftState.category)
+        outState.putString(STATE_INITIAL_LANGUAGE, initialDraftState.language)
+        outState.putString(STATE_INITIAL_CODE, initialDraftState.code)
+        outState.putString(STATE_INITIAL_TAGS, initialDraftState.tags)
+        outState.putBoolean(STATE_HAS_LOADED_INITIAL_DATA, hasLoadedInitialData)
     }
 
     override fun onDestroyView() {

@@ -36,11 +36,24 @@ class ArticleEditorFragment : Fragment() {
     private var isPreviewMode = false
     private var categories: List<Category> = emptyList()
     private var selectedCategoryId: Long? = null
+    private var currentDraftState = ArticleDraftState("", "", "", null)
     private var initialDraftState = ArticleDraftState("", "", "", null)
+    private var hasRestoredDraftState = false
+    private var hasLoadedInitialData = false
 
     companion object {
         const val RESULT_REFRESH_KEY = "refresh_articles"
         const val RESULT_MESSAGE_KEY = "article_manage_message"
+        private const val STATE_CURRENT_TITLE = "state_current_title"
+        private const val STATE_CURRENT_SUMMARY = "state_current_summary"
+        private const val STATE_CURRENT_CONTENT = "state_current_content"
+        private const val STATE_CURRENT_CATEGORY_ID = "state_current_category_id"
+        private const val STATE_INITIAL_TITLE = "state_initial_title"
+        private const val STATE_INITIAL_SUMMARY = "state_initial_summary"
+        private const val STATE_INITIAL_CONTENT = "state_initial_content"
+        private const val STATE_INITIAL_CATEGORY_ID = "state_initial_category_id"
+        private const val STATE_PREVIEW_MODE = "state_preview_mode"
+        private const val STATE_HAS_LOADED_INITIAL_DATA = "state_has_loaded_initial_data"
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -51,6 +64,25 @@ class ArticleEditorFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         markwon = Markwon.create(requireContext())
+
+        savedInstanceState?.let {
+            currentDraftState = ArticleDraftState(
+                title = it.getString(STATE_CURRENT_TITLE).orEmpty(),
+                summary = it.getString(STATE_CURRENT_SUMMARY).orEmpty(),
+                content = it.getString(STATE_CURRENT_CONTENT).orEmpty(),
+                categoryId = it.getLong(STATE_CURRENT_CATEGORY_ID).takeIf { value -> value > 0L }
+            )
+            initialDraftState = ArticleDraftState(
+                title = it.getString(STATE_INITIAL_TITLE).orEmpty(),
+                summary = it.getString(STATE_INITIAL_SUMMARY).orEmpty(),
+                content = it.getString(STATE_INITIAL_CONTENT).orEmpty(),
+                categoryId = it.getLong(STATE_INITIAL_CATEGORY_ID).takeIf { value -> value > 0L }
+            )
+            selectedCategoryId = currentDraftState.categoryId
+            isPreviewMode = it.getBoolean(STATE_PREVIEW_MODE, false)
+            hasRestoredDraftState = true
+            hasLoadedInitialData = it.getBoolean(STATE_HAS_LOADED_INITIAL_DATA, false)
+        }
 
         articleId = arguments?.getLong("article_id")?.takeIf { it > 0 }
 
@@ -75,11 +107,14 @@ class ArticleEditorFragment : Fragment() {
 
         setupInputs()
         observeData()
+        applyDraftState(currentDraftState)
+        applyPreviewMode()
         updateFormState()
-        captureInitialDraftState()
         viewModel.loadCategories()
 
-        articleId?.let { viewModel.loadArticle(it) }
+        if (!hasLoadedInitialData) {
+            articleId?.let { viewModel.loadArticle(it) }
+        }
     }
 
     private fun setupInputs() {
@@ -117,9 +152,8 @@ class ArticleEditorFragment : Fragment() {
                 updateFormState()
             }
 
-            // If editing, set the category after categories are loaded
-            viewModel.article.value?.let { article ->
-                val index = cats.indexOfFirst { it.id == article.categoryId }
+            selectedCategoryId?.let { categoryId ->
+                val index = cats.indexOfFirst { it.id == categoryId }
                 if (index >= 0) {
                     binding.spinnerCategory.setText(cats[index].name, false)
                     selectedCategoryId = cats[index].id
@@ -130,6 +164,7 @@ class ArticleEditorFragment : Fragment() {
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
             article ?: return@observe
+            if (hasLoadedInitialData && hasRestoredDraftState) return@observe
             binding.etTitle.setText(article.title)
             binding.etSummary.setText(article.summary.orEmpty())
             binding.etContent.setText(article.content.orEmpty())
@@ -140,6 +175,7 @@ class ArticleEditorFragment : Fragment() {
                 binding.spinnerCategory.setText(categories[index].name, false)
             }
             if (isPreviewMode) renderPreview()
+            hasLoadedInitialData = true
             captureInitialDraftState()
             updateFormState()
         }
@@ -171,6 +207,11 @@ class ArticleEditorFragment : Fragment() {
 
     private fun togglePreview() {
         isPreviewMode = !isPreviewMode
+        applyPreviewMode()
+        updateFormState()
+    }
+
+    private fun applyPreviewMode() {
         if (isPreviewMode) {
             renderPreview()
             binding.etContent.visibility = View.GONE
@@ -181,7 +222,16 @@ class ArticleEditorFragment : Fragment() {
             binding.tvPreview.visibility = View.GONE
             binding.btnPreview.text = "预览"
         }
-        updateFormState()
+    }
+
+    private fun applyDraftState(state: ArticleDraftState) {
+        if (state.title.isEmpty() && state.summary.isEmpty() && state.content.isEmpty() && state.categoryId == null) {
+            return
+        }
+        binding.etTitle.setText(state.title)
+        binding.etSummary.setText(state.summary)
+        binding.etContent.setText(state.content)
+        selectedCategoryId = state.categoryId
     }
 
     private fun renderPreview() {
@@ -302,6 +352,30 @@ class ArticleEditorFragment : Fragment() {
             articleId != null -> "保存后会同步更新文章详情页内容"
             else -> "内容已准备好，可以保存文章"
         }
+    }
+
+    override fun onPause() {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (_binding != null) {
+            currentDraftState = currentDraftState()
+        }
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CURRENT_TITLE, currentDraftState.title)
+        outState.putString(STATE_CURRENT_SUMMARY, currentDraftState.summary)
+        outState.putString(STATE_CURRENT_CONTENT, currentDraftState.content)
+        currentDraftState.categoryId?.let { outState.putLong(STATE_CURRENT_CATEGORY_ID, it) }
+        outState.putString(STATE_INITIAL_TITLE, initialDraftState.title)
+        outState.putString(STATE_INITIAL_SUMMARY, initialDraftState.summary)
+        outState.putString(STATE_INITIAL_CONTENT, initialDraftState.content)
+        initialDraftState.categoryId?.let { outState.putLong(STATE_INITIAL_CATEGORY_ID, it) }
+        outState.putBoolean(STATE_PREVIEW_MODE, isPreviewMode)
+        outState.putBoolean(STATE_HAS_LOADED_INITIAL_DATA, hasLoadedInitialData)
     }
 
     override fun onDestroyView() {
