@@ -1,6 +1,7 @@
 package com.sknote.app.ui.manage.user
 
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,6 +31,13 @@ class UserManageFragment : Fragment() {
     private val viewModel: UserManageViewModel by viewModels()
     private lateinit var adapter: UserManageAdapter
     private var currentUsername: String? = null
+    private var currentQuery: String = ""
+    private var listState: Parcelable? = null
+
+    companion object {
+        private const val STATE_QUERY = "state_query"
+        private const val STATE_LIST = "state_list"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentUserManageBinding.inflate(inflater, container, false)
@@ -38,6 +46,11 @@ class UserManageFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentQuery = it.getString(STATE_QUERY).orEmpty()
+            listState = it.getParcelable(STATE_LIST)
+        }
 
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
@@ -56,6 +69,10 @@ class UserManageFragment : Fragment() {
         }
         binding.rvUsers.layoutManager = LinearLayoutManager(context)
         binding.rvUsers.adapter = adapter
+        if (currentQuery.isNotEmpty()) {
+            binding.etSearch.setText(currentQuery)
+            binding.etSearch.setSelection(currentQuery.length)
+        }
 
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
@@ -75,12 +92,18 @@ class UserManageFragment : Fragment() {
         }
 
         observeData()
-        viewModel.loadUsers()
+        viewModel.loadUsers(search = currentQuery.ifEmpty { null })
     }
 
     private fun observeData() {
         viewModel.users.observe(viewLifecycleOwner) { users ->
-            adapter.submitList(users)
+            adapter.submitList(users) {
+                val pendingListState = listState
+                if (pendingListState != null) {
+                    binding.rvUsers.layoutManager?.onRestoreInstanceState(pendingListState)
+                    listState = null
+                }
+            }
             binding.tvEmpty.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
         }
 
@@ -168,6 +191,24 @@ class UserManageFragment : Fragment() {
             .setPositiveButton("删除") { _, _ -> viewModel.deleteUser(user.id) }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentQuery = currentBinding.etSearch.text?.toString().orEmpty()
+        listState = currentBinding.rvUsers.layoutManager?.onSaveInstanceState()
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_QUERY, currentQuery)
+        outState.putParcelable(STATE_LIST, listState)
     }
 
     override fun onDestroyView() {

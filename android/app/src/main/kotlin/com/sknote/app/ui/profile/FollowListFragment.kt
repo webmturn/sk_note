@@ -1,6 +1,7 @@
 package com.sknote.app.ui.profile
 
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +22,14 @@ class FollowListFragment : Fragment() {
     private var userId: Long = 0
     private var currentTab = 0
     private lateinit var adapter: FollowUserAdapter
+    private var followingListState: Parcelable? = null
+    private var followerListState: Parcelable? = null
+
+    companion object {
+        private const val STATE_CURRENT_TAB = "state_current_tab"
+        private const val STATE_FOLLOWING_LIST = "state_following_list"
+        private const val STATE_FOLLOWER_LIST = "state_follower_list"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFollowListBinding.inflate(inflater, container, false)
@@ -31,7 +40,11 @@ class FollowListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         userId = arguments?.getLong("user_id", 0) ?: 0
-        currentTab = arguments?.getInt("tab", 0) ?: 0
+        followingListState = savedInstanceState?.getParcelable(STATE_FOLLOWING_LIST) ?: followingListState
+        followerListState = savedInstanceState?.getParcelable(STATE_FOLLOWER_LIST) ?: followerListState
+        currentTab = savedInstanceState?.getInt(STATE_CURRENT_TAB)
+            ?: arguments?.getInt("tab", 0)
+            ?: 0
 
         if (userId == 0L) {
             findNavController().popBackStack()
@@ -62,6 +75,7 @@ class FollowListFragment : Fragment() {
 
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
+                captureCurrentListState()
                 currentTab = tab?.position ?: 0
                 loadData()
             }
@@ -70,6 +84,19 @@ class FollowListFragment : Fragment() {
         })
 
         loadData()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureCurrentListState()
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CURRENT_TAB, currentTab)
+        outState.putParcelable(STATE_FOLLOWING_LIST, followingListState)
+        outState.putParcelable(STATE_FOLLOWER_LIST, followerListState)
+    }
+
+    override fun onPause() {
+        captureCurrentListState()
+        super.onPause()
     }
 
     private fun loadData() {
@@ -89,7 +116,9 @@ class FollowListFragment : Fragment() {
 
                 if (response.isSuccessful) {
                     val users = response.body()?.users ?: emptyList()
-                    adapter.submitList(users)
+                    adapter.submitList(users) {
+                        restoreListStateForCurrentTab()
+                    }
                     binding.tvEmpty.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
                     binding.tvEmpty.text = if (currentTab == 0) "暂无关注" else "暂无粉丝"
                 } else {
@@ -103,6 +132,28 @@ class FollowListFragment : Fragment() {
                     binding.tvEmpty.text = "加载失败"
                     binding.tvEmpty.visibility = View.VISIBLE
                 }
+            }
+        }
+    }
+
+    private fun captureCurrentListState() {
+        val currentBinding = _binding ?: return
+        val state = currentBinding.rvUsers.layoutManager?.onSaveInstanceState()
+        if (currentTab == 0) {
+            followingListState = state
+        } else {
+            followerListState = state
+        }
+    }
+
+    private fun restoreListStateForCurrentTab() {
+        val pendingState = (if (currentTab == 0) followingListState else followerListState) ?: return
+        binding.rvUsers.post {
+            binding.rvUsers.layoutManager?.onRestoreInstanceState(pendingState)
+            if (currentTab == 0) {
+                followingListState = null
+            } else {
+                followerListState = null
             }
         }
     }

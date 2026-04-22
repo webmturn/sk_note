@@ -2,6 +2,7 @@ package com.sknote.app.ui.share
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Parcelable
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -31,6 +32,14 @@ class ShareListFragment : Fragment() {
     private val viewModel: ShareListViewModel by viewModels()
     private lateinit var adapter: ShareAdapter
     private var currentCategory: String? = null
+    private var currentQuery: String = ""
+    private var listState: Parcelable? = null
+
+    companion object {
+        private const val STATE_CATEGORY = "state_category"
+        private const val STATE_QUERY = "state_query"
+        private const val STATE_LIST = "state_list"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentShareListBinding.inflate(inflater, container, false)
@@ -39,6 +48,12 @@ class ShareListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentCategory = it.getString(STATE_CATEGORY)
+            listState = it.getParcelable(STATE_LIST)
+            currentQuery = it.getString(STATE_QUERY).orEmpty()
+        }
 
         val navController = parentFragment?.view?.let { Navigation.findNavController(it) }
             ?: findNavController()
@@ -80,6 +95,11 @@ class ShareListFragment : Fragment() {
                 else if (dy < 0) binding.fabAddShare.extend()
             }
         })
+
+        if (currentQuery.isNotEmpty()) {
+            binding.etSearch.setText(currentQuery)
+            binding.etSearch.setSelection(currentQuery.length)
+        }
 
         binding.btnSearch.setOnClickListener { performSearch() }
 
@@ -124,9 +144,9 @@ class ShareListFragment : Fragment() {
                 }
             }
 
-        updateSearchActionState(currentSearchQuery())
+        updateSearchActionState(currentQuery)
         observeData()
-        viewModel.loadShares()
+        viewModel.loadShares(currentCategory, currentQuery.ifEmpty { null })
         viewModel.loadCategories()
     }
 
@@ -150,7 +170,13 @@ class ShareListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.shares.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
+            adapter.submitList(list) {
+                val pendingListState = listState
+                if (pendingListState != null) {
+                    binding.rvShares.layoutManager?.onRestoreInstanceState(pendingListState)
+                    listState = null
+                }
+            }
             val query = currentSearchQuery()
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
             binding.tvEmpty.text = if (query.isEmpty()) "暂无文件分享" else "未找到「$query」相关分享"
@@ -170,7 +196,13 @@ class ShareListFragment : Fragment() {
                 val chip = Chip(requireContext()).apply {
                     text = ShareCategories.getLabel(cat.category) + " (${cat.count})"
                     isCheckable = true
+                    isChecked = currentCategory == cat.category
                     setOnClickListener {
+                        binding.chipAll.isChecked = false
+                        for (i in 0 until chipGroup.childCount) {
+                            (chipGroup.getChildAt(i) as? Chip)?.isChecked = false
+                        }
+                        isChecked = true
                         currentCategory = cat.category
                         viewModel.loadShares(cat.category, currentSearchQuery().ifEmpty { null }, force = true)
                     }
@@ -178,9 +210,14 @@ class ShareListFragment : Fragment() {
                 chipGroup.addView(chip)
             }
             binding.chipAll.setOnClickListener {
+                for (i in 0 until chipGroup.childCount) {
+                    (chipGroup.getChildAt(i) as? Chip)?.isChecked = false
+                }
+                binding.chipAll.isChecked = true
                 currentCategory = null
                 viewModel.loadShares(null, currentSearchQuery().ifEmpty { null }, force = true)
             }
+            binding.chipAll.isChecked = currentCategory == null
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
@@ -197,6 +234,25 @@ class ShareListFragment : Fragment() {
             binding.layoutError.visibility = View.GONE
             viewModel.loadShares(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentQuery = currentBinding.etSearch.text?.toString().orEmpty()
+        listState = currentBinding.rvShares.layoutManager?.onSaveInstanceState()
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CATEGORY, currentCategory)
+        outState.putString(STATE_QUERY, currentQuery)
+        outState.putParcelable(STATE_LIST, listState)
     }
 
     override fun onDestroyView() {

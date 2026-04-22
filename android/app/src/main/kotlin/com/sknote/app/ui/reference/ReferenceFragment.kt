@@ -2,6 +2,7 @@ package com.sknote.app.ui.reference
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -28,8 +29,20 @@ class ReferenceFragment : Fragment() {
     private var showingBookmarks = false
     private var statsExpanded = false
     private var detailFiltersExpanded = false
+    private var listState: Parcelable? = null
     private val bookmarkPrefs by lazy {
         requireContext().getSharedPreferences("reference_bookmarks", Context.MODE_PRIVATE)
+    }
+
+    companion object {
+        private const val STATE_TYPE = "state_type"
+        private const val STATE_CATEGORY = "state_category"
+        private const val STATE_SHAPE = "state_shape"
+        private const val STATE_SHOWING_BOOKMARKS = "state_showing_bookmarks"
+        private const val STATE_STATS_EXPANDED = "state_stats_expanded"
+        private const val STATE_DETAIL_FILTERS_EXPANDED = "state_detail_filters_expanded"
+        private const val STATE_SORT_MODE = "state_sort_mode"
+        private const val STATE_LIST = "state_list"
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -39,6 +52,18 @@ class ReferenceFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentType = it.getString(STATE_TYPE)
+            currentCategory = it.getString(STATE_CATEGORY)
+            currentShape = it.getString(STATE_SHAPE)
+            showingBookmarks = it.getBoolean(STATE_SHOWING_BOOKMARKS, false)
+            statsExpanded = it.getBoolean(STATE_STATS_EXPANDED, false)
+            detailFiltersExpanded = it.getBoolean(STATE_DETAIL_FILTERS_EXPANDED, false)
+            viewModel.sortMode = SortMode.entries.getOrElse(it.getInt(STATE_SORT_MODE, 0)) { SortMode.DEFAULT }
+            listState = it.getParcelable(STATE_LIST)
+            viewModel.shapeFilter = currentShape
+        }
 
         val navController = Navigation.findNavController(requireParentFragment().requireView())
         val navOptions = slideNavOptions()
@@ -255,9 +280,19 @@ class ReferenceFragment : Fragment() {
             SortMode.COLOR -> items.sortedWith(compareBy({ it.color }, { it.name.lowercase() }))
             SortMode.DEFAULT -> items
         }
-        adapter.submitList(items)
+        adapter.submitList(items) {
+            restoreListStateIfNeeded()
+        }
         binding.tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         binding.tvEmpty.text = if (items.isEmpty()) "还没有收藏任何参考" else ""
+    }
+
+    private fun restoreListStateIfNeeded() {
+        val pendingState = listState ?: return
+        binding.rvReferences.post {
+            binding.rvReferences.layoutManager?.onRestoreInstanceState(pendingState)
+            listState = null
+        }
     }
 
     private fun setupScrollToTop() {
@@ -409,7 +444,9 @@ class ReferenceFragment : Fragment() {
 
     private fun observeData() {
         viewModel.references.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
+            adapter.submitList(list) {
+                restoreListStateIfNeeded()
+            }
             binding.tvEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
         }
 
@@ -442,6 +479,29 @@ class ReferenceFragment : Fragment() {
                 loadBookmarks()
             }
         }
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        listState = currentBinding.rvReferences.layoutManager?.onSaveInstanceState()
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_TYPE, currentType)
+        outState.putString(STATE_CATEGORY, currentCategory)
+        outState.putString(STATE_SHAPE, currentShape)
+        outState.putBoolean(STATE_SHOWING_BOOKMARKS, showingBookmarks)
+        outState.putBoolean(STATE_STATS_EXPANDED, statsExpanded)
+        outState.putBoolean(STATE_DETAIL_FILTERS_EXPANDED, detailFiltersExpanded)
+        outState.putInt(STATE_SORT_MODE, viewModel.sortMode.ordinal)
+        outState.putParcelable(STATE_LIST, listState)
     }
 
     override fun onDestroyView() {

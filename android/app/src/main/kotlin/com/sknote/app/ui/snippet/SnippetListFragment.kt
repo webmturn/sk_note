@@ -2,6 +2,7 @@ package com.sknote.app.ui.snippet
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Parcelable
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -31,6 +32,14 @@ class SnippetListFragment : Fragment() {
     private val viewModel: SnippetListViewModel by viewModels()
     private lateinit var adapter: SnippetAdapter
     private var currentCategory: String? = null
+    private var currentQuery: String = ""
+    private var listState: Parcelable? = null
+
+    companion object {
+        private const val STATE_CATEGORY = "state_category"
+        private const val STATE_QUERY = "state_query"
+        private const val STATE_LIST = "state_list"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSnippetListBinding.inflate(inflater, container, false)
@@ -39,6 +48,12 @@ class SnippetListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        savedInstanceState?.let {
+            currentCategory = it.getString(STATE_CATEGORY)
+            listState = it.getParcelable(STATE_LIST)
+            currentQuery = it.getString(STATE_QUERY).orEmpty()
+        }
 
         val navController = parentFragment?.view?.let { Navigation.findNavController(it) }
             ?: findNavController()
@@ -78,6 +93,11 @@ class SnippetListFragment : Fragment() {
                 else if (dy < 0) binding.fabAddSnippet.extend()
             }
         })
+
+        if (currentQuery.isNotEmpty()) {
+            binding.etSearch.setText(currentQuery)
+            binding.etSearch.setSelection(currentQuery.length)
+        }
 
         binding.btnSearch.setOnClickListener { performSearch() }
 
@@ -122,9 +142,9 @@ class SnippetListFragment : Fragment() {
                 }
             }
 
-        updateSearchActionState(currentSearchQuery())
+        updateSearchActionState(currentQuery)
         observeData()
-        viewModel.loadSnippets()
+        viewModel.loadSnippets(currentCategory, currentQuery.ifEmpty { null })
         viewModel.loadCategories()
     }
 
@@ -148,7 +168,13 @@ class SnippetListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.snippets.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
+            adapter.submitList(list) {
+                val pendingListState = listState
+                if (pendingListState != null) {
+                    binding.rvSnippets.layoutManager?.onRestoreInstanceState(pendingListState)
+                    listState = null
+                }
+            }
             val query = currentSearchQuery()
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
             binding.tvEmpty.text = if (query.isEmpty()) "暂无代码片段" else "未找到「$query」相关代码片段"
@@ -169,6 +195,7 @@ class SnippetListFragment : Fragment() {
                 val chip = Chip(requireContext()).apply {
                     text = SnippetCategories.getLabel(cat.category) + " (${cat.count})"
                     isCheckable = true
+                    isChecked = currentCategory == cat.category
                     setOnClickListener {
                         binding.chipAll.isChecked = false
                         for (i in 0 until chipGroup.childCount) {
@@ -189,6 +216,7 @@ class SnippetListFragment : Fragment() {
                 currentCategory = null
                 viewModel.loadSnippets(null, currentSearchQuery().ifEmpty { null }, force = true)
             }
+            binding.chipAll.isChecked = currentCategory == null
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
@@ -205,6 +233,25 @@ class SnippetListFragment : Fragment() {
             binding.layoutError.visibility = View.GONE
             viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        currentQuery = currentBinding.etSearch.text?.toString().orEmpty()
+        listState = currentBinding.rvSnippets.layoutManager?.onSaveInstanceState()
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CATEGORY, currentCategory)
+        outState.putString(STATE_QUERY, currentQuery)
+        outState.putParcelable(STATE_LIST, listState)
     }
 
     override fun onDestroyView() {

@@ -1,6 +1,7 @@
 package com.sknote.app.ui.discussion
 
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +30,12 @@ class DiscussionListFragment : Fragment() {
     private lateinit var adapter: DiscussionAdapter
     private var currentCategory: String? = null
     private var currentArticleId: Long? = null
+    private var listState: Parcelable? = null
+
+    companion object {
+        private const val STATE_CATEGORY = "state_category"
+        private const val STATE_LIST = "state_list"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDiscussionListBinding.inflate(inflater, container, false)
@@ -38,6 +45,8 @@ class DiscussionListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        currentCategory = savedInstanceState?.getString(STATE_CATEGORY)
+        listState = savedInstanceState?.getParcelable(STATE_LIST)
         currentArticleId = arguments?.getLong("article_id")?.takeIf { it > 0L }
         val navOptions = slideNavOptions()
 
@@ -106,7 +115,7 @@ class DiscussionListFragment : Fragment() {
 
         observeData()
         viewModel.loadCategories()
-        viewModel.loadDiscussions(articleId = currentArticleId)
+        viewModel.loadDiscussions(currentCategory, currentArticleId)
     }
 
     private fun renderCategoryChips(categories: List<DiscussionCategory>) {
@@ -150,7 +159,13 @@ class DiscussionListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.discussions.observe(viewLifecycleOwner) { list ->
-            adapter.submitList(list)
+            adapter.submitList(list) {
+                val pendingListState = listState
+                if (pendingListState != null) {
+                    binding.rvDiscussions.layoutManager?.onRestoreInstanceState(pendingListState)
+                    listState = null
+                }
+            }
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
             binding.tvDiscussionCount.text = if (list.isNotEmpty()) "${list.size} 条讨论" else ""
         }
@@ -169,6 +184,23 @@ class DiscussionListFragment : Fragment() {
             binding.layoutError.visibility = View.GONE
             viewModel.loadDiscussions(currentCategory, currentArticleId)
         }
+    }
+
+    private fun captureUiState() {
+        val currentBinding = _binding ?: return
+        listState = currentBinding.rvDiscussions.layoutManager?.onSaveInstanceState()
+    }
+
+    override fun onPause() {
+        captureUiState()
+        super.onPause()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        captureUiState()
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_CATEGORY, currentCategory)
+        outState.putParcelable(STATE_LIST, listState)
     }
 
     override fun onDestroyView() {
