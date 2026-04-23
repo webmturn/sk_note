@@ -52,7 +52,13 @@ class DiscussionListFragment : Fragment() {
 
         adapter = DiscussionAdapter(
             onClick = { discussion ->
-                val bundle = Bundle().apply { putLong("discussion_id", discussion.id) }
+                val bundle = Bundle().apply {
+                    putLong("discussion_id", discussion.id)
+                    putString("prefill_title", discussion.title)
+                    putString("prefill_author_name", discussion.authorName)
+                    putString("prefill_category_name", discussion.categoryName)
+                    putString("prefill_created_at", discussion.createdAt)
+                }
                 findNavController().navigate(R.id.action_discussions_to_detail, bundle)
             },
             onAuthorClick = { discussion ->

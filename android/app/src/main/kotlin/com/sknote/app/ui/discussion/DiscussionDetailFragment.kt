@@ -54,6 +54,19 @@ class DiscussionDetailFragment : Fragment() {
         return binding.root
     }
 
+    private fun prefillHeader() {
+        val args = arguments ?: return
+        val h = hb ?: return
+        val title = args.getString("prefill_title")
+        val author = args.getString("prefill_author_name")
+        val category = args.getString("prefill_category_name")
+        val time = args.getString("prefill_created_at")
+        if (!title.isNullOrEmpty()) h.tvTitle.text = title
+        if (!author.isNullOrEmpty()) h.tvAuthor.text = author
+        if (!category.isNullOrEmpty()) h.chipCategory.text = category
+        if (!time.isNullOrEmpty()) h.tvTime.text = TimeUtil.formatRelative(time)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -127,6 +140,7 @@ class DiscussionDetailFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             adapter = ConcatAdapter(headerAdapter, commentAdapter)
         }
+        binding.rvMain.post { prefillHeader() }
 
         binding.btnLoginReply.setOnClickListener {
             findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
@@ -268,7 +282,7 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            if (isLoading) binding.progressBar.show() else binding.progressBar.hide()
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
