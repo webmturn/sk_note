@@ -161,10 +161,8 @@ class AdminFragment : Fragment() {
                 val isAdmin = role == "admin"
                 setVisibility(binding.cardGuestLogin, false, animate)
                 setVisibility(binding.cardUserProfile, true, animate)
-                setVisibility(binding.tvFunctionHeader, true, animate)
                 setVisibility(binding.cardFunctionGroup, true, animate)
                 setVisibility(binding.cardLogout, true, animate)
-                setVisibility(binding.tvAdminHeader, isAdmin, animate)
                 setVisibility(binding.cardAdminGroup, isAdmin, animate)
 
                 loadStats()
@@ -182,7 +180,6 @@ class AdminFragment : Fragment() {
                                 ApiClient.getTokenManager().updateUserRole(user.role)
                                 binding.tvRole.text = roleLabel(user.role)
                                 val latestIsAdmin = user.role == "admin"
-                                setVisibility(binding.tvAdminHeader, latestIsAdmin, true)
                                 setVisibility(binding.cardAdminGroup, latestIsAdmin, true)
                                 if (!user.avatarUrl.isNullOrEmpty()) {
                                     Glide.with(this@AdminFragment)
@@ -198,9 +195,7 @@ class AdminFragment : Fragment() {
                 }
             } else {
                 setVisibility(binding.cardUserProfile, false, animate)
-                setVisibility(binding.tvFunctionHeader, false, animate)
                 setVisibility(binding.cardFunctionGroup, false, animate)
-                setVisibility(binding.tvAdminHeader, false, animate)
                 setVisibility(binding.cardAdminGroup, false, animate)
                 setVisibility(binding.cardLogout, false, animate)
                 setVisibility(binding.cardGuestLogin, true, animate)

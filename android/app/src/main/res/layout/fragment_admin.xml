@@ -76,108 +76,85 @@
             </LinearLayout>
 
             <!-- 统计数据行 -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="?attr/colorOutlineVariant">
+                android:orientation="horizontal"
+                android:layout_marginTop="16dp"
+                android:paddingVertical="10dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:orientation="horizontal"
-                    android:paddingVertical="16dp"
                     android:gravity="center">
 
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:id="@+id/tvStatArticles"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center">
+                        android:text="-"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
 
-                        <TextView
-                            android:id="@+id/tvStatArticles"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="-"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorPrimary" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="文章"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="32dp"
-                        android:background="?attr/colorOutlineVariant" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center">
-
-                        <TextView
-                            android:id="@+id/tvStatDiscussions"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="-"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorPrimary" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="讨论"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="32dp"
-                        android:background="?attr/colorOutlineVariant" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center">
-
-                        <TextView
-                            android:id="@+id/tvStatNotifications"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="-"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorPrimary" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="通知"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
+                        android:text=" 文章"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvStatDiscussions"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" 讨论"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvStatNotifications"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" 通知"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- ========== 未登录: 访客区 ========== -->
@@ -234,30 +211,6 @@
                 app:cornerRadius="24dp" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvFunctionHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:layout_marginStart="20dp"
-            android:text="常用功能"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/tvAdminHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginStart="20dp"
-            android:text="管理入口"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
         <!-- ========== 功能菜单列表 ========== -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardFunctionGroup"
@@ -274,7 +227,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
+
+            <TextView
+                android:id="@+id/tvFunctionHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="常用功能"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <!-- 我的收藏 -->
             <LinearLayout
@@ -283,26 +248,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_orange"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_bookmark_filled"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -310,12 +275,12 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="我的收藏"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -327,26 +292,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_green"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_notification"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -354,7 +319,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="我的通知"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <TextView
@@ -366,8 +331,8 @@
                     android:layout_marginEnd="8dp" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -379,26 +344,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_blue"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_edit"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -406,12 +371,12 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="编辑资料"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -423,26 +388,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_purple"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_download"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -450,12 +415,12 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="文件分享"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -467,26 +432,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
-                    app:cardBackgroundColor="@color/icon_bg_green"
-                    android:layout_marginEnd="16dp">
+                    app:cardBackgroundColor="@color/icon_bg_teal"
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_history"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -494,12 +459,56 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="浏览历史"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_chevron_right"
+                    android:alpha="0.3" />
+            </LinearLayout>
+
+            <!-- 偏好与设置 -->
+            <LinearLayout
+                android:id="@+id/rowSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="14dp"
+                android:gravity="center_vertical"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/icon_bg_purple"
+                    android:layout_marginEnd="14dp">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/ic_settings"
+                        android:scaleType="centerInside"
+                        android:padding="8dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="偏好与设置"
+                    android:textSize="15sp"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -522,7 +531,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingVertical="8dp">
+            android:paddingVertical="4dp">
+
+            <TextView
+                android:id="@+id/tvAdminHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="管理入口"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:id="@+id/rowAdminCenter"
@@ -530,26 +551,26 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_red"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_dashboard"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -557,73 +578,12 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="管理中心"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_chevron_right"
-                    android:alpha="0.3" />
-            </LinearLayout>
-        </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- ========== 设置 & 退出 ========== -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginHorizontal="16dp"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingVertical="8dp">
-
-            <LinearLayout
-                android:id="@+id/rowSettings"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
-                android:gravity="center_vertical"
-                android:background="?attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="@color/icon_bg_purple"
-                    android:layout_marginEnd="16dp">
-
-                    <ImageView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:src="@drawable/ic_settings"
-                        android:scaleType="centerInside"
-                        android:padding="9dp" />
-                </com.google.android.material.card.MaterialCardView>
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="偏好与设置"
-                    android:textSize="16sp"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
                     android:alpha="0.3" />
             </LinearLayout>
@@ -647,33 +607,33 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:paddingHorizontal="20dp"
-                android:paddingVertical="16dp"
+                android:paddingVertical="14dp"
                 android:gravity="center_vertical"
                 android:background="?attr/selectableItemBackground"
                 android:clickable="true"
                 android:focusable="true">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    app:cardCornerRadius="12dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    app:cardCornerRadius="11dp"
                     app:cardElevation="0dp"
                     app:cardBackgroundColor="@color/icon_bg_red"
-                    android:layout_marginEnd="16dp">
+                    android:layout_marginEnd="14dp">
 
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:src="@drawable/ic_logout"
                         android:scaleType="centerInside"
-                        android:padding="9dp" />
+                        android:padding="8dp" />
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="退出登录"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textColor="@color/text_danger" />
             </LinearLayout>
         </LinearLayout>
