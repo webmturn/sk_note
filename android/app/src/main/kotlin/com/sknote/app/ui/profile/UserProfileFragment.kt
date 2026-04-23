@@ -54,6 +54,21 @@ class UserProfileFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentUserProfileBinding.inflate(inflater, container, false)
+
+        // 同步预填充缓存数据，避免布局跳动
+        val tokenManager = ApiClient.getTokenManager()
+        val cachedNickname = tokenManager.cachedNickname ?: ""
+        val cachedUsername = tokenManager.cachedUsername ?: ""
+        val cachedRole = tokenManager.cachedRole ?: "user"
+        val cachedCreatedAt = tokenManager.cachedCreatedAt
+        binding.tvUsername.text = cachedNickname.ifEmpty { cachedUsername }
+        binding.tvHandle.text = "@$cachedUsername"
+        binding.chipRole.text = "· ${roleLabel(cachedRole)}"
+        if (!cachedCreatedAt.isNullOrEmpty()) {
+            binding.tvJoinDate.text = "注册于 ${TimeUtil.formatRelative(cachedCreatedAt)}"
+            binding.tvJoinDate.visibility = View.VISIBLE
+        }
+
         return binding.root
     }
 
@@ -107,8 +122,14 @@ class UserProfileFragment : Fragment() {
             .setPopExitAnim(R.anim.slide_out_right)
             .build()
 
-        binding.btnEditProfile.setOnClickListener {
-            findNavController().navigate(R.id.profileEditFragment, null, navOptions)
+        binding.toolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_edit_profile -> {
+                    findNavController().navigate(R.id.profileEditFragment, null, navOptions)
+                    true
+                }
+                else -> false
+            }
         }
 
         binding.layoutFollowing.setOnClickListener {
@@ -187,7 +208,7 @@ class UserProfileFragment : Fragment() {
 
             binding.tvUsername.text = nickname.ifEmpty { username }
             binding.tvHandle.text = "@$username"
-            binding.chipRole.text = roleLabel(role)
+            binding.chipRole.text = "· ${roleLabel(role)}"
 
             // 立即加载Tab内容（不等其他请求）
             loadContent()
@@ -202,7 +223,7 @@ class UserProfileFragment : Fragment() {
                         binding.tvUsername.text = user.displayName
                         binding.tvHandle.text = "@${user.username}"
                         ApiClient.getTokenManager().updateNickname(user.displayName)
-                        binding.chipRole.text = roleLabel(user.role)
+                        binding.chipRole.text = "· ${roleLabel(user.role)}"
                         if (!user.bio.isNullOrEmpty()) {
                             binding.tvBio.text = user.bio.orEmpty()
                             binding.tvBio.visibility = View.VISIBLE
@@ -217,6 +238,7 @@ class UserProfileFragment : Fragment() {
                                 .into(binding.ivAvatar)
                         }
                         user.createdAt?.let {
+                            ApiClient.getTokenManager().updateCreatedAt(it)
                             binding.tvJoinDate.text = "注册于 ${TimeUtil.formatRelative(it)}"
                             binding.tvJoinDate.visibility = View.VISIBLE
                         }
@@ -278,7 +300,13 @@ class UserProfileFragment : Fragment() {
                     .setEnterAnim(R.anim.slide_in_right).setExitAnim(R.anim.slide_out_left)
                     .setPopEnterAnim(R.anim.slide_in_left).setPopExitAnim(R.anim.slide_out_right).build()
                 binding.rvContent.adapter = ProfileContentAdapter<Discussion>(list, ProfileContentAdapter.TYPE_DISCUSSION) { item ->
-                    val bundle = Bundle().apply { putLong("discussion_id", item.id) }
+                    val bundle = Bundle().apply {
+                        putLong("discussion_id", item.id)
+                        putString("prefill_title", item.title)
+                        putString("prefill_author_name", item.authorName)
+                        putString("prefill_category_name", item.categoryName)
+                        putString("prefill_created_at", item.createdAt)
+                    }
                     findNavController().navigate(R.id.discussionDetailFragment, bundle, navOptions)
                 }
                 restoreListStateForTab(0)

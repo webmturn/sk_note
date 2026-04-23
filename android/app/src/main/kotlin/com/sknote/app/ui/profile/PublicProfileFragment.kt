@@ -177,7 +177,7 @@ class PublicProfileFragment : Fragment() {
                     val data = response.body() ?: return@launch
                     binding.tvUsername.text = data.user.displayName
                     binding.tvHandle.text = "@${data.user.username}"
-                    binding.chipRole.text = when (data.user.role) {
+                    binding.chipRole.text = "· " + when (data.user.role) {
                         "admin" -> "管理员"
                         "editor" -> "编辑"
                         else -> "普通用户"
@@ -345,7 +345,13 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Discussion>(list, ProfileContentAdapter.TYPE_DISCUSSION) { item ->
-                    val bundle = Bundle().apply { putLong("discussion_id", item.id) }
+                    val bundle = Bundle().apply {
+                        putLong("discussion_id", item.id)
+                        putString("prefill_title", item.title)
+                        putString("prefill_author_name", item.authorName)
+                        putString("prefill_category_name", item.categoryName)
+                        putString("prefill_created_at", item.createdAt)
+                    }
                     findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter
