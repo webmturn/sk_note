@@ -1,12 +1,12 @@
 package com.sknote.app.ui.manage.user
 
-import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.sknote.app.data.model.User
 import com.sknote.app.databinding.ItemUserManageBinding
 import com.sknote.app.util.TimeUtil
@@ -39,31 +39,32 @@ class UserManageAdapter(
         }
 
         val badge = holder.binding.tvRoleBadge
+        val context = holder.binding.root.context
         when (user.role) {
             "admin" -> {
                 badge.text = "管理员"
-                badge.setTextColor(Color.WHITE)
+                badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnErrorContainer, 0))
                 val bg = GradientDrawable().apply {
                     cornerRadius = 8f
-                    setColor(0xFFE53935.toInt())
+                    setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorErrorContainer, 0))
                 }
                 badge.background = bg
             }
             "editor" -> {
                 badge.text = "编辑"
-                badge.setTextColor(Color.WHITE)
+                badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer, 0))
                 val bg = GradientDrawable().apply {
                     cornerRadius = 8f
-                    setColor(0xFF1E88E5.toInt())
+                    setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, 0))
                 }
                 badge.background = bg
             }
             else -> {
                 badge.text = "用户"
-                badge.setTextColor(0xFF666666.toInt())
+                badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, 0))
                 val bg = GradientDrawable().apply {
                     cornerRadius = 8f
-                    setColor(0xFFE0E0E0.toInt())
+                    setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorSurfaceVariant, 0))
                 }
                 badge.background = bg
             }

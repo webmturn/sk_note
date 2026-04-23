@@ -124,14 +124,14 @@
                             android:layout_height="48dp"
                             app:cardCornerRadius="14dp"
                             app:cardElevation="0dp"
-                            app:cardBackgroundColor="#FFF8E1">
+                            app:cardBackgroundColor="@color/theme_preview_light_bg">
 
                             <ImageView
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_dark_mode"
-                                app:tint="#FFA000" />
+                                app:tint="@color/theme_preview_light_icon" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -181,14 +181,14 @@
                             android:layout_height="48dp"
                             app:cardCornerRadius="14dp"
                             app:cardElevation="0dp"
-                            app:cardBackgroundColor="#37474F">
+                            app:cardBackgroundColor="@color/theme_preview_dark_bg">
 
                             <ImageView
                                 android:layout_width="28dp"
                                 android:layout_height="28dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_dark_mode"
-                                app:tint="#B0BEC5" />
+                                app:tint="@color/theme_preview_dark_icon" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView

@@ -11,6 +11,8 @@
         <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/surface_card</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
     <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">

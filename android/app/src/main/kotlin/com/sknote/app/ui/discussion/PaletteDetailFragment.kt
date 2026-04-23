@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.color.MaterialColors
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentPaletteDetailBinding
 import org.json.JSONArray
@@ -51,8 +52,9 @@ class PaletteDetailFragment : Fragment() {
         binding.toolbar.title = palName
         binding.tvPaletteName.text = palName
         binding.tvBlockCount.text = "${blocksArr.length()} 个积木块"
+        val fallbackPaletteColor = MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, 0)
         try { binding.paletteColorBar.setBackgroundColor(Color.parseColor(palColor)) }
-        catch (_: Exception) { binding.paletteColorBar.setBackgroundColor(Color.GRAY) }
+        catch (_: Exception) { binding.paletteColorBar.setBackgroundColor(fallbackPaletteColor) }
 
         // Import all button
         binding.btnImportAll.setOnClickListener {

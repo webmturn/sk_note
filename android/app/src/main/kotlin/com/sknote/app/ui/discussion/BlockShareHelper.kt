@@ -8,8 +8,10 @@ import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
@@ -259,13 +261,14 @@ object BlockShareHelper {
         val palName = paletteJson.optString("palette_name", "调色板")
         val palColor = paletteJson.optString("palette_color", "#9E9E9E")
         val blocksArr = paletteJson.optJSONArray("blocks") ?: JSONArray()
+        val fallbackPaletteColor = MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimary, 0)
 
         // Header
         view.findViewById<TextView>(R.id.tvPaletteName).text = palName
         view.findViewById<TextView>(R.id.tvBlockCount).text = "${blocksArr.length()} 个积木块"
         val colorBar = view.findViewById<View>(R.id.paletteColorBar)
         try { colorBar.setBackgroundColor(Color.parseColor(palColor)) }
-        catch (_: Exception) { colorBar.setBackgroundColor(Color.GRAY) }
+        catch (_: Exception) { colorBar.setBackgroundColor(fallbackPaletteColor) }
 
         // Block list
         val blockListContainer = view.findViewById<ViewGroup>(R.id.blockListContainer)
@@ -282,7 +285,7 @@ object BlockShareHelper {
             val blockShape = blockItem.findViewById<BlockShapeView>(R.id.blockShapeView)
             val blockColor = try {
                 if (colorStr.isNotEmpty()) Color.parseColor(colorStr) else Color.parseColor(palColor)
-            } catch (_: Exception) { Color.GRAY }
+            } catch (_: Exception) { fallbackPaletteColor }
             blockShape.blockColor = blockColor
             blockShape.blockShape = mapShape(type)
             if (spec.isNotEmpty()) {

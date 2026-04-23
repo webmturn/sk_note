@@ -9,11 +9,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.model.ReferenceItem
@@ -212,7 +212,7 @@ class ReferenceDetailFragment : Fragment() {
         val items = ReferenceData.getByTypeAndCategory(ref.type, ref.category)
         val names = items.map { it.name }.toTypedArray()
         val currentIdx = items.indexOfFirst { it.id == ref.id }
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("${getTypeLabel(ref.type)} / ${ref.category}")
             .setSingleChoiceItems(names, currentIdx) { dialog, which ->
                 dialog.dismiss()
@@ -310,8 +310,9 @@ class ReferenceDetailFragment : Fragment() {
                 binding.ivIconDetail.setImageResource(getIconRes(ref))
                 // Tint icon with block color
                 val iconColor = try {
-                    if (ref.color.orEmpty().isNotEmpty()) Color.parseColor(ref.color.orEmpty()) else Color.parseColor("#FF1976D2")
-                } catch (_: Exception) { Color.parseColor("#FF1976D2") }
+                    ref.color.orEmpty().takeIf { it.isNotBlank() }?.let { Color.parseColor(it) }
+                        ?: resolveThemeColor(com.google.android.material.R.attr.colorPrimary)
+                } catch (_: Exception) { resolveThemeColor(com.google.android.material.R.attr.colorPrimary) }
                 val tintedBg = Color.argb(25, Color.red(iconColor), Color.green(iconColor), Color.blue(iconColor))
                 binding.iconCardDetail.setCardBackgroundColor(tintedBg)
                 binding.ivIconDetail.setColorFilter(iconColor)
@@ -321,8 +322,9 @@ class ReferenceDetailFragment : Fragment() {
 
             // Set header accent color
             val blockColor = try {
-                if (ref.color.orEmpty().isNotEmpty()) Color.parseColor(ref.color.orEmpty()) else Color.parseColor("#FF1976D2")
-            } catch (_: Exception) { Color.parseColor("#FF1976D2") }
+                ref.color.orEmpty().takeIf { it.isNotBlank() }?.let { Color.parseColor(it) }
+                    ?: resolveThemeColor(com.google.android.material.R.attr.colorPrimary)
+            } catch (_: Exception) { resolveThemeColor(com.google.android.material.R.attr.colorPrimary) }
             binding.headerAccent.setBackgroundColor(blockColor)
 
             if (ref.code.orEmpty().isNotEmpty()) {

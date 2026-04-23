@@ -311,6 +311,7 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
                 val outValue = TypedValue()
                 context.theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
                 setBackgroundResource(outValue.resourceId)
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                 isClickable = true
                 isFocusable = true
             }

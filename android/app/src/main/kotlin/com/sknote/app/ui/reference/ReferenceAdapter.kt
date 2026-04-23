@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.sknote.app.data.model.ReferenceItem
 import com.sknote.app.databinding.ItemReferenceBinding
 
@@ -48,10 +49,15 @@ class ReferenceAdapter(
             binding.ivIcon.setImageResource(ReferenceIcons.getIconRes(item))
 
             // Set accent strip color from block color
+            val fallbackColor = MaterialColors.getColor(
+                binding.root.context,
+                com.google.android.material.R.attr.colorPrimary,
+                0
+            )
             val blockColor = try {
-                Color.parseColor(item.color.orEmpty())
+                item.color.orEmpty().takeIf { it.isNotBlank() }?.let { Color.parseColor(it) } ?: fallbackColor
             } catch (_: Exception) {
-                Color.parseColor("#FF1976D2")
+                fallbackColor
             }
             binding.accentStrip.setBackgroundColor(blockColor)
 

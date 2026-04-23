@@ -1,6 +1,7 @@
 package com.sknote.app.ui.profile
 
 import android.os.Bundle
+import android.content.res.Configuration
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -71,7 +72,12 @@ class ThemeSelectionFragment : Fragment() {
 
         // Update status text
         val label = SkNoteApp.themeModeLabel(mode)
-        binding.tvCurrentTheme.text = "当前主题：$label"
+        binding.tvCurrentTheme.text = if (isSystem) {
+            val effectiveMode = if (isSystemInDarkMode()) "深色" else "浅色"
+            "当前主题：$label（当前生效：$effectiveMode）"
+        } else {
+            "当前主题：$label"
+        }
     }
 
     private fun updateCardStroke(card: com.google.android.material.card.MaterialCardView, selected: Boolean) {
@@ -89,6 +95,11 @@ class ThemeSelectionFragment : Fragment() {
             card.strokeColor = color
             card.strokeWidth = (2 * resources.displayMetrics.density).toInt()
         }
+    }
+
+    private fun isSystemInDarkMode(): Boolean {
+        val nightModeFlags = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
     }
 
     override fun onDestroyView() {

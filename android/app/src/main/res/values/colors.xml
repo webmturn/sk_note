@@ -23,6 +23,10 @@
     <color name="surface_card">#FFFFFFFF</color>
     <color name="surface_elevated">#FFF5F5F5</color>
     <color name="detail_section_bg">#FFF8F9FA</color>
+    <color name="theme_preview_light_bg">#FFF8E1</color>
+    <color name="theme_preview_light_icon">#FFA000</color>
+    <color name="theme_preview_dark_bg">#FF37474F</color>
+    <color name="theme_preview_dark_icon">#FFB0BEC5</color>
     <color name="code_bg">#FFF1F3F4</color>
     <color name="accent_strip_alpha">#30000000</color>
 </resources>
