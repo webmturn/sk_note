@@ -14,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import android.content.Intent
+import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
@@ -184,6 +185,16 @@ class DiscussionDetailFragment : Fragment() {
             }
             h.tvAuthor.setOnClickListener(navigateToAuthor)
             h.ivAuthorAvatar.setOnClickListener(navigateToAuthor)
+            if (!discussion.authorAvatar.isNullOrEmpty()) {
+                Glide.with(this@DiscussionDetailFragment)
+                    .load(discussion.authorAvatar)
+                    .circleCrop()
+                    .placeholder(R.drawable.ic_person)
+                    .into(h.ivAuthorAvatar)
+            } else {
+                Glide.with(this@DiscussionDetailFragment).clear(h.ivAuthorAvatar)
+                h.ivAuthorAvatar.setImageResource(R.drawable.ic_person)
+            }
             h.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             h.tvViewCount.text = "${discussion.viewCount} 浏览"
             h.tvContent.visibility = View.VISIBLE

@@ -142,6 +142,19 @@ class AdminFragment : Fragment() {
         }
     }
 
+    private fun renderAvatar(avatarUrl: String?) {
+        if (!avatarUrl.isNullOrEmpty()) {
+            Glide.with(this)
+                .load(avatarUrl)
+                .circleCrop()
+                .placeholder(R.drawable.ic_account_circle)
+                .into(binding.ivAvatar)
+        } else {
+            Glide.with(this).clear(binding.ivAvatar)
+            binding.ivAvatar.setImageResource(R.drawable.ic_account_circle)
+        }
+    }
+
     private fun refreshLoginState() {
         Log.d(TAG, "AdminFragment.refreshLoginState START isFirstRefresh=$isFirstRefresh")
         viewLifecycleOwner.lifecycleScope.launch {
@@ -153,9 +166,11 @@ class AdminFragment : Fragment() {
                 val nickname = ApiClient.getTokenManager().getNickname().first() ?: ""
                 val username = ApiClient.getTokenManager().getUsername().first() ?: ""
                 val role = ApiClient.getTokenManager().getUserRole().first() ?: "user"
+                val avatarUrl = ApiClient.getTokenManager().getAvatarUrl().first()
 
                 binding.tvUsername.text = nickname.ifEmpty { username }
                 binding.tvRole.text = roleLabel(role)
+                renderAvatar(avatarUrl)
 
                 // 先立即显示所有卡片（不等网络）
                 val isAdmin = role == "admin"
@@ -176,24 +191,18 @@ class AdminFragment : Fragment() {
                             val user = response.body()?.get("user")
                             if (user != null) {
                                 binding.tvUsername.text = user.displayName
-                                ApiClient.getTokenManager().updateNickname(user.displayName)
-                                ApiClient.getTokenManager().updateUserRole(user.role)
+                                ApiClient.getTokenManager().updateCurrentUser(user.id, user.username, user.displayName, user.role, user.avatarUrl)
                                 binding.tvRole.text = roleLabel(user.role)
                                 val latestIsAdmin = user.role == "admin"
                                 setVisibility(binding.cardAdminGroup, latestIsAdmin, true)
-                                if (!user.avatarUrl.isNullOrEmpty()) {
-                                    Glide.with(this@AdminFragment)
-                                        .load(user.avatarUrl.orEmpty())
-                                        .circleCrop()
-                                        .placeholder(R.drawable.ic_account_circle)
-                                        .into(binding.ivAvatar)
-                                }
+                                renderAvatar(user.avatarUrl)
                                 restoreUiState()
                             }
                         }
                     } catch (_: Exception) { }
                 }
             } else {
+                renderAvatar(null)
                 setVisibility(binding.cardUserProfile, false, animate)
                 setVisibility(binding.cardFunctionGroup, false, animate)
                 setVisibility(binding.cardAdminGroup, false, animate)

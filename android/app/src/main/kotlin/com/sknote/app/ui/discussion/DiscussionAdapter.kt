@@ -6,6 +6,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.sknote.app.R
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.ItemDiscussionBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
@@ -60,6 +62,16 @@ class DiscussionAdapter(
             }
             binding.tvPreview.text = preview
             binding.tvAuthor.text = discussion.authorName ?: "Anonymous"
+            if (!discussion.authorAvatar.isNullOrEmpty()) {
+                Glide.with(binding.root.context)
+                    .load(discussion.authorAvatar)
+                    .circleCrop()
+                    .placeholder(R.drawable.ic_person)
+                    .into(binding.ivAvatar)
+            } else {
+                Glide.with(binding.root.context).clear(binding.ivAvatar)
+                binding.ivAvatar.setImageResource(R.drawable.ic_person)
+            }
             binding.tvCategory.text = discussion.categoryName.orEmpty().ifEmpty {
                 DiscussionCategoryDefaults.label(discussion.category)
             }

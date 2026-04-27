@@ -55,7 +55,8 @@ import kotlinx.coroutines.withTimeoutOrNull
                      userId = user.id,
                      username = user.username,
                      nickname = user.nickname.orEmpty(),
-                     role = user.role
+                     role = user.role,
+                     avatarUrl = user.avatarUrl
                  )
              } catch (_: Exception) {
              } finally {

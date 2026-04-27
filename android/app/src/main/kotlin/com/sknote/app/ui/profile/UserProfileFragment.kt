@@ -52,6 +52,19 @@ class UserProfileFragment : Fragment() {
         return isAdded && _binding != null && view != null
     }
 
+    private fun renderAvatar(avatarUrl: String?) {
+        if (!avatarUrl.isNullOrEmpty()) {
+            Glide.with(this)
+                .load(avatarUrl)
+                .circleCrop()
+                .placeholder(R.drawable.ic_account_circle)
+                .into(binding.ivAvatar)
+        } else {
+            Glide.with(this).clear(binding.ivAvatar)
+            binding.ivAvatar.setImageResource(R.drawable.ic_account_circle)
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentUserProfileBinding.inflate(inflater, container, false)
 
@@ -60,10 +73,12 @@ class UserProfileFragment : Fragment() {
         val cachedNickname = tokenManager.cachedNickname ?: ""
         val cachedUsername = tokenManager.cachedUsername ?: ""
         val cachedRole = tokenManager.cachedRole ?: "user"
+        val cachedAvatarUrl = tokenManager.cachedAvatarUrl
         val cachedCreatedAt = tokenManager.cachedCreatedAt
         binding.tvUsername.text = cachedNickname.ifEmpty { cachedUsername }
         binding.tvHandle.text = "@$cachedUsername"
         binding.chipRole.text = "· ${roleLabel(cachedRole)}"
+        renderAvatar(cachedAvatarUrl)
         if (!cachedCreatedAt.isNullOrEmpty()) {
             binding.tvJoinDate.text = "注册于 ${TimeUtil.formatRelative(cachedCreatedAt)}"
             binding.tvJoinDate.visibility = View.VISIBLE
@@ -202,6 +217,7 @@ class UserProfileFragment : Fragment() {
             val nickname = tokenManager.getNickname().first() ?: ""
             val username = tokenManager.getUsername().first() ?: ""
             val role = tokenManager.getUserRole().first() ?: "user"
+            val avatarUrl = tokenManager.getAvatarUrl().first()
             myId = tokenManager.getUserId().first() ?: 0
 
             if (!isFragmentUsable()) return@launch
@@ -209,6 +225,7 @@ class UserProfileFragment : Fragment() {
             binding.tvUsername.text = nickname.ifEmpty { username }
             binding.tvHandle.text = "@$username"
             binding.chipRole.text = "· ${roleLabel(role)}"
+            renderAvatar(avatarUrl)
 
             // 立即加载Tab内容（不等其他请求）
             loadContent()
@@ -222,7 +239,7 @@ class UserProfileFragment : Fragment() {
                         val user = response.body()?.get("user") ?: return@loadMe
                         binding.tvUsername.text = user.displayName
                         binding.tvHandle.text = "@${user.username}"
-                        ApiClient.getTokenManager().updateNickname(user.displayName)
+                        ApiClient.getTokenManager().updateCurrentUser(user.id, user.username, user.displayName, user.role, user.avatarUrl)
                         binding.chipRole.text = "· ${roleLabel(user.role)}"
                         if (!user.bio.isNullOrEmpty()) {
                             binding.tvBio.text = user.bio.orEmpty()
@@ -230,13 +247,7 @@ class UserProfileFragment : Fragment() {
                         } else {
                             binding.tvBio.visibility = View.GONE
                         }
-                        if (!user.avatarUrl.isNullOrEmpty()) {
-                            Glide.with(this@UserProfileFragment)
-                                .load(user.avatarUrl.orEmpty())
-                                .circleCrop()
-                                .placeholder(R.drawable.ic_account_circle)
-                                .into(binding.ivAvatar)
-                        }
+                        renderAvatar(user.avatarUrl)
                         user.createdAt?.let {
                             ApiClient.getTokenManager().updateCreatedAt(it)
                             binding.tvJoinDate.text = "注册于 ${TimeUtil.formatRelative(it)}"
