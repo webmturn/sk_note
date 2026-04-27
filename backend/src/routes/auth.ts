@@ -38,6 +38,57 @@ function needsUpgrade(storedHash: string): boolean {
   return !storedHash.startsWith('$2');
 }
 
+function arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+function sanitizeUploadFileName(fileName: string): string {
+  const safeName = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_');
+  return safeName || `avatar_${Date.now()}.jpg`;
+}
+
+type ImgBbUploadResponse = {
+  success?: boolean;
+  data?: {
+    url?: string;
+    display_url?: string;
+  };
+  error?: {
+    message?: string;
+  };
+  message?: string;
+};
+
+async function uploadAvatarToImgBb(file: File, apiKey: string): Promise<string> {
+  const imageBase64 = arrayBufferToBase64(await file.arrayBuffer());
+  const formData = new FormData();
+  formData.append('image', imageBase64);
+  formData.append('name', sanitizeUploadFileName(file.name));
+
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const result = await response.json() as ImgBbUploadResponse;
+  const imageUrl = result?.data?.url || result?.data?.display_url;
+
+  if (!response.ok || !result?.success || !imageUrl) {
+    const message = result?.error?.message || result?.message || `ImgBB 上传失败 (${response.status})`;
+    throw new Error(message);
+  }
+
+  return imageUrl;
+}
+
 // 注册
 authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, windowMs: 30 * 60 * 1000 }), async (c) => {
   try {
@@ -160,6 +211,38 @@ authRoutes.get('/me', authMiddleware(), async (c) => {
 
   if (!user) return c.json({ error: '用户不存在' }, 404);
   return c.json({ user });
+});
+
+authRoutes.post('/avatar/upload', rateLimit({ key: 'auth:avatar-upload', maxRequests: 10, windowMs: 15 * 60 * 1000 }), authMiddleware(), async (c) => {
+  try {
+    const apiKey = (c.env.IMGBB_API_KEY || '').trim();
+    if (!apiKey) {
+      return c.json({ error: '服务器未配置 ImgBB API Key' }, 500);
+    }
+
+    const formData = await c.req.formData();
+    const avatarEntry = formData.get('avatar') ?? formData.get('image');
+
+    if (!avatarEntry || typeof avatarEntry === 'string') {
+      return c.json({ error: '请上传图片文件' }, 400);
+    }
+    const avatar = avatarEntry as File;
+    if (!avatar.type.startsWith('image/')) {
+      return c.json({ error: '仅支持图片文件' }, 400);
+    }
+    if (avatar.size <= 0) {
+      return c.json({ error: '图片不能为空' }, 400);
+    }
+    if (avatar.size > 1024 * 1024) {
+      return c.json({ error: '图片不能超过 1MB' }, 400);
+    }
+
+    const url = await uploadAvatarToImgBb(avatar, apiKey);
+    return c.json({ url });
+  } catch (e: any) {
+    console.error('头像上传失败:', e);
+    return c.json({ error: e?.message || '头像上传失败' }, 500);
+  }
 });
 
 // 更新个人信息
@@ -296,7 +379,7 @@ authRoutes.put('/users/:id/role', authMiddleware(), adminMiddleware(), async (c)
     if (!target) return c.json({ error: '用户不存在' }, 404);
 
     await c.env.DB.prepare(
-      'UPDATE users SET role = ?, updated_at = datetime("now") WHERE id = ?'
+      `UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`
     ).bind(role, userId).run();
 
     return c.json({ message: '角色更新成功' });
@@ -362,7 +445,7 @@ authRoutes.put('/users/:id/password', authMiddleware(), adminMiddleware(), async
 
     const newHash = await hashPassword(new_password);
     await c.env.DB.prepare(
-      'UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?'
+      `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
     ).bind(newHash, userId).run();
 
     return c.json({ message: '密码重置成功' });
@@ -398,7 +481,7 @@ authRoutes.put('/password', rateLimit({ key: 'auth:password', maxRequests: 5, wi
 
     const newHash = await hashPassword(new_password);
     await c.env.DB.prepare(
-      'UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?'
+      `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
     ).bind(newHash, payload.id).run();
 
     return c.json({ message: '密码修改成功' });

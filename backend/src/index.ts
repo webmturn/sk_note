@@ -19,6 +19,7 @@ export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
   CORS_ORIGINS?: string;
+  IMGBB_API_KEY?: string;
 }
 
 export interface JwtPayload {

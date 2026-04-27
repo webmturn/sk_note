@@ -12,6 +12,7 @@ const dbPath = process.env.DB_PATH || './data/sk-note.db';
 const port = parseInt(process.env.PORT || '3000');
 const jwtSecret = process.env.JWT_SECRET || '';
 const corsOrigins = process.env.CORS_ORIGINS || '';
+const imgbbApiKey = process.env.IMGBB_API_KEY || '';
 
 if (!jwtSecret) {
   console.error('❌ JWT_SECRET 未配置，请在 .env 文件中设置');
@@ -33,6 +34,7 @@ app.use('*', async (c, next) => {
   (c.env as any).DB = db;
   (c.env as any).JWT_SECRET = jwtSecret;
   (c.env as any).CORS_ORIGINS = corsOrigins;
+  (c.env as any).IMGBB_API_KEY = imgbbApiKey;
   // Polyfill Cloudflare Workers executionCtx
   try { c.executionCtx; } catch {
     Object.defineProperty(c, 'executionCtx', {
