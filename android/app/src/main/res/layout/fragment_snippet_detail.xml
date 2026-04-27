@@ -180,7 +180,9 @@
                             android:textSize="13sp"
                             android:fontFamily="monospace"
                             android:textColor="?attr/colorOnSurface"
-                            android:lineSpacingMultiplier="1.4" />
+                            android:lineSpacingMultiplier="1.4"
+                            android:textIsSelectable="true"
+                            android:breakStrategy="simple" />
                     </HorizontalScrollView>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
