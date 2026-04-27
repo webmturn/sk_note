@@ -9,6 +9,9 @@ import com.sknote.app.data.model.ChangePasswordRequest
 import com.sknote.app.data.model.User
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 class ProfileEditViewModel : ViewModel() {
 
@@ -23,6 +26,9 @@ class ProfileEditViewModel : ViewModel() {
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
+
+    private val _avatarUploadUrl = MutableLiveData<String?>()
+    val avatarUploadUrl: LiveData<String?> = _avatarUploadUrl
 
     fun loadProfile() {
         viewModelScope.launch {
@@ -56,6 +62,7 @@ class ProfileEditViewModel : ViewModel() {
                     _message.value = "资料更新成功"
                     ApiClient.getTokenManager().updateUsername(username)
                     ApiClient.getTokenManager().updateNickname(nickname)
+                    ApiClient.getTokenManager().updateAvatarUrl(avatarUrl.ifEmpty { null })
                     loadProfile()
                 } else {
                     val serverMsg = try {
@@ -66,6 +73,41 @@ class ProfileEditViewModel : ViewModel() {
                             409 -> "账号已被占用"
                             400 -> "输入不符合要求"
                             else -> "更新失败: ${response.code()}"
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _error.value = ErrorUtil.friendlyMessage(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun uploadAvatar(imageBytes: ByteArray, fileName: String, mimeType: String = "image/jpeg") {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val requestBody = imageBytes.toRequestBody(mimeType.toMediaTypeOrNull())
+                val avatarPart = MultipartBody.Part.createFormData("avatar", fileName, requestBody)
+                val response = ApiClient.getService().uploadAvatar(avatarPart)
+                if (response.isSuccessful) {
+                    val url = response.body()?.url.orEmpty()
+                    if (url.isNotEmpty()) {
+                        _avatarUploadUrl.value = url
+                        _message.value = "头像上传成功，请记得保存资料"
+                    } else {
+                        _error.value = "服务器未返回头像链接"
+                    }
+                } else {
+                    val serverMsg = try {
+                        org.json.JSONObject(response.errorBody()?.string() ?: "").optString("error", "")
+                    } catch (_: Exception) { "" }
+                    _error.value = serverMsg.ifEmpty {
+                        when (response.code()) {
+                            400 -> "图片格式或大小不符合要求"
+                            401 -> "请先登录后再上传头像"
+                            else -> "头像上传失败: ${response.code()}"
                         }
                     }
                 }
@@ -106,6 +148,7 @@ class ProfileEditViewModel : ViewModel() {
         }
     }
 
+    fun clearAvatarUploadUrl() { _avatarUploadUrl.value = null }
     fun clearMessage() { _message.value = null }
     fun clearError() { _error.value = null }
 }

@@ -8,6 +8,11 @@ data class MessageResponse(
     val id: Long? = null
 )
 
+data class ImageUploadResponse(
+    val url: String? = null,
+    val error: String? = null
+)
+
 data class PaginationInfo(
     val page: Int,
     val limit: Int,

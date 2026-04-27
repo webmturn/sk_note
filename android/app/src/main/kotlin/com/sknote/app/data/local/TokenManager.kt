@@ -40,6 +40,7 @@ class TokenManager(private val context: Context) {
     private val nicknameFlow = MutableStateFlow<String?>(null)
     private val userRoleFlow = MutableStateFlow<String?>(null)
     private val userIdFlow = MutableStateFlow<Long?>(null)
+    private val avatarUrlFlow = MutableStateFlow<String?>(null)
     private val createdAtFlow = MutableStateFlow<String?>(null)
 
     @Volatile
@@ -58,6 +59,7 @@ class TokenManager(private val context: Context) {
         private const val NICKNAME_KEY = "nickname"
         private const val USER_ROLE_KEY = "user_role"
         private const val USER_ID_KEY = "user_id"
+        private const val AVATAR_URL_KEY = "avatar_url"
         private const val CREATED_AT_KEY = "created_at"
         private const val LEGACY_MIGRATED_KEY = "legacy_migrated"
 
@@ -80,6 +82,7 @@ class TokenManager(private val context: Context) {
         val nickname = authPrefs.getString(NICKNAME_KEY, null)
         val role = authPrefs.getString(USER_ROLE_KEY, null)
         val userId = if (authPrefs.contains(USER_ID_KEY)) authPrefs.getLong(USER_ID_KEY, 0L).takeIf { it > 0L } else null
+        val avatarUrl = authPrefs.getString(AVATAR_URL_KEY, null)
         val createdAt = authPrefs.getString(CREATED_AT_KEY, null)
 
         cachedToken = token
@@ -88,6 +91,7 @@ class TokenManager(private val context: Context) {
         nicknameFlow.value = nickname
         userRoleFlow.value = role
         userIdFlow.value = userId
+        avatarUrlFlow.value = avatarUrl
         createdAtFlow.value = createdAt
     }
 
@@ -131,15 +135,17 @@ class TokenManager(private val context: Context) {
     fun getNickname(): Flow<String?> = nicknameFlow
     fun getUserRole(): Flow<String?> = userRoleFlow
     fun getUserId(): Flow<Long?> = userIdFlow
+    fun getAvatarUrl(): Flow<String?> = avatarUrlFlow
     fun getCreatedAt(): Flow<String?> = createdAtFlow
 
     val cachedUsername: String? get() = usernameFlow.value
     val cachedNickname: String? get() = nicknameFlow.value
     val cachedRole: String? get() = userRoleFlow.value
     val cachedUserId: Long? get() = userIdFlow.value
+    val cachedAvatarUrl: String? get() = avatarUrlFlow.value
     val cachedCreatedAt: String? get() = createdAtFlow.value
 
-    suspend fun saveAuth(token: String, username: String, role: String, userId: Long = 0L, nickname: String = "", createdAt: String? = null) {
+    suspend fun saveAuth(token: String, username: String, role: String, userId: Long = 0L, nickname: String = "", avatarUrl: String? = null, createdAt: String? = null) {
         authPrefs.edit()
             .putString(TOKEN_KEY, token)
             .putString(USERNAME_KEY, username)
@@ -151,8 +157,15 @@ class TokenManager(private val context: Context) {
                 } else {
                     remove(USER_ID_KEY)
                 }
+                if (!avatarUrl.isNullOrEmpty()) {
+                    putString(AVATAR_URL_KEY, avatarUrl)
+                } else {
+                    remove(AVATAR_URL_KEY)
+                }
                 if (!createdAt.isNullOrEmpty()) {
                     putString(CREATED_AT_KEY, createdAt)
+                } else {
+                    remove(CREATED_AT_KEY)
                 }
             }
             .apply()
@@ -174,12 +187,23 @@ class TokenManager(private val context: Context) {
         refreshAuthCache()
     }
 
+    suspend fun updateAvatarUrl(avatarUrl: String?) {
+        authPrefs.edit().apply {
+            if (!avatarUrl.isNullOrEmpty()) {
+                putString(AVATAR_URL_KEY, avatarUrl)
+            } else {
+                remove(AVATAR_URL_KEY)
+            }
+        }.apply()
+        refreshAuthCache()
+    }
+
     suspend fun updateCreatedAt(createdAt: String) {
         authPrefs.edit().putString(CREATED_AT_KEY, createdAt).apply()
         refreshAuthCache()
     }
 
-    suspend fun updateCurrentUser(userId: Long, username: String, nickname: String, role: String) {
+    suspend fun updateCurrentUser(userId: Long, username: String, nickname: String, role: String, avatarUrl: String? = null) {
         authPrefs.edit()
             .putString(USERNAME_KEY, username)
             .putString(NICKNAME_KEY, nickname.ifEmpty { username })
@@ -189,6 +213,11 @@ class TokenManager(private val context: Context) {
                     putLong(USER_ID_KEY, userId)
                 } else {
                     remove(USER_ID_KEY)
+                }
+                if (!avatarUrl.isNullOrEmpty()) {
+                    putString(AVATAR_URL_KEY, avatarUrl)
+                } else {
+                    remove(AVATAR_URL_KEY)
                 }
             }
             .apply()
@@ -202,6 +231,7 @@ class TokenManager(private val context: Context) {
             .remove(NICKNAME_KEY)
             .remove(USER_ROLE_KEY)
             .remove(USER_ID_KEY)
+            .remove(AVATAR_URL_KEY)
             .remove(CREATED_AT_KEY)
             .apply()
         appContext.dataStore.edit { prefs ->

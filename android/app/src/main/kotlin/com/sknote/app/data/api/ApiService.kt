@@ -1,6 +1,7 @@
 package com.sknote.app.data.api
 
 import com.sknote.app.data.model.*
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -154,6 +155,10 @@ interface ApiService {
 
     @PUT("api/auth/me")
     suspend fun updateProfile(@Body request: Map<String, String>): Response<MessageResponse>
+
+    @Multipart
+    @POST("api/auth/avatar/upload")
+    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): Response<ImageUploadResponse>
 
     // ============ 管理员：用户管理 ============
 

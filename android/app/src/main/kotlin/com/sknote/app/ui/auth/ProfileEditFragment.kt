@@ -1,5 +1,10 @@
 package com.sknote.app.ui.auth
 
+import android.content.ContentResolver
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -7,14 +12,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentProfileEditBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 class ProfileEditFragment : Fragment() {
 
@@ -32,6 +44,9 @@ class ProfileEditFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: ProfileEditViewModel by viewModels()
     private var initialDraftState = ProfileDraftState("", "", "", "", "", "", "")
+    private val pickAvatarImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { uploadAvatar(it) }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileEditBinding.inflate(inflater, container, false)
@@ -48,6 +63,8 @@ class ProfileEditFragment : Fragment() {
                 override fun handleOnBackPressed() { confirmExit() }
             }
         )
+        binding.ivAvatar.setOnClickListener { pickAvatarImage.launch("image/*") }
+        binding.btnUploadAvatar.setOnClickListener { pickAvatarImage.launch("image/*") }
 
         binding.btnSaveProfile.setOnClickListener {
             val nickname = binding.etNickname.text.toString().trim()
@@ -83,13 +100,7 @@ class ProfileEditFragment : Fragment() {
             binding.etUsername.setText(user.username)
             binding.etBio.setText(user.bio.orEmpty())
             binding.etAvatarUrl.setText(user.avatarUrl.orEmpty())
-            if (!user.avatarUrl.isNullOrEmpty()) {
-                Glide.with(this)
-                    .load(user.avatarUrl.orEmpty())
-                    .circleCrop()
-                    .placeholder(R.drawable.ic_account_circle)
-                    .into(binding.ivAvatar)
-            }
+            renderAvatar(user.avatarUrl)
             captureInitialDraftState()
         }
 
@@ -97,6 +108,15 @@ class ProfileEditFragment : Fragment() {
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.btnSaveProfile.isEnabled = !isLoading
             binding.btnChangePassword.isEnabled = !isLoading
+            binding.btnUploadAvatar.isEnabled = !isLoading
+        }
+
+        viewModel.avatarUploadUrl.observe(viewLifecycleOwner) { url ->
+            if (!url.isNullOrEmpty()) {
+                binding.etAvatarUrl.setText(url)
+                renderAvatar(url)
+                viewModel.clearAvatarUploadUrl()
+            }
         }
 
         viewModel.message.observe(viewLifecycleOwner) { msg ->
@@ -194,6 +214,134 @@ class ProfileEditFragment : Fragment() {
             valid = false
         }
         return valid
+    }
+
+    private fun renderAvatar(url: String?) {
+        if (!url.isNullOrEmpty()) {
+            Glide.with(this)
+                .load(url)
+                .circleCrop()
+                .placeholder(R.drawable.ic_account_circle)
+                .into(binding.ivAvatar)
+        } else {
+            Glide.with(this).clear(binding.ivAvatar)
+            binding.ivAvatar.setImageResource(R.drawable.ic_account_circle)
+        }
+    }
+
+    private fun uploadAvatar(uri: Uri) {
+        val resolver = requireContext().contentResolver
+        viewLifecycleOwner.lifecycleScope.launch {
+            val imageBytes = withContext(Dispatchers.IO) {
+                compressAvatarImage(uri, resolver)
+            }
+            if (imageBytes == null) {
+                Snackbar.make(binding.root, "头像图片处理失败", Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
+            viewModel.uploadAvatar(
+                imageBytes = imageBytes,
+                fileName = "avatar_${System.currentTimeMillis()}.jpg"
+            )
+        }
+    }
+
+    private fun compressAvatarImage(uri: Uri, resolver: ContentResolver): ByteArray? {
+        return try {
+            val boundsOptions = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            resolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, boundsOptions)
+            } ?: return null
+            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+                return null
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(
+                    width = boundsOptions.outWidth,
+                    height = boundsOptions.outHeight,
+                    reqWidth = 1440,
+                    reqHeight = 1440
+                )
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            val original = resolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+            } ?: return null
+            val rotated = applyExifOrientation(original, uri, resolver)
+
+            val maxWidth = 720
+            val scaled = if (rotated.width > maxWidth) {
+                val ratio = maxWidth.toFloat() / rotated.width
+                Bitmap.createScaledBitmap(rotated, maxWidth, (rotated.height * ratio).toInt(), true)
+            } else {
+                rotated
+            }
+
+            val output = ByteArrayOutputStream()
+            var quality = 85
+            do {
+                output.reset()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, output)
+                quality -= 10
+            } while (output.size() > 850 * 1024 && quality >= 45)
+
+            if (scaled !== rotated) scaled.recycle()
+            if (rotated !== original) rotated.recycle()
+            original.recycle()
+            output.toByteArray()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int, reqHeight: Int): Int {
+        var inSampleSize = 1
+        var currentWidth = width
+        var currentHeight = height
+        while (currentWidth / 2 >= reqWidth && currentHeight / 2 >= reqHeight) {
+            currentWidth /= 2
+            currentHeight /= 2
+            inSampleSize *= 2
+        }
+        return inSampleSize.coerceAtLeast(1)
+    }
+
+    private fun applyExifOrientation(bitmap: Bitmap, uri: Uri, resolver: ContentResolver): Bitmap {
+        val orientation = resolver.openInputStream(uri)?.use { inputStream ->
+            ExifInterface(inputStream).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )
+        } ?: ExifInterface.ORIENTATION_NORMAL
+
+        val matrix = Matrix()
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> {
+                matrix.setRotate(180f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                matrix.setRotate(90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                matrix.setRotate(-90f)
+                matrix.postScale(-1f, 1f)
+            }
+            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
+        }
+
+        return if (matrix.isIdentity) {
+            bitmap
+        } else {
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        }
     }
 
     private fun captureInitialDraftState() {
