@@ -1,5 +1,6 @@
 package com.sknote.app.ui.discussion
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import android.content.Intent
 import com.bumptech.glide.Glide
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
@@ -49,6 +51,32 @@ class DiscussionDetailFragment : Fragment() {
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
         get() = headerAdapter.headerBinding
+
+    private fun renderDiscussionAuthorAvatar(avatarUrl: String?) {
+        val h = hb ?: return
+        val placeholderPadding = (6 * resources.displayMetrics.density).toInt()
+        if (!avatarUrl.isNullOrEmpty()) {
+            h.ivAuthorAvatar.imageTintList = null
+            h.ivAuthorAvatar.setPadding(0, 0, 0, 0)
+            Glide.with(this)
+                .load(avatarUrl)
+                .circleCrop()
+                .placeholder(R.drawable.ic_person)
+                .into(h.ivAuthorAvatar)
+        } else {
+            Glide.with(this).clear(h.ivAuthorAvatar)
+            h.ivAuthorAvatar.setImageResource(R.drawable.ic_person)
+            h.ivAuthorAvatar.imageTintList = ColorStateList.valueOf(
+                MaterialColors.getColor(h.ivAuthorAvatar, com.google.android.material.R.attr.colorOnSecondaryContainer)
+            )
+            h.ivAuthorAvatar.setPadding(
+                placeholderPadding,
+                placeholderPadding,
+                placeholderPadding,
+                placeholderPadding
+            )
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDiscussionDetailBinding.inflate(inflater, container, false)
@@ -185,16 +213,7 @@ class DiscussionDetailFragment : Fragment() {
             }
             h.tvAuthor.setOnClickListener(navigateToAuthor)
             h.ivAuthorAvatar.setOnClickListener(navigateToAuthor)
-            if (!discussion.authorAvatar.isNullOrEmpty()) {
-                Glide.with(this@DiscussionDetailFragment)
-                    .load(discussion.authorAvatar)
-                    .circleCrop()
-                    .placeholder(R.drawable.ic_person)
-                    .into(h.ivAuthorAvatar)
-            } else {
-                Glide.with(this@DiscussionDetailFragment).clear(h.ivAuthorAvatar)
-                h.ivAuthorAvatar.setImageResource(R.drawable.ic_person)
-            }
+            renderDiscussionAuthorAvatar(discussion.authorAvatar)
             h.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
             h.tvViewCount.text = "${discussion.viewCount} 浏览"
             h.tvContent.visibility = View.VISIBLE

@@ -46,7 +46,10 @@ class CommentAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val comment = getItem(position)
         holder.binding.tvAuthor.text = comment.authorName ?: "匿名"
+        val placeholderPadding = (4 * holder.binding.root.context.resources.displayMetrics.density).toInt()
         if (!comment.authorAvatar.isNullOrEmpty()) {
+            holder.binding.ivAvatar.imageTintList = null
+            holder.binding.ivAvatar.setPadding(0, 0, 0, 0)
             Glide.with(holder.itemView.context)
                 .load(comment.authorAvatar)
                 .circleCrop()
@@ -55,6 +58,12 @@ class CommentAdapter(
         } else {
             Glide.with(holder.itemView.context).clear(holder.binding.ivAvatar)
             holder.binding.ivAvatar.setImageResource(R.drawable.ic_person)
+            holder.binding.ivAvatar.setPadding(
+                placeholderPadding,
+                placeholderPadding,
+                placeholderPadding,
+                placeholderPadding
+            )
         }
         holder.binding.tvContent.text = comment.content.orEmpty()
         holder.binding.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
