@@ -126,29 +126,29 @@ private fun resolveCategoryKeywordKey(source: String): String? = when {
 
 object AppIcons {
     object Category {
-        val Default = R.drawable.ic_mtrl_box
-        val Discussion = R.drawable.ic_nav_forum
-        val Article = R.drawable.ic_mtrl_article
-        val Reference = R.drawable.ic_nav_reference
-        val Book = R.drawable.ic_nav_book
-        val Code = R.drawable.ic_nav_code
-        val Blocks = R.drawable.ic_mtrl_block
-        val Palette = R.drawable.ic_mtrl_palette
-        val Bug = R.drawable.ic_mtrl_bug_report
+        val Default = R.drawable.ic_box
+        val Discussion = R.drawable.ic_forum
+        val Article = R.drawable.ic_article
+        val Reference = R.drawable.ic_reference
+        val Book = R.drawable.ic_book
+        val Code = R.drawable.ic_code
+        val Blocks = R.drawable.ic_blocks
+        val Palette = R.drawable.ic_palette
+        val Bug = R.drawable.ic_bug_report
         val Feedback = R.drawable.ic_feedback
         val Share = R.drawable.ic_share
-        val Question = R.drawable.ic_mtrl_help
-        val Feature = R.drawable.ic_mtrl_bulb
-        val Camera = R.drawable.ic_mtrl_camera
-        val Calendar = R.drawable.ic_mtrl_calendar
-        val Bookmark = R.drawable.ic_mtrl_bookmark
-        val Badge = R.drawable.ic_mtrl_badge
-        val Android = R.drawable.ic_mtrl_android
+        val Question = R.drawable.ic_help
+        val Feature = R.drawable.ic_feature
+        val Camera = R.drawable.ic_camera
+        val Calendar = R.drawable.ic_calendar
+        val Bookmark = R.drawable.ic_bookmark
+        val Badge = R.drawable.ic_badge
+        val Android = R.drawable.ic_android
         val Bluetooth = R.drawable.ic_comp_bluetooth
         val Firebase = R.drawable.ic_comp_firebase
         val Intent = R.drawable.ic_comp_intent
         val Location = R.drawable.ic_comp_location
-        val Person = R.drawable.ic_nav_person
+        val Person = R.drawable.ic_person
         val File = R.drawable.ic_comp_file
         val Database = R.drawable.ic_comp_database
         val Network = R.drawable.ic_comp_network
@@ -157,26 +157,26 @@ object AppIcons {
         val Dialog = R.drawable.ic_comp_dialog
         val SharedPref = R.drawable.ic_comp_sharedpref
         val Timer = R.drawable.ic_comp_timer
-        val Folder = R.drawable.ic_mtrl_folder
-        val FolderCode = R.drawable.ic_mtrl_folder_code
-        val Star = R.drawable.ic_mtrl_star
-        val Map = R.drawable.ic_mtrl_map
-        val AddCircle = R.drawable.ic_mtrl_add_circle
-        val Cloud = R.drawable.ic_mtrl_firebase_cloud
+        val Folder = R.drawable.ic_folder
+        val FolderCode = R.drawable.ic_folder_code
+        val Star = R.drawable.ic_star
+        val Map = R.drawable.ic_map
+        val AddCircle = R.drawable.ic_add_circle
+        val Cloud = R.drawable.ic_cloud
         val Settings = R.drawable.ic_settings
         val Info = R.drawable.ic_info
         val Alarm = R.drawable.ic_history
     }
 
     object Discussion {
-        val Pinned = R.drawable.ic_mtrl_pin_fill
+        val Pinned = R.drawable.ic_pin
         val PaletteShare = R.drawable.ic_palette
         val BlockShare = R.drawable.ic_blocks
-        val General = R.drawable.ic_nav_forum
+        val General = R.drawable.ic_forum
         val Question = R.drawable.ic_help
         val Feedback = R.drawable.ic_feedback
         val Bug = R.drawable.ic_bug_report
-        val Feature = R.drawable.ic_add
+        val Feature = R.drawable.ic_feature
     }
 
     object Analyzer {
