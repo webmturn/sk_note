@@ -1,7 +1,9 @@
 import { Context, Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth';
+import { purgeCache } from '../middleware/cache';
 import { rateLimit } from '../middleware/rateLimit';
+import { deleteNotificationsByRelatedTargets } from './notifications';
 import bcrypt from 'bcryptjs';
 
 export const authRoutes = new Hono<AppEnv>();
@@ -416,6 +418,34 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
       return c.json({ error: '不能删除其他管理员账号' }, 400);
     }
 
+    const affectedDiscussionsResult = await c.env.DB.prepare(`
+      SELECT DISTINCT c.discussion_id as id
+      FROM comments c
+      INNER JOIN discussions d ON d.id = c.discussion_id
+      WHERE c.author_id = ? AND d.author_id != ?
+    `).bind(userId, userId).all<{ id: number }>();
+    const affectedDiscussionIds = affectedDiscussionsResult.results.map((row) => row.id);
+
+    const deletedDiscussionsResult = await c.env.DB.prepare(
+      'SELECT id FROM discussions WHERE author_id = ?'
+    ).bind(userId).all<{ id: number }>();
+    const deletedDiscussionIds = deletedDiscussionsResult.results.map((row) => row.id);
+
+    const deletedArticlesResult = await c.env.DB.prepare(
+      'SELECT id FROM articles WHERE author_id = ?'
+    ).bind(userId).all<{ id: number }>();
+    const deletedArticleIds = deletedArticlesResult.results.map((row) => row.id);
+
+    const deletedSnippetsResult = await c.env.DB.prepare(
+      'SELECT id FROM snippets WHERE author_id = ?'
+    ).bind(userId).all<{ id: number }>();
+    const deletedSnippetIds = deletedSnippetsResult.results.map((row) => row.id);
+
+    const deletedSharesResult = await c.env.DB.prepare(
+      'SELECT id FROM shares WHERE author_id = ?'
+    ).bind(userId).all<{ id: number }>();
+    const deletedShareIds = deletedSharesResult.results.map((row) => row.id);
+
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(userId),
@@ -429,6 +459,52 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
       c.env.DB.prepare('DELETE FROM reading_history WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
     ]);
+
+    if (affectedDiscussionIds.length > 0) {
+      await c.env.DB.batch(
+        affectedDiscussionIds.map((discussionId) =>
+          c.env.DB.prepare(`
+            UPDATE discussions
+            SET reply_count = (
+              SELECT COUNT(*) FROM comments WHERE discussion_id = ?
+            ), updated_at = datetime('now')
+            WHERE id = ?
+          `).bind(discussionId, discussionId)
+        )
+      );
+    }
+
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'discussion', deletedDiscussionIds);
+
+    const baseUrl = new URL(c.req.url).origin;
+    const cacheUrls = new Set<string>([
+      `${baseUrl}/api/articles`,
+      `${baseUrl}/api/home`,
+      `${baseUrl}/api/discussions`,
+      `${baseUrl}/api/snippets`,
+      `${baseUrl}/api/snippets/categories`,
+      `${baseUrl}/api/shares`,
+      `${baseUrl}/api/shares/categories`,
+      `${baseUrl}/api/stats`,
+    ]);
+
+    for (const id of deletedArticleIds) {
+      cacheUrls.add(`${baseUrl}/api/articles/${id}`);
+    }
+    for (const id of deletedDiscussionIds) {
+      cacheUrls.add(`${baseUrl}/api/discussions/${id}`);
+    }
+    for (const id of affectedDiscussionIds) {
+      cacheUrls.add(`${baseUrl}/api/discussions/${id}`);
+    }
+    for (const id of deletedSnippetIds) {
+      cacheUrls.add(`${baseUrl}/api/snippets/${id}`);
+    }
+    for (const id of deletedShareIds) {
+      cacheUrls.add(`${baseUrl}/api/shares/${id}`);
+    }
+
+    await purgeCache([...cacheUrls]);
 
     return c.json({ message: '用户已删除' });
   } catch (e: any) {

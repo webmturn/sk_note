@@ -117,3 +117,17 @@ export async function createNotification(
     VALUES (?, ?, ?, ?, ?, ?)
   `).bind(userId, type, title, content, relatedType || null, relatedId || null).run();
 }
+
+export async function deleteNotificationsByRelatedTargets(
+  db: D1Database,
+  relatedType: string,
+  relatedIds: number[]
+) {
+  const ids = relatedIds.filter((id, index, arr) => Number.isInteger(id) && id > 0 && arr.indexOf(id) === index);
+  if (ids.length === 0) return;
+
+  const placeholders = ids.map(() => '?').join(', ');
+  await db.prepare(
+    `DELETE FROM notifications WHERE related_type = ? AND related_id IN (${placeholders})`
+  ).bind(relatedType, ...ids).run();
+}

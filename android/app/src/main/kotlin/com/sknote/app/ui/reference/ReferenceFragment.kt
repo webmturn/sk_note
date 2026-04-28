@@ -131,11 +131,12 @@ class ReferenceFragment : Fragment() {
     private fun updateSubtitle() {
         val total = ReferenceData.getItemCount()
         val bm = getBookmarkedIds().size
+        val selectedType = currentType
         binding.tvSubtitle.text = when {
             showingBookmarks -> "已收藏 $bm 项参考"
             currentCategory != null && currentType != null -> "${typeLabel(currentType)} / $currentCategory"
             currentShape != null && currentType != null -> "${typeLabel(currentType)} / ${shapeLabel(currentShape)}"
-            currentType != null -> "${typeLabel(currentType)} · 共 ${ReferenceData.getByType(currentType!!).size} 项"
+            selectedType != null -> "${typeLabel(selectedType)} · 共 ${ReferenceData.getByType(selectedType).size} 项"
             else -> "共 $total 项参考 · 已收藏 $bm 项"
         }
     }

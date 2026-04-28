@@ -160,10 +160,6 @@ interface ApiService {
     @POST("api/auth/image/upload")
     suspend fun uploadImage(@Part image: MultipartBody.Part): Response<ImageUploadResponse>
 
-    @Multipart
-    @POST("api/auth/avatar/upload")
-    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): Response<ImageUploadResponse>
-
     // ============ 管理员：用户管理 ============
 
     @GET("api/auth/users")

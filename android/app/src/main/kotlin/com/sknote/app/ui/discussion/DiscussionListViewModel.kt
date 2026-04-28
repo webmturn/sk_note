@@ -25,14 +25,7 @@ class DiscussionListViewModel : ViewModel() {
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    private var lastLoadTime = 0L
-    private var lastCategory: String? = null
-    private var lastArticleId: Long? = null
-    private val cacheDuration = 60_000L
-
-    fun invalidateCache() {
-        lastLoadTime = 0L
-    }
+    fun invalidateCache() = Unit
 
     fun loadCategories() {
         viewModelScope.launch {
@@ -46,13 +39,8 @@ class DiscussionListViewModel : ViewModel() {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun loadDiscussions(category: String? = null, articleId: Long? = null, force: Boolean = false) {
-        val now = System.currentTimeMillis()
-        if (!force && category == lastCategory && articleId == lastArticleId && now - lastLoadTime < cacheDuration && _discussions.value != null) {
-            return
-        }
-        lastCategory = category
-        lastArticleId = articleId
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -60,7 +48,6 @@ class DiscussionListViewModel : ViewModel() {
                 val response = ApiClient.getService().getDiscussions(category = category, articleId = articleId)
                 if (response.isSuccessful) {
                     _discussions.value = response.body()?.discussions ?: emptyList()
-                    lastLoadTime = System.currentTimeMillis()
                 } else {
                     _error.value = "加载失败"
                 }

@@ -22,21 +22,14 @@ class DiscussionManageViewModel : ViewModel() {
 
     fun clearMessage() { _message.value = null }
 
-    private var lastLoadTime = 0L
-    private val cacheDuration = 60_000L
-
+    @Suppress("UNUSED_PARAMETER")
     fun loadDiscussions(force: Boolean = false) {
-        val now = System.currentTimeMillis()
-        if (!force && now - lastLoadTime < cacheDuration && _discussions.value != null) {
-            return
-        }
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = ApiClient.getService().getDiscussions(page = 1, limit = 100)
                 if (response.isSuccessful) {
                     _discussions.value = response.body()?.discussions ?: emptyList()
-                    lastLoadTime = System.currentTimeMillis()
                 } else {
                     _message.value = "加载失败: ${response.code()}"
                 }

@@ -4,7 +4,7 @@ import { authMiddleware, isOwnerOrEditorOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
-import { createNotification } from './notifications';
+import { createNotification, deleteNotificationsByRelatedTargets } from './notifications';
 
 export const discussionRoutes = new Hono<AppEnv>();
 
@@ -372,6 +372,7 @@ discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
   }
 
   await c.env.DB.prepare('DELETE FROM discussions WHERE id = ?').bind(id).run();
+  await deleteNotificationsByRelatedTargets(c.env.DB, 'discussion', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
   return c.json({ message: '删除成功' });
@@ -382,11 +383,19 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
   const commentId = c.req.param('commentId');
   const discussionId = c.req.param('id');
 
+  const discussionIdNum = Number.parseInt(discussionId, 10);
+  if (!Number.isInteger(discussionIdNum) || discussionIdNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+
   const comment = await c.env.DB.prepare(
-    'SELECT author_id FROM comments WHERE id = ?'
-  ).bind(commentId).first<{ author_id: number }>();
+    'SELECT author_id, discussion_id FROM comments WHERE id = ?'
+  ).bind(commentId).first<{ author_id: number; discussion_id: number }>();
 
   if (!comment) return c.json({ error: '评论不存在' }, 404);
+  if (comment.discussion_id !== discussionIdNum) {
+    return c.json({ error: '评论不属于当前讨论' }, 400);
+  }
   if (!(await isOwnerOrEditorOrAdmin(c, comment.author_id))) {
     return c.json({ error: '无权删除' }, 403);
   }
@@ -405,7 +414,7 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
   await c.env.DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run();
   await c.env.DB.prepare(
     'UPDATE discussions SET reply_count = MAX(0, reply_count - ?) WHERE id = ?'
-  ).bind(deleteCount, discussionId).run();
+  ).bind(deleteCount, discussionIdNum).run();
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${discussionId}`]);
@@ -414,11 +423,22 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
 
 // 点赞评论
 discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (c) => {
+  const discussionId = c.req.param('id');
   const commentId = c.req.param('commentId');
   const user = c.get('user')!;
 
-  const comment = await c.env.DB.prepare('SELECT id FROM comments WHERE id = ?').bind(commentId).first();
+  const discussionIdNum = Number.parseInt(discussionId, 10);
+  if (!Number.isInteger(discussionIdNum) || discussionIdNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+
+  const comment = await c.env.DB.prepare(
+    'SELECT id, discussion_id FROM comments WHERE id = ?'
+  ).bind(commentId).first<{ id: number; discussion_id: number }>();
   if (!comment) return c.json({ error: '评论不存在' }, 404);
+  if (comment.discussion_id !== discussionIdNum) {
+    return c.json({ error: '评论不属于当前讨论' }, 400);
+  }
 
   const result = await toggleLike(c, {
     userId: user.id,

@@ -23,16 +23,10 @@ class UserManageViewModel : ViewModel() {
     val message: LiveData<String?> = _message
 
     fun clearMessage() { _message.value = null }
-
-    private var lastLoadTime = 0L
-    private val cacheDuration = 60_000L
     private var currentSearch: String? = null
 
+    @Suppress("UNUSED_PARAMETER")
     fun loadUsers(force: Boolean = false, search: String? = null) {
-        val now = System.currentTimeMillis()
-        if (!force && search == currentSearch && now - lastLoadTime < cacheDuration && _users.value != null) {
-            return
-        }
         currentSearch = search
         viewModelScope.launch {
             _isLoading.value = true
@@ -40,7 +34,6 @@ class UserManageViewModel : ViewModel() {
                 val response = ApiClient.getService().getUsers(page = 1, limit = 100, search = search)
                 if (response.isSuccessful) {
                     _users.value = response.body()?.users ?: emptyList()
-                    lastLoadTime = System.currentTimeMillis()
                 } else {
                     _message.value = "加载失败: ${response.code()}"
                 }

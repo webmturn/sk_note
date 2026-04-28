@@ -24,23 +24,10 @@ class ShareListViewModel : ViewModel() {
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    private var lastLoadTime = 0L
-    private var lastCategory: String? = null
-    private var lastSearch: String? = null
-    private val cacheDuration = 60_000L
+    fun invalidateCache() = Unit
 
-    fun invalidateCache() {
-        lastLoadTime = 0L
-    }
-
+    @Suppress("UNUSED_PARAMETER")
     fun loadShares(category: String? = null, search: String? = null, force: Boolean = false) {
-        val now = System.currentTimeMillis()
-        if (!force && category == lastCategory && search == lastSearch
-            && now - lastLoadTime < cacheDuration && _shares.value != null) {
-            return
-        }
-        lastCategory = category
-        lastSearch = search
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -50,7 +37,6 @@ class ShareListViewModel : ViewModel() {
                 )
                 if (response.isSuccessful) {
                     _shares.value = response.body()?.shares ?: emptyList()
-                    lastLoadTime = System.currentTimeMillis()
                 } else {
                     _error.value = "加载失败"
                 }
