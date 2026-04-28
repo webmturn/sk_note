@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Context, Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth';
 import { rateLimit } from '../middleware/rateLimit';
@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 export const authRoutes = new Hono<AppEnv>();
 
 const BCRYPT_ROUNDS = 10;
+const MAX_UPLOAD_SIZE = 1024 * 1024;
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -52,7 +53,7 @@ function arrayBufferToBase64(arrayBuffer: ArrayBuffer): string {
 
 function sanitizeUploadFileName(fileName: string): string {
   const safeName = fileName.trim().replace(/[^a-zA-Z0-9._-]/g, '_');
-  return safeName || `avatar_${Date.now()}.jpg`;
+  return safeName || `upload_${Date.now()}.jpg`;
 }
 
 type ImgBbUploadResponse = {
@@ -67,7 +68,7 @@ type ImgBbUploadResponse = {
   message?: string;
 };
 
-async function uploadAvatarToImgBb(file: File, apiKey: string): Promise<string> {
+async function uploadImageToImgBb(file: File, apiKey: string): Promise<string> {
   const imageBase64 = arrayBufferToBase64(await file.arrayBuffer());
   const formData = new FormData();
   formData.append('image', imageBase64);
@@ -87,6 +88,38 @@ async function uploadAvatarToImgBb(file: File, apiKey: string): Promise<string> 
   }
 
   return imageUrl;
+}
+
+async function handleImageUpload(c: Context<AppEnv>) {
+  try {
+    const apiKey = (c.env.IMGBB_API_KEY || '').trim();
+    if (!apiKey) {
+      return c.json({ error: '服务器未配置 ImgBB API Key' }, 500);
+    }
+
+    const formData = await c.req.formData();
+    const imageEntry = formData.get('image') ?? formData.get('avatar');
+
+    if (!imageEntry || typeof imageEntry === 'string') {
+      return c.json({ error: '请上传图片文件' }, 400);
+    }
+    const image = imageEntry as File;
+    if (!image.type.startsWith('image/')) {
+      return c.json({ error: '仅支持图片文件' }, 400);
+    }
+    if (image.size <= 0) {
+      return c.json({ error: '图片不能为空' }, 400);
+    }
+    if (image.size > MAX_UPLOAD_SIZE) {
+      return c.json({ error: '图片不能超过 1MB' }, 400);
+    }
+
+    const url = await uploadImageToImgBb(image, apiKey);
+    return c.json({ url });
+  } catch (e: any) {
+    console.error('图片上传失败:', e);
+    return c.json({ error: e?.message || '图片上传失败' }, 500);
+  }
 }
 
 // 注册
@@ -213,36 +246,12 @@ authRoutes.get('/me', authMiddleware(), async (c) => {
   return c.json({ user });
 });
 
-authRoutes.post('/avatar/upload', rateLimit({ key: 'auth:avatar-upload', maxRequests: 10, windowMs: 15 * 60 * 1000 }), authMiddleware(), async (c) => {
-  try {
-    const apiKey = (c.env.IMGBB_API_KEY || '').trim();
-    if (!apiKey) {
-      return c.json({ error: '服务器未配置 ImgBB API Key' }, 500);
-    }
+authRoutes.post('/image/upload', rateLimit({ key: 'auth:image-upload', maxRequests: 10, windowMs: 15 * 60 * 1000 }), authMiddleware(), async (c) => {
+  return handleImageUpload(c);
+});
 
-    const formData = await c.req.formData();
-    const avatarEntry = formData.get('avatar') ?? formData.get('image');
-
-    if (!avatarEntry || typeof avatarEntry === 'string') {
-      return c.json({ error: '请上传图片文件' }, 400);
-    }
-    const avatar = avatarEntry as File;
-    if (!avatar.type.startsWith('image/')) {
-      return c.json({ error: '仅支持图片文件' }, 400);
-    }
-    if (avatar.size <= 0) {
-      return c.json({ error: '图片不能为空' }, 400);
-    }
-    if (avatar.size > 1024 * 1024) {
-      return c.json({ error: '图片不能超过 1MB' }, 400);
-    }
-
-    const url = await uploadAvatarToImgBb(avatar, apiKey);
-    return c.json({ url });
-  } catch (e: any) {
-    console.error('头像上传失败:', e);
-    return c.json({ error: e?.message || '头像上传失败' }, 500);
-  }
+authRoutes.post('/avatar/upload', rateLimit({ key: 'auth:image-upload', maxRequests: 10, windowMs: 15 * 60 * 1000 }), authMiddleware(), async (c) => {
+  return handleImageUpload(c);
 });
 
 // 更新个人信息

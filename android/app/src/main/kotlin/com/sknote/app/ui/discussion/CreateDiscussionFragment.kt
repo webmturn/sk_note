@@ -2,7 +2,6 @@ package com.sknote.app.ui.discussion
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -19,10 +18,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
-import com.sknote.app.data.api.SmmsUploader
+import com.sknote.app.data.api.BackendImageUploader
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentCreateDiscussionBinding
-import com.sknote.app.ui.reference.BlockShapeView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -259,7 +257,7 @@ class CreateDiscussionFragment : Fragment() {
                 }
 
                 val fileName = "img_${System.currentTimeMillis()}.jpg"
-                val result = SmmsUploader.upload(bytes, fileName)
+                val result = BackendImageUploader.upload(bytes, fileName)
 
                 val p = imageAdapter.indexOfUri(uri)
                 if (p < 0) return@launch
@@ -281,11 +279,30 @@ class CreateDiscussionFragment : Fragment() {
 
     private fun compressImage(uri: Uri, resolver: android.content.ContentResolver): ByteArray? {
         return try {
-            val inputStream = resolver.openInputStream(uri) ?: return null
-            val original = BitmapFactory.decodeStream(inputStream)
-            inputStream.close()
+            val boundsOptions = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            resolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, boundsOptions)
+            } ?: return null
+            if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+                return null
+            }
 
-            val maxWidth = 1200
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(
+                    width = boundsOptions.outWidth,
+                    height = boundsOptions.outHeight,
+                    reqWidth = 1280,
+                    reqHeight = 1280
+                )
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            val original = resolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream, null, decodeOptions)
+            } ?: return null
+
+            val maxWidth = 960
             val scaled = if (original.width > maxWidth) {
                 val ratio = maxWidth.toFloat() / original.width
                 Bitmap.createScaledBitmap(original, maxWidth, (original.height * ratio).toInt(), true)
@@ -294,13 +311,31 @@ class CreateDiscussionFragment : Fragment() {
             }
 
             val baos = ByteArrayOutputStream()
-            scaled.compress(Bitmap.CompressFormat.JPEG, 80, baos)
+            var quality = 82
+            do {
+                baos.reset()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+                quality -= 8
+            } while (baos.size() > 850 * 1024 && quality >= 42)
+
             if (scaled !== original) scaled.recycle()
             original.recycle()
             baos.toByteArray()
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int, reqHeight: Int): Int {
+        var inSampleSize = 1
+        var currentWidth = width
+        var currentHeight = height
+        while (currentWidth / 2 >= reqWidth && currentHeight / 2 >= reqHeight) {
+            currentWidth /= 2
+            currentHeight /= 2
+            inSampleSize *= 2
+        }
+        return inSampleSize.coerceAtLeast(1)
     }
 
     private fun submitDiscussion() {

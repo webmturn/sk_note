@@ -5,13 +5,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sknote.app.data.api.ApiClient
+import com.sknote.app.data.api.BackendImageUploader
 import com.sknote.app.data.model.ChangePasswordRequest
 import com.sknote.app.data.model.User
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 
 class ProfileEditViewModel : ViewModel() {
 
@@ -88,11 +86,13 @@ class ProfileEditViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val requestBody = imageBytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val avatarPart = MultipartBody.Part.createFormData("avatar", fileName, requestBody)
-                val response = ApiClient.getService().uploadAvatar(avatarPart)
-                if (response.isSuccessful) {
-                    val url = response.body()?.url.orEmpty()
+                val result = BackendImageUploader.upload(
+                    imageBytes = imageBytes,
+                    fileName = fileName,
+                    mimeType = mimeType
+                )
+                if (result.success) {
+                    val url = result.url.orEmpty()
                     if (url.isNotEmpty()) {
                         _avatarUploadUrl.value = url
                         _message.value = "头像上传成功，请记得保存资料"
@@ -100,16 +100,7 @@ class ProfileEditViewModel : ViewModel() {
                         _error.value = "服务器未返回头像链接"
                     }
                 } else {
-                    val serverMsg = try {
-                        org.json.JSONObject(response.errorBody()?.string() ?: "").optString("error", "")
-                    } catch (_: Exception) { "" }
-                    _error.value = serverMsg.ifEmpty {
-                        when (response.code()) {
-                            400 -> "图片格式或大小不符合要求"
-                            401 -> "请先登录后再上传头像"
-                            else -> "头像上传失败: ${response.code()}"
-                        }
-                    }
+                    _error.value = result.error ?: "头像上传失败"
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)

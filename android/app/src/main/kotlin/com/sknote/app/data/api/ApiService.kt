@@ -157,6 +157,10 @@ interface ApiService {
     suspend fun updateProfile(@Body request: Map<String, String>): Response<MessageResponse>
 
     @Multipart
+    @POST("api/auth/image/upload")
+    suspend fun uploadImage(@Part image: MultipartBody.Part): Response<ImageUploadResponse>
+
+    @Multipart
     @POST("api/auth/avatar/upload")
     suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): Response<ImageUploadResponse>
 
