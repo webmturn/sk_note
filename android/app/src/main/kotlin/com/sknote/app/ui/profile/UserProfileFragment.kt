@@ -130,6 +130,22 @@ class UserProfileFragment : Fragment() {
                 }
             }
 
+        navHandle?.getLiveData<Boolean>("refresh_profile")
+            ?.observe(viewLifecycleOwner) { shouldRefresh ->
+                if (shouldRefresh == true) {
+                    loadData()
+                    navHandle.remove<Boolean>("refresh_profile")
+                }
+            }
+
+        navHandle?.getLiveData<String>("profile_result_message")
+            ?.observe(viewLifecycleOwner) { message ->
+                if (!message.isNullOrEmpty()) {
+                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    navHandle.remove<String>("profile_result_message")
+                }
+            }
+
         val navOptions = androidx.navigation.NavOptions.Builder()
             .setEnterAnim(R.anim.slide_in_right)
             .setExitAnim(R.anim.slide_out_left)

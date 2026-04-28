@@ -15,7 +15,8 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -79,8 +80,58 @@
                         android:layout_marginTop="12dp"
                         android:text="从相册上传"
                         style="@style/Widget.Material3.Button.TonalButton" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="也可以直接点击头像重新选择"
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textSize="12sp"
+                        android:alpha="0.72" />
+
+                    <TextView
+                        android:id="@+id/tvProfileStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="正在加载资料..."
+                        android:textColor="?attr/colorOnPrimaryContainer"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="基础资料"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="这些内容会展示在你的个人主页，保存后会立即同步。"
+                android:textSize="13sp"
+                android:alpha="0.72" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
             <TextView
                 android:layout_width="wrap_content"
@@ -103,7 +154,9 @@
                     android:id="@+id/etNickname"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints="name"
                     android:hint="显示给其他用户的名字，支持中文"
+                    android:imeOptions="actionNext"
                     android:inputType="text"
                     android:maxLength="20"
                     android:singleLine="true" />
@@ -129,7 +182,9 @@
                     android:id="@+id/etUsername"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints="username"
                     android:hint="账号（至少2个字符）"
+                    android:imeOptions="actionNext"
                     android:inputType="text"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -156,6 +211,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="介绍一下自己吧..."
+                    android:imeOptions="actionNext"
                     android:inputType="textMultiLine"
                     android:minLines="2"
                     android:maxLines="5"
@@ -175,6 +231,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
+                app:endIconMode="clear_text"
+                app:helperText="留空则使用默认头像，也可以粘贴 http/https 图片链接"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -182,6 +240,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="输入头像图片链接"
+                    android:imeOptions="actionDone"
                     android:inputType="textUri"
                     android:singleLine="true" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -191,21 +250,43 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="保存资料"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_marginBottom="24dp" />
+                style="@style/Widget.Material3.Button"
+                android:layout_marginTop="4dp" />
 
-            <com.google.android.material.divider.MaterialDivider
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="修改密码"
-                android:textSize="14sp"
+                android:text="账号安全"
+                android:textSize="16sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="密码修改会单独提交，只有完整填写后才可点击提交。"
+                android:textSize="13sp"
+                android:alpha="0.72" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layoutOldPassword"
@@ -219,7 +300,9 @@
                     android:id="@+id/etOldPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints="password"
                     android:hint="当前密码"
+                    android:imeOptions="actionNext"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -235,7 +318,9 @@
                     android:id="@+id/etNewPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:autofillHints="newPassword"
                     android:hint="新密码（至少6位）"
+                    android:imeOptions="actionNext"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -252,6 +337,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="确认新密码"
+                    android:imeOptions="actionDone"
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -260,7 +346,11 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="修改密码"
-                android:layout_marginBottom="16dp" />
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <ProgressBar
                 android:id="@+id/progressBar"
