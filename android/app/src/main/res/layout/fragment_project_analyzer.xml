@@ -27,7 +27,7 @@
         <ImageView
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:src="@drawable/ic_comp_file"
+            android:src="@drawable/ic_file"
             android:alpha="0.5"
             android:layout_marginBottom="16dp" />
 

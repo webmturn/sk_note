@@ -144,19 +144,19 @@ object AppIcons {
         val Bookmark = R.drawable.ic_bookmark
         val Badge = R.drawable.ic_badge
         val Android = R.drawable.ic_android
-        val Bluetooth = R.drawable.ic_comp_bluetooth
-        val Firebase = R.drawable.ic_comp_firebase
-        val Intent = R.drawable.ic_comp_intent
-        val Location = R.drawable.ic_comp_location
+        val Bluetooth = R.drawable.ic_bluetooth
+        val Firebase = R.drawable.ic_firebase
+        val Intent = R.drawable.ic_intent
+        val Location = R.drawable.ic_location
         val Person = R.drawable.ic_person
-        val File = R.drawable.ic_comp_file
-        val Database = R.drawable.ic_comp_database
-        val Network = R.drawable.ic_comp_network
-        val Media = R.drawable.ic_comp_media
-        val Notification = R.drawable.ic_comp_notification
-        val Dialog = R.drawable.ic_comp_dialog
-        val SharedPref = R.drawable.ic_comp_sharedpref
-        val Timer = R.drawable.ic_comp_timer
+        val File = R.drawable.ic_file
+        val Database = R.drawable.ic_database
+        val Network = R.drawable.ic_network
+        val Media = R.drawable.ic_media
+        val Notification = R.drawable.ic_notification
+        val Dialog = R.drawable.ic_dialog
+        val SharedPref = R.drawable.ic_sharedpref
+        val Timer = R.drawable.ic_timer
         val Folder = R.drawable.ic_folder
         val FolderCode = R.drawable.ic_folder_code
         val Star = R.drawable.ic_star
@@ -165,7 +165,7 @@ object AppIcons {
         val Cloud = R.drawable.ic_cloud
         val Settings = R.drawable.ic_settings
         val Info = R.drawable.ic_info
-        val Alarm = R.drawable.ic_history
+        val Alarm = R.drawable.ic_alarm
     }
 
     object Discussion {
@@ -333,29 +333,29 @@ object ReferenceIconResolver {
         val name = itemName.lowercase()
         return when (itemType) {
             "component" -> when {
-                name.contains("intent") -> R.drawable.ic_comp_intent
-                name.contains("sharedpreferences") -> R.drawable.ic_comp_sharedpref
-                name.contains("sqlite") -> R.drawable.ic_comp_database
+                name.contains("intent") -> R.drawable.ic_intent
+                name.contains("sharedpreferences") -> R.drawable.ic_sharedpref
+                name.contains("sqlite") -> R.drawable.ic_database
                 name.contains("calendar") -> R.drawable.ic_comp_calendar
                 name.contains("vibrator") -> R.drawable.ic_comp_vibrate
-                name.contains("timer") -> R.drawable.ic_comp_timer
-                name.contains("progressdialog") -> R.drawable.ic_comp_dialog
-                name.contains("timepickerdialog") -> R.drawable.ic_comp_timer
-                name.contains("dialog") -> R.drawable.ic_comp_dialog
-                name.contains("mediaplayer") -> R.drawable.ic_comp_media
+                name.contains("timer") -> R.drawable.ic_timer
+                name.contains("progressdialog") -> R.drawable.ic_dialog
+                name.contains("timepickerdialog") -> R.drawable.ic_timer
+                name.contains("dialog") -> R.drawable.ic_dialog
+                name.contains("mediaplayer") -> R.drawable.ic_media
                 name.contains("soundpool") -> R.drawable.ic_comp_sound
                 name.contains("camera") -> R.drawable.ic_comp_camera
-                name.contains("filepicker") -> R.drawable.ic_comp_file
-                name.contains("requestnetwork") -> R.drawable.ic_comp_network
-                name.contains("firebase") -> R.drawable.ic_comp_firebase
+                name.contains("filepicker") -> R.drawable.ic_file
+                name.contains("requestnetwork") -> R.drawable.ic_network
+                name.contains("firebase") -> R.drawable.ic_firebase
                 name.contains("interstitial") || name.contains("rewarded") -> R.drawable.ic_comp_ad
                 name.contains("objectanimator") -> R.drawable.ic_comp_animation
                 name.contains("gyroscope") -> R.drawable.ic_comp_gyroscope
                 name.contains("texttospeech") -> R.drawable.ic_comp_tts
                 name.contains("speechtotext") -> R.drawable.ic_comp_stt
-                name.contains("bluetooth") -> R.drawable.ic_comp_bluetooth
-                name.contains("location") -> R.drawable.ic_comp_location
-                name.contains("notification") -> R.drawable.ic_comp_notification
+                name.contains("bluetooth") -> R.drawable.ic_bluetooth
+                name.contains("location") -> R.drawable.ic_location
+                name.contains("notification") -> R.drawable.ic_notification
                 else -> R.drawable.ic_comp_default
             }
             "widget" -> when {
