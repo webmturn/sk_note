@@ -74,6 +74,17 @@ class BlockShapeView @JvmOverloads constructor(
             requestLayout(); invalidate()
         }
 
+    /**
+     * Optional overrides used by [BlockContainerView] to make c/e shapes large
+     * enough to embed real substack content. Set to 0 to use default minHeight.
+     */
+    var substack1ExtraHeight: Int = 0
+        set(value) { field = value; requestLayout(); invalidate() }
+    var substack2ExtraHeight: Int = 0
+        set(value) { field = value; requestLayout(); invalidate() }
+    var substackExtraWidth: Int = 0
+        set(value) { field = value; requestLayout(); invalidate() }
+
     // ---- Spec 解析 ----
     private sealed class Seg {
         data class Txt(val t: String) : Seg()
@@ -149,8 +160,8 @@ class BlockShapeView @JvmOverloads constructor(
             else -> topSpacing
         }
         bh = textHeight + actualTopSpacing + bottomSpacing
-        ch = minHeight
-        ih = minHeight
+        ch = if (substack1ExtraHeight > minHeight) substack1ExtraHeight else minHeight
+        ih = if (substack2ExtraHeight > minHeight) substack2ExtraHeight else minHeight
 
         val contentW = if (parsedSegments.isNotEmpty()) {
             var w = specPadH
@@ -167,8 +178,35 @@ class BlockShapeView @JvmOverloads constructor(
         } else {
             if (blockLabel.isNotEmpty()) (textPaint.measureText(blockLabel) + 20 * density).toInt() else 0
         }
-        bw = maxOf(contentW, defaultMinWidth)
+        // Expand width to fit substack content if requested.
+        val substackRequiredW = if (substackExtraWidth > 0) {
+            cornerRadius + substackExtraWidth + (4 * density).toInt()
+        } else 0
+        bw = maxOf(contentW, defaultMinWidth, substackRequiredW)
     }
+
+    // ---- Layout coordinates exposed for [BlockContainerView] ----
+
+    /** Recomputes sizes then returns the header (top bar) height in px. */
+    fun computedHeaderHeight(): Int { computeSizes(); return bh }
+    /** Top y of the first substack region (relative to the view). */
+    fun computedSubstack1Top(): Int { computeSizes(); return bh }
+    /** Bottom y of the first substack region. */
+    fun computedSubstack1Bottom(): Int { computeSizes(); return bh + ch - borderWidth }
+    /** Top y of the second substack region (e-block). */
+    fun computedSubstack2Top(): Int {
+        computeSizes()
+        return bh + ch - borderWidth + bottomPadding
+    }
+    /** Bottom y of the second substack region. */
+    fun computedSubstack2Bottom(): Int {
+        computeSizes()
+        return bh + ch - borderWidth + bottomPadding + ih - borderWidth
+    }
+    /** Left padding from view edge to where substack content should start. */
+    fun computedSubstackLeftIndent(): Int = cornerRadius + (2 * density).toInt()
+    /** Cached width of the rendered shape (post computeSizes). */
+    fun computedShapeWidth(): Int { computeSizes(); return bw }
 
     // 源码 getTotalHeight() L648-662:
     // shapeType 4(语句)/7(帽子)/10(C块) → +borderWidth
@@ -187,6 +225,27 @@ class BlockShapeView @JvmOverloads constructor(
     }
 
     private val strokePad = (outlinePaint.strokeWidth + 1f).toInt()
+
+    /** The stroke padding applied around the drawn shape; used by [BlockContainerView]. */
+    val computedStrokePad: Int get() = strokePad
+
+    /**
+     * Negative top margin sequential blocks should use so the previous block's
+     * male connector visually fits into the next block's female slot, while also
+     * collapsing the strokePad empty rim that exists on both views.
+     *
+     *  overlap = borderWidth (the connector depth) + 2 * strokePad (top + bottom rim)
+     */
+    val computedInterlockOverlap: Int get() = borderWidth + 2 * strokePad
+
+    companion object {
+        /** Same as the instance accessor but computable without a view. */
+        fun interlockOverlap(density: Float): Int {
+            val border = (3 * density).toInt()
+            val stroke = (maxOf(2f, 1.5f * density) + 1f).toInt()
+            return border + 2 * stroke
+        }
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         computeSizes()
