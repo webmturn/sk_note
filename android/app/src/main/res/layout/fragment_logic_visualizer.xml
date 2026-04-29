@@ -27,7 +27,7 @@
         <ImageView
             android:layout_width="64dp"
             android:layout_height="64dp"
-            android:src="@drawable/ic_comp_file"
+            android:src="@drawable/ic_file"
             android:alpha="0.5"
             android:layout_marginBottom="16dp" />
 
@@ -139,15 +139,16 @@
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <!-- Event chips scroll -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvEvents"
+        <!-- Tabs: 概览 / 事件 / 视图 / 资源 -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabsView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
-            android:clipToPadding="false"
-            android:background="?attr/colorSurface" />
+            android:background="?attr/colorSurface"
+            app:tabMode="scrollable"
+            app:tabIndicatorColor="?attr/colorPrimary"
+            app:tabSelectedTextColor="?attr/colorPrimary"
+            app:tabTextColor="?attr/colorOnSurfaceVariant" />
 
         <View
             android:layout_width="match_parent"
@@ -155,27 +156,103 @@
             android:background="?attr/colorOutlineVariant"
             android:alpha="0.3" />
 
-        <!-- Block visualization scroll -->
-        <androidx.core.widget.NestedScrollView
-            android:id="@+id/scrollBlocks"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <HorizontalScrollView
+            <!-- Tab 1: Overview -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollOverview"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fillViewport="true">
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
 
                 <LinearLayout
-                    android:id="@+id/layoutBlocks"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/layoutOverview"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="14dp"
-                    android:minWidth="400dp" />
-            </HorizontalScrollView>
-        </androidx.core.widget.NestedScrollView>
+                    android:padding="14dp" />
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 2: Events (existing block visualization) -->
+            <LinearLayout
+                android:id="@+id/panelEvents"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvEvents"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp"
+                    android:clipToPadding="false"
+                    android:background="?attr/colorSurface" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant"
+                    android:alpha="0.3" />
+
+                <androidx.core.widget.NestedScrollView
+                    android:id="@+id/scrollBlocks"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fillViewport="true">
+
+                        <LinearLayout
+                            android:id="@+id/layoutBlocks"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp"
+                            android:minWidth="400dp" />
+                    </HorizontalScrollView>
+                </androidx.core.widget.NestedScrollView>
+            </LinearLayout>
+
+            <!-- Tab 3: View tree -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollViewTree"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/layoutViewTree"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp" />
+            </androidx.core.widget.NestedScrollView>
+
+            <!-- Tab 4: Resources -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scrollResources"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fillViewport="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/layoutResources"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp" />
+            </androidx.core.widget.NestedScrollView>
+        </FrameLayout>
     </LinearLayout>
 
 </LinearLayout>
