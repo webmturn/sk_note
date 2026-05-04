@@ -21,6 +21,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSnippetListBinding
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -34,6 +37,8 @@ class SnippetListFragment : Fragment() {
     private var currentCategory: String? = null
     private var currentQuery: String = ""
     private var listState: Parcelable? = null
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     companion object {
         private const val STATE_CATEGORY = "state_category"
@@ -144,6 +149,19 @@ class SnippetListFragment : Fragment() {
 
         updateSearchActionState(currentQuery)
         observeData()
+
+        val cached = viewModel.snippets.value
+        if (cached != null) {
+            contentShown = true
+            binding.skeletonContainer.root.visibility = View.GONE
+            adapter.submitList(cached)
+            binding.tvSnippetCount.text = if (cached.isNotEmpty()) "${cached.size} 个片段" else ""
+            if (cached.isEmpty()) binding.layoutEmpty.visibility = View.VISIBLE
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.rvSnippets)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
+
         viewModel.loadSnippets(currentCategory, currentQuery.ifEmpty { null })
         viewModel.loadCategories()
     }
@@ -168,6 +186,11 @@ class SnippetListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.snippets.observe(viewLifecycleOwner) { list ->
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvSnippets)
+            }
             adapter.submitList(list) {
                 val pendingListState = listState
                 if (pendingListState != null) {
@@ -219,9 +242,13 @@ class SnippetListFragment : Fragment() {
             binding.chipAll.isChecked = currentCategory == null
         }
 
-        viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            binding.swipeRefresh.isRefreshing = it && contentShown
+        }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
             } else {
@@ -231,6 +258,10 @@ class SnippetListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.rvSnippets)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
     }
@@ -256,6 +287,9 @@ class SnippetListFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

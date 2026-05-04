@@ -11,9 +11,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentArticleListBinding
-import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.fadeIn
 import com.sknote.app.util.fadeOut
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.showSkeleton
+import com.sknote.app.util.slideNavOptions
 import com.sknote.app.ui.home.ArticleAdapter
 
 class ArticleListFragment : Fragment() {
@@ -23,6 +26,8 @@ class ArticleListFragment : Fragment() {
     private val viewModel: ArticleListViewModel by viewModels()
     private lateinit var adapter: ArticleAdapter
     private var currentCategoryId: Long? = null
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleListBinding.inflate(inflater, container, false)
@@ -51,17 +56,38 @@ class ArticleListFragment : Fragment() {
         }
 
         observeData()
+
+        val cached = viewModel.articles.value
+        if (cached != null) {
+            contentShown = true
+            binding.skeletonContainer.root.visibility = View.GONE
+            adapter.submitList(cached)
+            if (cached.isEmpty()) binding.layoutEmpty.fadeIn() else binding.layoutEmpty.fadeOut()
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.rvArticles)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
+
         viewModel.loadArticles(currentCategoryId)
     }
 
     private fun observeData() {
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvArticles)
+            }
             adapter.submitList(articles)
             if (articles.isEmpty()) binding.layoutEmpty.fadeIn() else binding.layoutEmpty.fadeOut()
         }
-        viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            binding.swipeRefresh.isRefreshing = it && contentShown
+        }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.tvError.text = error
                 binding.layoutError.fadeIn()
                 binding.layoutEmpty.fadeOut()
@@ -72,12 +98,19 @@ class ArticleListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.rvArticles)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadArticles(currentCategoryId)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

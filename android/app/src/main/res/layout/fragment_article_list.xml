@@ -30,6 +30,10 @@
                 android:padding="12dp"
                 android:clipToPadding="false" />
 
+            <include
+                android:id="@+id/skeletonContainer"
+                layout="@layout/layout_skeleton_list_articles" />
+
             <LinearLayout
                 android:id="@+id/layoutEmpty"
                 android:layout_width="match_parent"

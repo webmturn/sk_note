@@ -120,13 +120,22 @@
                 </HorizontalScrollView>
             </com.sknote.app.util.NestedScrollableHost>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvSnippets"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingHorizontal="16dp" />
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSnippets"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="16dp" />
+
+                <include
+                    android:id="@+id/skeletonContainer"
+                    layout="@layout/layout_skeleton_list_snippets" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/layoutEmpty"

@@ -21,6 +21,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentShareListBinding
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -34,6 +37,8 @@ class ShareListFragment : Fragment() {
     private var currentCategory: String? = null
     private var currentQuery: String = ""
     private var listState: Parcelable? = null
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     companion object {
         private const val STATE_CATEGORY = "state_category"
@@ -146,6 +151,19 @@ class ShareListFragment : Fragment() {
 
         updateSearchActionState(currentQuery)
         observeData()
+
+        val cached = viewModel.shares.value
+        if (cached != null) {
+            contentShown = true
+            binding.skeletonContainer.root.visibility = View.GONE
+            adapter.submitList(cached)
+            binding.tvShareCount.text = if (cached.isNotEmpty()) "${cached.size} 个分享" else ""
+            if (cached.isEmpty()) binding.layoutEmpty.visibility = View.VISIBLE
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.rvShares)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
+
         viewModel.loadShares(currentCategory, currentQuery.ifEmpty { null })
         viewModel.loadCategories()
     }
@@ -170,6 +188,11 @@ class ShareListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.shares.observe(viewLifecycleOwner) { list ->
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvShares)
+            }
             adapter.submitList(list) {
                 val pendingListState = listState
                 if (pendingListState != null) {
@@ -220,9 +243,13 @@ class ShareListFragment : Fragment() {
             binding.chipAll.isChecked = currentCategory == null
         }
 
-        viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            binding.swipeRefresh.isRefreshing = it && contentShown
+        }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
             } else {
@@ -232,6 +259,10 @@ class ShareListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.rvShares)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadShares(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
         }
     }
@@ -257,6 +288,9 @@ class ShareListFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

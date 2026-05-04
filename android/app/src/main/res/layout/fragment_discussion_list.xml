@@ -69,13 +69,22 @@
                     app:chipSpacingHorizontal="6dp" />
             </HorizontalScrollView>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_discussions"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingHorizontal="16dp" />
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_discussions"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:paddingHorizontal="16dp" />
+
+                <include
+                    android:id="@+id/skeletonContainer"
+                    layout="@layout/layout_skeleton_list_discussions" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/layoutEmpty"

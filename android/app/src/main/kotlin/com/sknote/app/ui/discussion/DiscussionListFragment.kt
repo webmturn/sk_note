@@ -18,6 +18,9 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentDiscussionListBinding
 import com.sknote.app.util.CategoryIconResolver
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -31,6 +34,8 @@ class DiscussionListFragment : Fragment() {
     private var currentCategory: String? = null
     private var currentArticleId: Long? = null
     private var listState: Parcelable? = null
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     companion object {
         private const val STATE_CATEGORY = "state_category"
@@ -120,6 +125,19 @@ class DiscussionListFragment : Fragment() {
             }
 
         observeData()
+
+        val cached = viewModel.discussions.value
+        if (cached != null) {
+            contentShown = true
+            binding.skeletonContainer.root.visibility = View.GONE
+            adapter.submitList(cached)
+            binding.tvDiscussionCount.text = if (cached.isNotEmpty()) "${cached.size} 条讨论" else ""
+            if (cached.isEmpty()) binding.layoutEmpty.visibility = View.VISIBLE
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.rvDiscussions)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
+
         viewModel.loadCategories()
         viewModel.loadDiscussions(currentCategory, currentArticleId)
     }
@@ -165,6 +183,11 @@ class DiscussionListFragment : Fragment() {
 
     private fun observeData() {
         viewModel.discussions.observe(viewLifecycleOwner) { list ->
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvDiscussions)
+            }
             adapter.submitList(list) {
                 val pendingListState = listState
                 if (pendingListState != null) {
@@ -176,9 +199,13 @@ class DiscussionListFragment : Fragment() {
             binding.tvDiscussionCount.text = if (list.isNotEmpty()) "${list.size} 条讨论" else ""
         }
         viewModel.categories.observe(viewLifecycleOwner) { renderCategoryChips(it) }
-        viewModel.isLoading.observe(viewLifecycleOwner) { binding.swipeRefresh.isRefreshing = it }
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            binding.swipeRefresh.isRefreshing = it && contentShown
+        }
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
             } else {
@@ -188,6 +215,10 @@ class DiscussionListFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.rvDiscussions)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadDiscussions(currentCategory, currentArticleId)
         }
     }
@@ -211,6 +242,9 @@ class DiscussionListFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }
