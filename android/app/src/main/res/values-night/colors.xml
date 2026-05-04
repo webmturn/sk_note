@@ -29,4 +29,6 @@
     <color name="theme_preview_dark_icon">#FFD0D7DE</color>
     <color name="code_bg">#FF161622</color>
     <color name="accent_strip_alpha">#40FFFFFF</color>
+
+    <color name="skeleton_base">#FF202028</color>
 </resources>
