@@ -1,6 +1,7 @@
 package com.sknote.app.ui.manage.article
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -13,6 +14,17 @@ class ArticleManageAdapter(
     private val onEdit: (Article) -> Unit,
     private val onDelete: (Article) -> Unit
 ) : ListAdapter<Article, ArticleManageAdapter.ViewHolder>(DiffCallback()) {
+
+    private var currentUserId: Long = -1L
+    private var currentRole: String = "user"
+
+    fun updateUserContext(userId: Long, role: String) {
+        val effective = role.ifBlank { "user" }
+        if (currentUserId == userId && currentRole == effective) return
+        currentUserId = userId
+        currentRole = effective
+        notifyDataSetChanged()
+    }
 
     class ViewHolder(val binding: ItemArticleManageBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -30,6 +42,13 @@ class ArticleManageAdapter(
         val article = getItem(position)
         holder.binding.tvTitle.text = article.title
         holder.binding.tvMeta.text = "${article.categoryName ?: "未分类"} · ${article.viewCount} 阅读 · ${TimeUtil.formatRelative(article.createdAt)}"
+
+        // Backend allows article edit/delete only for author or admin; editors managing this screen
+        // can only modify their own articles, so hide both actions otherwise.
+        val canManage = article.authorId == currentUserId || currentRole == "admin"
+        holder.binding.btnEdit.visibility = if (canManage) View.VISIBLE else View.GONE
+        holder.binding.btnDelete.visibility = if (canManage) View.VISIBLE else View.GONE
+
         holder.binding.btnEdit.setOnClickListener { onEdit(article) }
         holder.binding.btnDelete.setOnClickListener { onDelete(article) }
     }

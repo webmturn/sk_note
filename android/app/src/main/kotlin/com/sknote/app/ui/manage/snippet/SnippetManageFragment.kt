@@ -12,10 +12,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.data.api.ApiClient
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetManageBinding
 import com.sknote.app.util.requireRolesOrExit
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class SnippetManageFragment : Fragment() {
@@ -63,6 +65,15 @@ class SnippetManageFragment : Fragment() {
         )
         binding.rvSnippets.layoutManager = LinearLayoutManager(context)
         binding.rvSnippets.adapter = adapter
+
+        // Editors should only see delete on their own snippets; admins see everything.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val tokenManager = ApiClient.getTokenManager()
+            val userId = tokenManager.getUserId().first() ?: -1L
+            val role = tokenManager.getUserRole().first() ?: "user"
+            if (_binding == null) return@launch
+            adapter.updateUserContext(userId, role)
+        }
 
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.loadSnippets(force = true)

@@ -12,10 +12,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.data.api.ApiClient
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Article
 import com.sknote.app.databinding.FragmentArticleManageBinding
 import com.sknote.app.util.requireRolesOrExit
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class ArticleManageFragment : Fragment() {
@@ -54,6 +56,15 @@ class ArticleManageFragment : Fragment() {
         )
         binding.rvArticles.layoutManager = LinearLayoutManager(context)
         binding.rvArticles.adapter = adapter
+
+        // Editors should only see edit/delete on their own articles; admins see everything.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val tokenManager = ApiClient.getTokenManager()
+            val userId = tokenManager.getUserId().first() ?: -1L
+            val role = tokenManager.getUserRole().first() ?: "user"
+            if (_binding == null) return@launch
+            adapter.updateUserContext(userId, role)
+        }
 
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.articleEditorFragment, null, slideNavOptions())

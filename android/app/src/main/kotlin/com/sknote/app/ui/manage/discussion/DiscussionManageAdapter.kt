@@ -16,6 +16,17 @@ class DiscussionManageAdapter(
     private val onDelete: (Discussion) -> Unit
 ) : ListAdapter<Discussion, DiscussionManageAdapter.ViewHolder>(DiffCallback()) {
 
+    private var currentUserId: Long = -1L
+    private var currentRole: String = "user"
+
+    fun updateUserContext(userId: Long, role: String) {
+        val effective = role.ifBlank { "user" }
+        if (currentUserId == userId && currentRole == effective) return
+        currentUserId = userId
+        currentRole = effective
+        notifyDataSetChanged()
+    }
+
     class ViewHolder(val binding: ItemDiscussionManageBinding) : RecyclerView.ViewHolder(binding.root)
 
     class DiffCallback : DiffUtil.ItemCallback<Discussion>() {
@@ -34,6 +45,11 @@ class DiscussionManageAdapter(
         holder.binding.tvMeta.text = "${item.authorName ?: "匿名"} · ${item.replyCount} 回复 · ${item.viewCount} 浏览 · ${TimeUtil.formatRelative(item.createdAt)}"
         holder.binding.tvBadgePinned.visibility = if (item.isPinned == 1) View.VISIBLE else View.GONE
         holder.binding.tvBadgeClosed.visibility = if (item.isClosed == 1) View.VISIBLE else View.GONE
+
+        // Edit limited to author or admin (mirrors backend); editors keep moderation delete only.
+        val canEdit = item.authorId == currentUserId || currentRole == "admin"
+        holder.binding.btnEdit.visibility = if (canEdit) View.VISIBLE else View.GONE
+
         holder.binding.btnView.setOnClickListener { onView(item) }
         holder.binding.btnEdit.setOnClickListener { onEdit(item) }
         holder.binding.btnDelete.setOnClickListener { onDelete(item) }
