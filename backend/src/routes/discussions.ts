@@ -4,7 +4,7 @@ import { authMiddleware, isOwnerOrAdmin, isOwnerOrEditorOrAdmin } from '../middl
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
-import { createNotification, deleteNotificationsByRelatedTargets } from './notifications';
+import { createNotification, deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const discussionRoutes = new Hono<AppEnv>();
 
@@ -412,10 +412,25 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
   `).bind(commentId).first<{ total: number }>();
   const deleteCount = countResult?.total || 1;
 
+  // 先收集此次删除涉及的评论 ID（父+所有后代），用于清理对应通知
+  const descendantRows = await c.env.DB.prepare(`
+    WITH RECURSIVE descendants(id) AS (
+      SELECT id FROM comments WHERE id = ?
+      UNION ALL
+      SELECT c.id FROM comments c JOIN descendants d ON c.parent_id = d.id
+    )
+    SELECT id FROM descendants
+  `).bind(commentId).all<{ id: number }>();
+  const deletedCommentIds = descendantRows.results.map((row) => row.id);
+
   await c.env.DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run();
   await c.env.DB.prepare(
     'UPDATE discussions SET reply_count = MAX(0, reply_count - ?) WHERE id = ?'
   ).bind(deleteCount, discussionIdNum).run();
+
+  if (deletedCommentIds.length > 0) {
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'comment', deletedCommentIds);
+  }
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${discussionId}`]);
@@ -434,8 +449,8 @@ discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (
   }
 
   const comment = await c.env.DB.prepare(
-    'SELECT id, discussion_id FROM comments WHERE id = ?'
-  ).bind(commentId).first<{ id: number; discussion_id: number }>();
+    'SELECT id, discussion_id, author_id, content FROM comments WHERE id = ?'
+  ).bind(commentId).first<{ id: number; discussion_id: number; author_id: number; content: string }>();
   if (!comment) return c.json({ error: '评论不存在' }, 404);
   if (comment.discussion_id !== discussionIdNum) {
     return c.json({ error: '评论不属于当前讨论' }, 400);
@@ -449,6 +464,19 @@ discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (
     likeSuccessMessage: '点赞成功',
     unlikeSuccessMessage: '已取消点赞',
   });
+
+  if (result.liked) {
+    const actorName = await getActorDisplayName(c.env.DB, user.id);
+    await notifyActor(c.env.DB, {
+      ownerId: comment.author_id,
+      actorId: user.id,
+      type: 'like',
+      title: `${actorName} 点赞了你的评论`,
+      content: (comment.content || '').slice(0, 100),
+      relatedType: 'discussion',
+      relatedId: comment.discussion_id,
+    });
+  }
 
   return c.json(result);
 });

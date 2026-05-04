@@ -446,6 +446,12 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
     ).bind(userId).all<{ id: number }>();
     const deletedShareIds = deletedSharesResult.results.map((row) => row.id);
 
+    // 收集该用户写过的评论 ID（用于清理评论相关通知，ON DELETE CASCADE 会实际删除数据）
+    const deletedCommentsResult = await c.env.DB.prepare(
+      'SELECT id FROM comments WHERE author_id = ?'
+    ).bind(userId).all<{ id: number }>();
+    const deletedCommentIds = deletedCommentsResult.results.map((row) => row.id);
+
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(userId),
@@ -475,6 +481,11 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
     }
 
     await deleteNotificationsByRelatedTargets(c.env.DB, 'discussion', deletedDiscussionIds);
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'article', deletedArticleIds);
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'snippet', deletedSnippetIds);
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'share', deletedShareIds);
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'comment', deletedCommentIds);
+    await deleteNotificationsByRelatedTargets(c.env.DB, 'user', [userId]);
 
     const baseUrl = new URL(c.req.url).origin;
     const cacheUrls = new Set<string>([

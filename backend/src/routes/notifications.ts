@@ -131,3 +131,36 @@ export async function deleteNotificationsByRelatedTargets(
     `DELETE FROM notifications WHERE related_type = ? AND related_id IN (${placeholders})`
   ).bind(relatedType, ...ids).run();
 }
+
+// 获取用户的展示名（昵称优先，否则用户名，最后兜底为“有人”）
+export async function getActorDisplayName(db: D1Database, actorId: number): Promise<string> {
+  if (!Number.isInteger(actorId) || actorId <= 0) return '有人';
+  const row = await db.prepare(
+    'SELECT username, nickname FROM users WHERE id = ?'
+  ).bind(actorId).first<{ username: string | null; nickname: string | null }>();
+  const nickname = (row?.nickname || '').trim();
+  return nickname || (row?.username || '').trim() || '有人';
+}
+
+// 互动类通知的统一封装：跳过自我通知，失败只记录日志不阻断主流程
+export async function notifyActor(
+  db: D1Database,
+  params: {
+    ownerId: number;
+    actorId: number;
+    type: string;
+    title: string;
+    content?: string;
+    relatedType?: string;
+    relatedId?: number;
+  }
+): Promise<void> {
+  const { ownerId, actorId, type, title, content, relatedType, relatedId } = params;
+  if (!Number.isInteger(ownerId) || ownerId <= 0) return;
+  if (ownerId === actorId) return;
+  try {
+    await createNotification(db, ownerId, type, title, content || '', relatedType, relatedId);
+  } catch (e) {
+    console.error('通知创建失败:', e);
+  }
+}

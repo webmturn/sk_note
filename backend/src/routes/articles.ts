@@ -3,6 +3,7 @@ import type { AppEnv } from '../index';
 import { authMiddleware, editorMiddleware, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { toggleLike } from '../likeUtils';
+import { deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const articleRoutes = new Hono<AppEnv>();
 
@@ -200,6 +201,7 @@ articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => 
   if (result.meta.changes === 0) {
     return c.json({ error: '文章不存在' }, 404);
   }
+  await deleteNotificationsByRelatedTargets(c.env.DB, 'article', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ message: '删除成功' });
@@ -210,7 +212,9 @@ articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user')!;
 
-  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(id).first();
+  const article = await c.env.DB.prepare(
+    'SELECT id, title, author_id FROM articles WHERE id = ?'
+  ).bind(id).first<{ id: number; title: string; author_id: number }>();
   if (!article) return c.json({ error: '文章不存在' }, 404);
 
   const result = await toggleLike(c, {
@@ -221,6 +225,19 @@ articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
     likeSuccessMessage: '点赞成功',
     unlikeSuccessMessage: '已取消点赞',
   });
+
+  if (result.liked) {
+    const actorName = await getActorDisplayName(c.env.DB, user.id);
+    await notifyActor(c.env.DB, {
+      ownerId: article.author_id,
+      actorId: user.id,
+      type: 'like',
+      title: `${actorName} 点赞了你的文章`,
+      content: (article.title || '').slice(0, 100),
+      relatedType: 'article',
+      relatedId: article.id,
+    });
+  }
 
   return c.json(result);
 });

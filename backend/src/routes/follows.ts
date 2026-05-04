@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
 import { toggleRelation } from '../likeUtils';
+import { getActorDisplayName, notifyActor } from './notifications';
 
 export const followRoutes = new Hono<AppEnv>();
 
@@ -34,7 +35,20 @@ followRoutes.post('/:userId', authMiddleware(), async (c) => {
       activateSuccessMessage: '已关注',
       deactivateSuccessMessage: '已取消关注',
     });
+if (result.active) {
+      const actorName = await getActorDisplayName(c.env.DB, currentUser.id);
+      await notifyActor(c.env.DB, {
+        ownerId: targetId,
+        actorId: currentUser.id,
+        type: 'system',
+        title: `${actorName} 关注了你`,
+        content: '',
+        relatedType: 'user',
+        relatedId: currentUser.id,
+      });
+    }
 
+    
     return c.json({ message: result.message, following: result.active });
   } catch (e: any) {
     console.error('关注操作失败:', e);

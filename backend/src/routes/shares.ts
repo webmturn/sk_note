@@ -4,6 +4,7 @@ import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
+import { deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const shareRoutes = new Hono<AppEnv>();
 
@@ -87,7 +88,9 @@ shareRoutes.get('/:id', async (c) => {
 // 记录下载次数（IP 去重）
 shareRoutes.post('/:id/download', async (c) => {
   const id = c.req.param('id');
-  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ? AND is_approved = 1').bind(id).first();
+  const share = await c.env.DB.prepare(
+    'SELECT id, title, author_id FROM shares WHERE id = ? AND is_approved = 1'
+  ).bind(id).first<{ id: number; title: string; author_id: number }>();
   if (!share) return c.json({ error: '分享不存在' }, 404);
 
   const viewerKey = 'dl:' + (
@@ -100,6 +103,20 @@ shareRoutes.post('/:id/download', async (c) => {
   ).bind(viewerKey, 'share', id).run();
   if (result.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE shares SET download_count = download_count + 1 WHERE id = ?').bind(id).run();
+
+    // 分享下载通知：基于 viewer_key 天然去重，避免同一用户/IP 重复通知
+    const currentUser = c.get('user');
+    const actorId = currentUser?.id ?? 0;
+    const actorName = actorId > 0 ? await getActorDisplayName(c.env.DB, actorId) : '有人';
+    await notifyActor(c.env.DB, {
+      ownerId: share.author_id,
+      actorId,
+      type: 'system',
+      title: `${actorName} 下载了你的分享`,
+      content: (share.title || '').slice(0, 100),
+      relatedType: 'share',
+      relatedId: share.id,
+    });
   }
   return c.json({ message: '已记录' });
 });
@@ -207,6 +224,7 @@ shareRoutes.delete('/:id', authMiddleware(), async (c) => {
   }
 
   await c.env.DB.prepare('DELETE FROM shares WHERE id = ?').bind(id).run();
+  await deleteNotificationsByRelatedTargets(c.env.DB, 'share', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '已删除' });
@@ -217,7 +235,9 @@ shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user')!;
 
-  const share = await c.env.DB.prepare('SELECT id FROM shares WHERE id = ?').bind(id).first();
+  const share = await c.env.DB.prepare(
+    'SELECT id, title, author_id FROM shares WHERE id = ?'
+  ).bind(id).first<{ id: number; title: string; author_id: number }>();
   if (!share) return c.json({ error: '分享不存在' }, 404);
 
   const result = await toggleLike(c, {
@@ -228,6 +248,19 @@ shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
     likeSuccessMessage: '已点赞',
     unlikeSuccessMessage: '取消点赞',
   });
+
+  if (result.liked) {
+    const actorName = await getActorDisplayName(c.env.DB, user.id);
+    await notifyActor(c.env.DB, {
+      ownerId: share.author_id,
+      actorId: user.id,
+      type: 'like',
+      title: `${actorName} 点赞了你的分享`,
+      content: (share.title || '').slice(0, 100),
+      relatedType: 'share',
+      relatedId: share.id,
+    });
+  }
 
   return c.json(result);
 });
