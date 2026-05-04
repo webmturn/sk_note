@@ -25,8 +25,11 @@ import com.sknote.app.data.model.Comment
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
 import com.sknote.app.databinding.LayoutDiscussionDetailHeaderBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
+import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.hideSkeletonAndShow
 import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
@@ -48,6 +51,8 @@ class DiscussionDetailFragment : Fragment() {
     private var currentDiscussionAuthorId: Long = -1
     private var replyParentCommentId: Long? = null
     private var replyTargetName: String = ""
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
         get() = headerAdapter.headerBinding
@@ -171,6 +176,9 @@ class DiscussionDetailFragment : Fragment() {
         }
         binding.rvMain.post { prefillHeader() }
 
+        showSkeleton(binding.skeletonContainer.root, binding.layoutError)
+        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+
         binding.btnLoginReply.setOnClickListener {
             findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
         }
@@ -202,6 +210,11 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             discussion ?: return@observe
             val h = hb ?: return@observe
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvMain)
+            }
             currentDiscussionAuthorId = discussion.authorId
             h.tvTitle.text = discussion.title
             h.tvAuthor.text = discussion.authorName ?: "匿名"
@@ -313,11 +326,13 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            if (isLoading) binding.progressBar.show() else binding.progressBar.hide()
+            if (isLoading && contentShown) binding.progressBar.show() else binding.progressBar.hide()
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
             } else {
@@ -327,6 +342,10 @@ class DiscussionDetailFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.layoutError)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadDiscussion(discussionId)
         }
 
@@ -410,6 +429,9 @@ class DiscussionDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

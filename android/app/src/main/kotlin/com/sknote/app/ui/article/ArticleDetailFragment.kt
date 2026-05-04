@@ -16,7 +16,10 @@ import com.sknote.app.R
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentArticleDetailBinding
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
 import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.showSkeleton
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.TimeUtil
@@ -38,6 +41,8 @@ class ArticleDetailFragment : Fragment() {
     private var isBookmarking = false
     private var cachedUserId: Long = -1L
     private var cachedRole: String = "user"
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArticleDetailBinding.inflate(inflater, container, false)
@@ -78,6 +83,10 @@ class ArticleDetailFragment : Fragment() {
             }
 
         setupScrollProgress()
+
+        showSkeleton(binding.skeletonContainer.root, binding.scrollView, binding.layoutError)
+        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+
         viewModel.loadArticle(articleId)
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -111,6 +120,11 @@ class ArticleDetailFragment : Fragment() {
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
             article ?: return@observe
+            if (!contentShown) {
+                contentShown = true
+                skeletonAnimator?.stop()
+                hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
+            }
             currentArticleTitle = article.title
             currentArticleSummary = article.summary.orEmpty()
             currentArticleContent = article.content.orEmpty()
@@ -134,12 +148,10 @@ class ArticleDetailFragment : Fragment() {
             markwon.setMarkdown(binding.tvContent, article.content.orEmpty())
         }
 
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
+                skeletonAnimator?.stop()
+                binding.skeletonContainer.root.visibility = View.GONE
                 binding.layoutError.visibility = View.VISIBLE
                 binding.tvError.text = error
             } else {
@@ -149,6 +161,10 @@ class ArticleDetailFragment : Fragment() {
 
         binding.btnRetry.setOnClickListener {
             binding.layoutError.visibility = View.GONE
+            if (!contentShown) {
+                showSkeleton(binding.skeletonContainer.root, binding.scrollView, binding.layoutError)
+                skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+            }
             viewModel.loadArticle(articleId)
         }
 
@@ -273,6 +289,9 @@ class ArticleDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

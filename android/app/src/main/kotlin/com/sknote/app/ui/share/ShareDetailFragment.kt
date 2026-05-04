@@ -18,9 +18,12 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Share
 import com.sknote.app.databinding.FragmentShareDetailBinding
-import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.LanzouParser
+import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.TimeUtil
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -34,6 +37,8 @@ class ShareDetailFragment : Fragment() {
     private var currentUserId: Long = -1
     private var currentUserRole: String = "user"
     private var isLiking = false
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     private fun isFragmentUsable(): Boolean {
         return _binding != null && isAdded && context != null && activity != null
@@ -127,6 +132,9 @@ class ShareDetailFragment : Fragment() {
             }
         }
 
+        showSkeleton(binding.skeletonContainer.root, binding.scrollView)
+        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (isLoggedIn) {
@@ -138,7 +146,7 @@ class ShareDetailFragment : Fragment() {
             binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = false
             binding.toolbar.menu.findItem(R.id.action_copy_link)?.isVisible = false
             binding.toolbar.menu.findItem(R.id.action_open_browser)?.isVisible = false
-            loadShare()
+            loadShare(showProgress = false)
         }
 
         binding.btnLike.setOnClickListener {
@@ -175,13 +183,18 @@ class ShareDetailFragment : Fragment() {
     }
 
     private fun loadShare(showProgress: Boolean = true) {
-        if (showProgress) binding.progressBar.visibility = View.VISIBLE
+        if (showProgress && contentShown) binding.progressBar.visibility = View.VISIBLE
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getShare(shareId)
                 if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     val share = response.body()?.share ?: return@launch
+                    if (!contentShown) {
+                        contentShown = true
+                        skeletonAnimator?.stop()
+                        hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
+                    }
                     currentShare = share
                     val downloadUrl = normalizedDownloadUrl(share)
                     val browsableUri = buildBrowsableUri(downloadUrl)
@@ -223,7 +236,7 @@ class ShareDetailFragment : Fragment() {
                 if (!isFragmentUsable()) return@launch
                 Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
-                if (isFragmentUsable()) binding.progressBar.visibility = View.GONE
+                if (isFragmentUsable() && contentShown) binding.progressBar.visibility = View.GONE
             }
         }
     }
@@ -370,6 +383,9 @@ class ShareDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }

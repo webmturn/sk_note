@@ -31,14 +31,22 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Single RecyclerView: header (discussion content) + comments -->
+            <!-- Single RecyclerView: header (discussion content) + comments.
+                 invisible (not gone) so LayoutManager still measures and creates the
+                 header ViewHolder (so headerBinding becomes non-null), while staying
+                 hidden until hideSkeletonAndShow cross-fades it from alpha 0 to 1. -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:paddingBottom="8dp"
+                android:visibility="invisible"
                 android:background="?attr/colorSurfaceContainerLow" />
+
+            <include
+                android:id="@+id/skeletonContainer"
+                layout="@layout/layout_skeleton_discussion_detail" />
 
             <!-- Loading: thin bar overlaying content top -->
             <com.google.android.material.progressindicator.LinearProgressIndicator

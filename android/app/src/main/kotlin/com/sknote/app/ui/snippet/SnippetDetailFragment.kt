@@ -18,7 +18,10 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetDetailBinding
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
 import com.sknote.app.util.requireLoggedIn
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.util.SyntaxHighlightUtil
 import com.sknote.app.util.TimeUtil
@@ -35,6 +38,8 @@ class SnippetDetailFragment : Fragment() {
     private var currentSnippet: Snippet? = null
     private var currentUserId: Long = -1
     private var currentUserRole: String = "user"
+    private var skeletonAnimator: SkeletonAnimator? = null
+    private var contentShown: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSnippetDetailBinding.inflate(inflater, container, false)
@@ -86,6 +91,9 @@ class SnippetDetailFragment : Fragment() {
 
         binding.btnCopy.setOnClickListener { copyCode() }
 
+        showSkeleton(binding.skeletonContainer.root, binding.scrollView)
+        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
             if (isLoggedIn) {
@@ -93,7 +101,7 @@ class SnippetDetailFragment : Fragment() {
                 currentUserRole = ApiClient.getTokenManager().getUserRole().first() ?: "user"
             }
             binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = false
-            loadSnippet()
+            loadSnippet(showProgress = false)
         }
 
         binding.btnLike.setOnClickListener {
@@ -126,13 +134,18 @@ class SnippetDetailFragment : Fragment() {
     }
 
     private fun loadSnippet(showProgress: Boolean = true) {
-        if (showProgress) binding.progressBar.visibility = View.VISIBLE
+        if (showProgress && contentShown) binding.progressBar.visibility = View.VISIBLE
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val response = ApiClient.getService().getSnippet(snippetId)
                 if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val snippet = response.body()?.snippet ?: return@launch
+                    if (!contentShown) {
+                        contentShown = true
+                        skeletonAnimator?.stop()
+                        hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
+                    }
                     currentSnippet = snippet
                     codeText = snippet.code.orEmpty()
                     val displayLanguage = snippet.language.orEmpty().trim().ifEmpty { "other" }
@@ -214,6 +227,9 @@ class SnippetDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
+        contentShown = false
         _binding = null
     }
 }
