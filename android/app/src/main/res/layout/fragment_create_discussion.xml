@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -79,11 +80,35 @@
 
                 <!-- Block/palette share preview (hidden by default) -->
                 <FrameLayout
-                    android:id="@+id/blockPreviewContainer"
+                    android:id="@+id/blockPreviewWrapper"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:visibility="gone" />
+                    android:visibility="gone">
+
+                    <FrameLayout
+                        android:id="@+id/blockPreviewContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearAttachment"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="6dp"
+                        android:contentDescription="移除附件"
+                        android:tooltipText="移除附件"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:padding="0dp"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_close"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        app:iconSize="16dp" />
+                </FrameLayout>
 
                 <!-- Title -->
                 <com.google.android.material.textfield.TextInputLayout
@@ -117,35 +142,184 @@
                     android:layout_marginBottom="12dp"
                     app:dividerColor="?attr/colorOutlineVariant" />
 
-                <!-- Category chips -->
+                <!-- Category section -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="分类"
+                    android:text="选择分类"
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="6dp" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layoutCategory"
+                <HorizontalScrollView
+                    android:id="@+id/categoryScroll"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                    android:scrollbars="none"
+                    android:overScrollMode="never">
 
-                    <AutoCompleteTextView
-                        android:id="@+id/spinnerCategory"
-                        android:layout_width="match_parent"
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupCategory"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:inputType="none"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:singleLine="true"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:chipSpacingHorizontal="6dp" />
+                </HorizontalScrollView>
+
+                <TextView
+                    android:id="@+id/tvCategoryDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="12dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    tools:text="通用讨论" />
+
+                <!-- Markdown formatting toolbar -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:overScrollMode="never">
+
+                    <LinearLayout
+                        android:id="@+id/formatToolbar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTogglePreview"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="预览"
+                            android:textSize="12sp"
+                            android:minWidth="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingHorizontal="12dp"
+                            app:icon="@drawable/ic_visibility"
+                            app:iconSize="16dp"
+                            app:iconPadding="4dp" />
+
+                        <com.google.android.material.divider.MaterialDivider
+                            android:layout_width="1dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="4dp"
+                            app:dividerColor="?attr/colorOutlineVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatBold"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="加粗"
+                            android:tooltipText="加粗"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_format_bold"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatItalic"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="斜体"
+                            android:tooltipText="斜体"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_format_italic"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatCode"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="行内代码"
+                            android:tooltipText="行内代码"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_code"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatCodeBlock"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="代码块"
+                            android:tooltipText="代码块"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_terminal"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatLink"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="插入链接"
+                            android:tooltipText="插入链接"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_link"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatQuote"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="引用"
+                            android:tooltipText="引用"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_format_quote"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFormatList"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="项目列表"
+                            android:tooltipText="项目列表"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_format_list"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </HorizontalScrollView>
 
                 <!-- Content -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layoutContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:hint="写下你的想法..."
                     app:counterEnabled="true"
                     app:counterMaxLength="5000"
@@ -167,6 +341,29 @@
                         android:lineSpacingMultiplier="1.4"
                         android:maxLength="5000" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                    app:cardCornerRadius="12dp"
+                    app:strokeColor="?attr/colorOutlineVariant"
+                    app:strokeWidth="1dp">
+
+                    <TextView
+                        android:id="@+id/tvPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="14dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="15sp"
+                        android:lineSpacingMultiplier="1.4"
+                        android:textIsSelectable="true"
+                        tools:text="预览内容" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -197,9 +394,10 @@
 
                     <TextView
                         android:id="@+id/tvImageHint"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="最多 9 张，每张 ≤ 5MB"
+                        android:layout_weight="1"
+                        android:text="最多 9 张，自动压缩到 ≤ 1MB"
                         android:textSize="11sp"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:layout_marginStart="10dp" />
@@ -211,6 +409,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false"
                     android:visibility="gone" />
 
             </LinearLayout>

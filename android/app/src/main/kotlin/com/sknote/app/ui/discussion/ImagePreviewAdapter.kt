@@ -15,7 +15,8 @@ data class ImageItem(
 )
 
 class ImagePreviewAdapter(
-    private val onRemove: (Int) -> Unit
+    private val onRemove: (Int) -> Unit,
+    private val onPreview: ((ImageItem) -> Unit)? = null
 ) : RecyclerView.Adapter<ImagePreviewAdapter.ViewHolder>() {
 
     private val items = mutableListOf<ImageItem>()
@@ -80,6 +81,9 @@ class ImagePreviewAdapter(
             binding.btnRemove.setOnClickListener {
                 val pos = bindingAdapterPosition
                 if (pos != RecyclerView.NO_POSITION) onRemove(pos)
+            }
+            binding.ivPreview.setOnClickListener {
+                if (!item.isUploading) onPreview?.invoke(item)
             }
         }
     }

@@ -260,8 +260,9 @@ class DiscussionDetailFragment : Fragment() {
                 h.blockPreviewContainer.visibility = View.GONE
             }
 
-            val canEdit = discussion.authorId == cachedUserId || cachedRole == "admin" || cachedRole == "editor"
-            val canDelete = canEdit
+            // Edit limited to author or admin (matches backend); delete includes editor for moderation.
+            val canEdit = discussion.authorId == cachedUserId || cachedRole == "admin"
+            val canDelete = canEdit || cachedRole == "editor"
             binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
             binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
 
