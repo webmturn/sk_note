@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     type TEXT NOT NULL CHECK(type IN ('reply', 'like', 'mention', 'system')),
     title TEXT NOT NULL,
     content TEXT DEFAULT '',
-    related_type TEXT DEFAULT NULL CHECK(related_type IN ('discussion', 'comment', 'article', 'snippet', NULL)),
+    related_type TEXT DEFAULT NULL CHECK(related_type IS NULL OR related_type IN ('discussion', 'comment', 'article', 'snippet', 'share')),
     related_id INTEGER DEFAULT NULL,
     is_read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),

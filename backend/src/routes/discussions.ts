@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
-import { authMiddleware, isOwnerOrEditorOrAdmin } from '../middleware/auth';
+import { authMiddleware, isOwnerOrAdmin, isOwnerOrEditorOrAdmin } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
@@ -201,7 +201,8 @@ discussionRoutes.put('/:id', authMiddleware(), async (c) => {
   if (!discussion) {
     return c.json({ error: '讨论不存在' }, 404);
   }
-  if (!(await isOwnerOrEditorOrAdmin(c, discussion.author_id))) {
+  // 编辑限于作者或管理员；编辑角色不能改写其他用户的讨论内容
+  if (!(await isOwnerOrAdmin(c, discussion.author_id))) {
     return c.json({ error: '无权编辑' }, 403);
   }
 
