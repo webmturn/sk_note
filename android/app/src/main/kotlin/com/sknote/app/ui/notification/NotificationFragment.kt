@@ -160,6 +160,10 @@ class NotificationFragment : Fragment() {
                 val bundle = Bundle().apply { putLong("snippet_id", relatedId) }
                 findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
             }
+            "user" -> if (relatedId != null) {
+                val bundle = Bundle().apply { putLong("user_id", relatedId) }
+                findNavController().navigate(R.id.publicProfileFragment, bundle, slideNavOptions())
+            }
         }
     }
 
