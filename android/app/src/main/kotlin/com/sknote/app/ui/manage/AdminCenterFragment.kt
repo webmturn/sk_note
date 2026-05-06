@@ -75,6 +75,14 @@ class AdminCenterFragment : Fragment() {
         binding.cardSnippets.setOnClickListener {
             findNavController().navigate(R.id.snippetManageFragment, null, slideNavOptions())
         }
+
+        binding.cardShares.setOnClickListener {
+            findNavController().navigate(R.id.shareManageFragment, null, slideNavOptions())
+        }
+
+        binding.cardReleases.setOnClickListener {
+            findNavController().navigate(R.id.releaseManageFragment, null, slideNavOptions())
+        }
     }
 
     private fun captureUiState() {

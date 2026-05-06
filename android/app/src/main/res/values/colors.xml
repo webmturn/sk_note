@@ -15,6 +15,7 @@
     <color name="icon_bg_teal">#B2DFDB</color>
     <color name="icon_bg_blue">#BBDEFB</color>
     <color name="icon_bg_red">#FFCDD2</color>
+    <color name="icon_bg_indigo">#C5CAE9</color>
     <color name="text_danger">#D32F2F</color>
     <color name="banner_text">#FFFFFFFF</color>
     <color name="banner_text_secondary">#B3FFFFFF</color>
