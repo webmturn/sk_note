@@ -120,6 +120,25 @@ interface ApiService {
     @DELETE("api/discussions/{id}")
     suspend fun deleteDiscussion(@Path("id") id: Long): Response<MessageResponse>
 
+    @PUT("api/discussions/{id}/pin")
+    suspend fun pinDiscussion(
+        @Path("id") id: Long,
+        @Body request: UpdatePinRequest
+    ): Response<MessageResponse>
+
+    @PUT("api/discussions/{id}/close")
+    suspend fun closeDiscussion(
+        @Path("id") id: Long,
+        @Body request: UpdateCloseRequest
+    ): Response<MessageResponse>
+
+    @PUT("api/discussions/{discussionId}/comments/{commentId}")
+    suspend fun updateComment(
+        @Path("discussionId") discussionId: Long,
+        @Path("commentId") commentId: Long,
+        @Body request: UpdateCommentRequest
+    ): Response<MessageResponse>
+
     @DELETE("api/discussions/{discussionId}/comments/{commentId}")
     suspend fun deleteComment(
         @Path("discussionId") discussionId: Long,
@@ -267,6 +286,20 @@ interface ApiService {
     @POST("api/shares/{id}/download")
     suspend fun recordShareDownload(@Path("id") id: Long): Response<MessageResponse>
 
+    @GET("api/shares/manage/list")
+    suspend fun getSharesManage(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 50,
+        @Query("status") status: String? = null,
+        @Query("search") search: String? = null
+    ): Response<SharesResponse>
+
+    @PUT("api/shares/{id}/approve")
+    suspend fun approveShare(
+        @Path("id") id: Long,
+        @Body request: ApproveShareRequest
+    ): Response<MessageResponse>
+
     // ============ 收藏 & 阅读历史 ============
 
     @GET("api/bookmarks")
@@ -340,4 +373,26 @@ interface ApiService {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20
     ): Response<SharesResponse>
+
+    // ============ 应用版本与更新检查 ============
+
+    @GET("api/app/check-update")
+    suspend fun checkAppUpdate(
+        @Query("current_version") currentVersion: String
+    ): Response<CheckUpdateResponse>
+
+    @GET("api/app/releases")
+    suspend fun getAppReleases(): Response<AppReleasesResponse>
+
+    @POST("api/app/releases")
+    suspend fun createAppRelease(@Body request: CreateAppReleaseRequest): Response<MessageResponse>
+
+    @DELETE("api/app/releases/{id}")
+    suspend fun deleteAppRelease(@Path("id") id: Long): Response<MessageResponse>
+
+    @PUT("api/app/releases/{id}/active")
+    suspend fun setAppReleaseActive(
+        @Path("id") id: Long,
+        @Body request: UpdateReleaseActiveRequest
+    ): Response<MessageResponse>
 }

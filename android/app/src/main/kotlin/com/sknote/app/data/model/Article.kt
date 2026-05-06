@@ -16,6 +16,7 @@ data class Article(
     @SerializedName("category_name") val categoryName: String? = null,
     @SerializedName("view_count") val viewCount: Int = 0,
     @SerializedName("like_count") val likeCount: Int = 0,
+    @SerializedName("is_published") val isPublished: Int = 1,
     @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("updated_at") val updatedAt: String? = null
 )
@@ -31,7 +32,8 @@ data class CreateArticleRequest(
     val title: String,
     val content: String,
     val summary: String = "",
-    @SerializedName("category_id") val categoryId: Long
+    @SerializedName("category_id") val categoryId: Long,
+    @SerializedName("is_published") val isPublished: Int? = null
 )
 
 data class UpdateArticleRequest(

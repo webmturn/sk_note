@@ -17,7 +17,12 @@ data class Share(
     @SerializedName("view_count") val viewCount: Int = 0,
     @SerializedName("like_count") val likeCount: Int = 0,
     @SerializedName("download_count") val downloadCount: Int = 0,
+    @SerializedName("is_approved") val isApproved: Int = 1,
     @SerializedName("created_at") val createdAt: String? = null
+)
+
+data class ApproveShareRequest(
+    @SerializedName("is_approved") val isApproved: Boolean
 )
 
 data class SharesResponse(

@@ -33,7 +33,8 @@ data class Comment(
     @SerializedName("parent_id") val parentId: Long? = null,
     @SerializedName("parent_author_name") val parentAuthorName: String? = null,
     @SerializedName("like_count") val likeCount: Int = 0,
-    @SerializedName("created_at") val createdAt: String? = null
+    @SerializedName("created_at") val createdAt: String? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null
 )
 
 data class DiscussionsResponse(
@@ -83,4 +84,16 @@ data class UpdateDiscussionRequest(
 data class CreateCommentRequest(
     val content: String,
     @SerializedName("parent_id") val parentId: Long? = null
+)
+
+data class UpdateCommentRequest(
+    val content: String,
+)
+
+data class UpdatePinRequest(
+    @SerializedName("is_pinned") val isPinned: Int
+)
+
+data class UpdateCloseRequest(
+    @SerializedName("is_closed") val isClosed: Int
 )

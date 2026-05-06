@@ -360,6 +360,24 @@
         tools:layout="@layout/fragment_snippet_manage" />
 
     <fragment
+        android:id="@+id/shareManageFragment"
+        android:name="com.sknote.app.ui.manage.share.ShareManageFragment"
+        android:label="分享管理"
+        tools:layout="@layout/fragment_share_manage" />
+
+    <fragment
+        android:id="@+id/releaseManageFragment"
+        android:name="com.sknote.app.ui.manage.release.ReleaseManageFragment"
+        android:label="版本发布"
+        tools:layout="@layout/fragment_release_manage" />
+
+    <fragment
+        android:id="@+id/releaseEditorFragment"
+        android:name="com.sknote.app.ui.manage.release.ReleaseEditorFragment"
+        android:label="发布新版本"
+        tools:layout="@layout/fragment_release_editor" />
+
+    <fragment
         android:id="@+id/userManageFragment"
         android:name="com.sknote.app.ui.manage.user.UserManageFragment"
         android:label="账号管理"
