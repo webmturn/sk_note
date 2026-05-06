@@ -505,7 +505,7 @@ class ProjectAnalyzerFragment : Fragment() {
             val previewContainer = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(8), dp(8), dp(8), dp(8))
-                setBackgroundColor(0xFFF5F5F5.toInt())
+                setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceContainerLow))
             }
             previewInnerScroll.addView(previewContainer)
             previewScroll.addView(previewInnerScroll)
@@ -966,6 +966,28 @@ class ProjectAnalyzerFragment : Fragment() {
         return tv.data
     }
 
+    /** Resolves a theme attribute color and applies the given 0..255 alpha, preserving the RGB. */
+    private fun resolveColorWithAlpha(attr: Int, alpha: Int): Int {
+        val rgb = resolveColor(attr) and 0xFFFFFF
+        return ((alpha and 0xFF) shl 24) or rgb
+    }
+
+    /**
+     * If the user-defined textColor from the sk project is the default opaque black (or near-black),
+     * fall back to the theme's onSurface color so it stays readable in dark mode. Otherwise honor it.
+     */
+    private fun adaptUserTextColor(rawColor: Int): Int {
+        val alpha = (rawColor ushr 24) and 0xFF
+        val r = (rawColor ushr 16) and 0xFF
+        val g = (rawColor ushr 8) and 0xFF
+        val b = rawColor and 0xFF
+        return if (alpha == 0 || (alpha == 0xFF && r < 0x40 && g < 0x40 && b < 0x40)) {
+            resolveColor(com.google.android.material.R.attr.colorOnSurface)
+        } else {
+            rawColor
+        }
+    }
+
     // Simple project list adapter
     inner class ProjectAdapter(
         private val projects: List<SkProject>,
@@ -1144,7 +1166,7 @@ class ProjectAnalyzerFragment : Fragment() {
             return TextView(ctx).apply {
                 text = "... (\u5d4c\u5957\u8fc7\u6df1)"
                 textSize = 11f
-                setTextColor(0xFF999999.toInt())
+                setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(dp(8), dp(4), dp(8), dp(4))
             }
         }
@@ -1194,9 +1216,9 @@ class ProjectAnalyzerFragment : Fragment() {
             val label = TextView(ctx).apply {
                 text = "${node.type.substringBefore("(")} #${node.id}"
                 textSize = 10f
-                setTextColor(0xAA000000.toInt())
+                setTextColor(resolveColorWithAlpha(com.google.android.material.R.attr.colorOnSurface, 0xAA))
                 setPadding(dp(4), dp(2), dp(4), dp(2))
-                setBackgroundColor(0x15000000.toInt())
+                setBackgroundColor(resolveColorWithAlpha(com.google.android.material.R.attr.colorOnSurface, 0x15))
             }
             container.addView(label, LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1219,15 +1241,15 @@ class ProjectAnalyzerFragment : Fragment() {
         // Apply border for all views
         val wrapper = FrameLayout(ctx).apply {
             val gd = android.graphics.drawable.GradientDrawable().apply {
-                setStroke(1, 0x40000000.toInt())
+                setStroke(1, resolveColorWithAlpha(com.google.android.material.R.attr.colorOnSurface, 0x40))
                 cornerRadius = dp(2).toFloat()
                 if (!isContainer) {
-                    // Use white-ish background for non-container views
+                    // Use surface-ish background for non-container views (theme-aware)
                     val alpha = (node.bgColor ushr 24) and 0xFF
                     if (alpha > 0 && node.bgColor != 0xFFFFFFFF.toInt()) {
                         setColor(node.bgColor)
                     } else {
-                        setColor(0xFFFAFAFA.toInt())
+                        setColor(resolveColor(com.google.android.material.R.attr.colorSurfaceContainer))
                     }
                 }
             }
@@ -1284,8 +1306,8 @@ class ProjectAnalyzerFragment : Fragment() {
                     text = if (node.text.isNotEmpty()) node.text else node.id
                     textSize = 13f
                     gravity = android.view.Gravity.CENTER
-                    setTextColor(0xFF1565C0.toInt())
-                    setBackgroundColor(0xFFE3F2FD.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnPrimaryContainer))
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorPrimaryContainer))
                     setPadding(dp(12), dp(8), dp(12), dp(8))
                     minimumHeight = dp(36)
                     minimumWidth = dp(60)
@@ -1295,7 +1317,7 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = if (node.text.isNotEmpty()) node.text else "TextView"
                     textSize = node.textSize.toFloat().coerceIn(10f, 18f)
-                    setTextColor(node.textColor)
+                    setTextColor(adaptUserTextColor(node.textColor))
                     setPadding(dp(6), dp(4), dp(6), dp(4))
                     minimumHeight = dp(24)
                 }
@@ -1304,12 +1326,12 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = if (node.hint.isNotEmpty()) node.hint else if (node.text.isNotEmpty()) node.text else "EditText"
                     textSize = 13f
-                    setTextColor(0xFF999999.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                     setPadding(dp(10), dp(8), dp(10), dp(8))
                     val gd = android.graphics.drawable.GradientDrawable().apply {
-                        setStroke(dp(1), 0xFF999999.toInt())
+                        setStroke(dp(1), resolveColor(com.google.android.material.R.attr.colorOutline))
                         cornerRadius = dp(4).toFloat()
-                        setColor(0xFFFFFFFF.toInt())
+                        setColor(resolveColor(com.google.android.material.R.attr.colorSurface))
                     }
                     background = gd
                     minimumHeight = dp(36)
@@ -1320,7 +1342,7 @@ class ProjectAnalyzerFragment : Fragment() {
                     text = "🖼"
                     textSize = 20f
                     gravity = android.view.Gravity.CENTER
-                    setBackgroundColor(0xFFE0E0E0.toInt())
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceVariant))
                     minimumWidth = dp(48)
                     minimumHeight = dp(48)
                 }
@@ -1329,7 +1351,7 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = "${if (node.type == "CheckBox") "☐" else "○"} ${if (node.text.isNotEmpty()) node.text else node.id}"
                     textSize = 13f
-                    setTextColor(0xFF333333.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                     setPadding(dp(8), dp(6), dp(8), dp(6))
                     minimumHeight = dp(32)
                 }
@@ -1338,7 +1360,7 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = "⊙ ${if (node.text.isNotEmpty()) node.text else "Switch"}"
                     textSize = 13f
-                    setTextColor(0xFF333333.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                     setPadding(dp(8), dp(6), dp(8), dp(6))
                     minimumHeight = dp(32)
                 }
@@ -1350,10 +1372,10 @@ class ProjectAnalyzerFragment : Fragment() {
                     addView(TextView(ctx).apply {
                         text = node.type
                         textSize = 10f
-                        setTextColor(0xFF666666.toInt())
+                        setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                     })
                     addView(View(ctx).apply {
-                        setBackgroundColor(0xFFBBDEFB.toInt())
+                        setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorPrimaryContainer))
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, dp(8)
                         ).apply { topMargin = dp(2) }
@@ -1365,9 +1387,9 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = "▼ ${node.id}"
                     textSize = 13f
-                    setTextColor(0xFF333333.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
                     setPadding(dp(10), dp(8), dp(10), dp(8))
-                    setBackgroundColor(0xFFF5F5F5.toInt())
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceVariant))
                     minimumHeight = dp(36)
                 }
             }
@@ -1376,8 +1398,8 @@ class ProjectAnalyzerFragment : Fragment() {
                     text = "🌐 WebView\n${node.id}"
                     textSize = 12f
                     gravity = android.view.Gravity.CENTER
-                    setTextColor(0xFF666666.toInt())
-                    setBackgroundColor(0xFFF0F0F0.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceVariant))
                     setPadding(dp(12), dp(20), dp(12), dp(20))
                     minimumHeight = dp(60)
                 }
@@ -1385,23 +1407,23 @@ class ProjectAnalyzerFragment : Fragment() {
             node.type == "ListView" || node.type == "RecyclerView" || node.type == "GridView" -> {
                 LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
-                    setBackgroundColor(0xFFF8F8F8.toInt())
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceVariant))
                     setPadding(dp(8), dp(4), dp(8), dp(4))
                     addView(TextView(ctx).apply {
                         text = "${node.type} #${node.id}"
                         textSize = 10f
-                        setTextColor(0xFF666666.toInt())
+                        setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                         setPadding(0, 0, 0, dp(4))
                     })
                     for (i in 1..3) {
                         addView(TextView(ctx).apply {
                             text = "  Item $i"
                             textSize = 12f
-                            setTextColor(0xFF888888.toInt())
+                            setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                             setPadding(dp(8), dp(4), 0, dp(4))
                         })
                         if (i < 3) addView(View(ctx).apply {
-                            setBackgroundColor(0xFFE0E0E0.toInt())
+                            setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorOutlineVariant))
                             layoutParams = LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.MATCH_PARENT, dp(1)
                             )
@@ -1415,8 +1437,8 @@ class ProjectAnalyzerFragment : Fragment() {
                     text = "🗺 MapView\n${node.id}"
                     textSize = 12f
                     gravity = android.view.Gravity.CENTER
-                    setTextColor(0xFF666666.toInt())
-                    setBackgroundColor(0xFFE8F5E9.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnTertiaryContainer))
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorTertiaryContainer))
                     setPadding(dp(12), dp(20), dp(12), dp(20))
                     minimumHeight = dp(60)
                 }
@@ -1425,9 +1447,9 @@ class ProjectAnalyzerFragment : Fragment() {
                 TextView(ctx).apply {
                     text = "🔍 搜索..."
                     textSize = 13f
-                    setTextColor(0xFF999999.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                     setPadding(dp(12), dp(8), dp(12), dp(8))
-                    setBackgroundColor(0xFFF5F5F5.toInt())
+                    setBackgroundColor(resolveColor(com.google.android.material.R.attr.colorSurfaceVariant))
                     minimumHeight = dp(36)
                 }
             }
@@ -1437,7 +1459,7 @@ class ProjectAnalyzerFragment : Fragment() {
                     text = "${node.type}\n#${node.id}"
                     textSize = 11f
                     gravity = android.view.Gravity.CENTER
-                    setTextColor(0xFF888888.toInt())
+                    setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                     setPadding(dp(8), dp(6), dp(8), dp(6))
                     minimumHeight = dp(28)
                 }
