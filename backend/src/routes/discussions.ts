@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
-import { authMiddleware, isOwnerOrAdmin, isOwnerOrEditorOrAdmin } from '../middleware/auth';
+import { adminMiddleware, authMiddleware, isOwnerOrAdmin, isOwnerOrEditorOrAdmin, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
@@ -273,10 +273,18 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
   }
 
   const discussionExists = await c.env.DB.prepare(
-    'SELECT id FROM discussions WHERE id = ?'
-  ).bind(discussionIdNum).first();
+    'SELECT id, is_closed FROM discussions WHERE id = ?'
+  ).bind(discussionIdNum).first<{ id: number; is_closed: number }>();
   if (!discussionExists) {
     return c.json({ error: '讨论不存在' }, 404);
+  }
+
+  // 已锁定的讨论：仅 admin/editor 可继续回复
+  if (discussionExists.is_closed === 1) {
+    const role = await refreshCurrentUserRole(c);
+    if (role !== 'admin' && role !== 'editor') {
+      return c.json({ error: '该讨论已锁定，无法回复' }, 403);
+    }
   }
 
   let parentIdForInsert: number | null = null;
@@ -377,6 +385,96 @@ discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
   return c.json({ message: '删除成功' });
+});
+
+// 管理员：置顶 / 取消置顶
+discussionRoutes.put('/:id/pin', authMiddleware(), adminMiddleware(), async (c) => {
+  const id = c.req.param('id');
+  const idNum = Number.parseInt(id, 10);
+  if (!Number.isInteger(idNum) || idNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const pinned = body.is_pinned === undefined ? 1 : (body.is_pinned ? 1 : 0);
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM discussions WHERE id = ?'
+  ).bind(idNum).first();
+  if (!existing) return c.json({ error: '讨论不存在' }, 404);
+
+  await c.env.DB.prepare(
+    'UPDATE discussions SET is_pinned = ?, updated_at = datetime(\'now\') WHERE id = ?'
+  ).bind(pinned, idNum).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${idNum}`]);
+  return c.json({ message: pinned ? '已置顶' : '已取消置顶', is_pinned: pinned });
+});
+
+// 管理员：锁定 / 解锁
+discussionRoutes.put('/:id/close', authMiddleware(), adminMiddleware(), async (c) => {
+  const id = c.req.param('id');
+  const idNum = Number.parseInt(id, 10);
+  if (!Number.isInteger(idNum) || idNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const closed = body.is_closed === undefined ? 1 : (body.is_closed ? 1 : 0);
+
+  const existing = await c.env.DB.prepare(
+    'SELECT id FROM discussions WHERE id = ?'
+  ).bind(idNum).first();
+  if (!existing) return c.json({ error: '讨论不存在' }, 404);
+
+  await c.env.DB.prepare(
+    'UPDATE discussions SET is_closed = ?, updated_at = datetime(\'now\') WHERE id = ?'
+  ).bind(closed, idNum).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${idNum}`]);
+  return c.json({ message: closed ? '已锁定' : '已解锁', is_closed: closed });
+});
+
+// 编辑评论（仅作者或管理员）
+discussionRoutes.put('/:id/comments/:commentId', authMiddleware(), async (c) => {
+  const discussionId = c.req.param('id');
+  const commentId = c.req.param('commentId');
+  const { content } = await c.req.json();
+
+  const discussionIdNum = Number.parseInt(discussionId, 10);
+  if (!Number.isInteger(discussionIdNum) || discussionIdNum <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+
+  if (!content || typeof content !== 'string') {
+    return c.json({ error: '回复内容不能为空' }, 400);
+  }
+  if (content.length > 5000) {
+    return c.json({ error: '回复内容最长5000个字符' }, 400);
+  }
+
+  const comment = await c.env.DB.prepare(
+    'SELECT author_id, discussion_id FROM comments WHERE id = ?'
+  ).bind(commentId).first<{ author_id: number; discussion_id: number }>();
+
+  if (!comment) return c.json({ error: '评论不存在' }, 404);
+  if (comment.discussion_id !== discussionIdNum) {
+    return c.json({ error: '评论不属于当前讨论' }, 400);
+  }
+  // 评论编辑限于作者或管理员；编辑角色不能改写他人评论
+  if (!(await isOwnerOrAdmin(c, comment.author_id))) {
+    return c.json({ error: '无权编辑' }, 403);
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE comments SET content = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(content, commentId).run();
+
+  const baseUrl = new URL(c.req.url).origin;
+  await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${discussionId}`]);
+  return c.json({ message: '更新成功' });
 });
 
 // 删除评论（仅作者或管理员）
