@@ -111,7 +111,7 @@ articleRoutes.get('/:id', authMiddleware(false), async (c) => {
 // 创建文章（需要编辑/管理员权限）
 articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
   const user = c.get('user')!;
-  const { title, content, summary, category_id, sort_order } = await c.req.json();
+  const { title, content, summary, category_id, sort_order, is_published } = await c.req.json();
 
   if (!title || !content || !category_id) {
     return c.json({ error: '标题、内容和分类不能为空' }, 400);
@@ -129,14 +129,22 @@ articleRoutes.post('/', authMiddleware(), editorMiddleware(), async (c) => {
     return c.json({ error: '分类不存在' }, 404);
   }
 
+  // is_published 缺省为 1 (已发布)；显式传 0 / false 即视为草稿
+  const publishedValue = is_published === undefined || is_published === null
+    ? 1
+    : (is_published ? 1 : 0);
+
   const result = await c.env.DB.prepare(`
-    INSERT INTO articles (title, content, summary, category_id, author_id, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(title, content, summary || '', categoryIdNum, user.id, sort_order || 0).run();
+    INSERT INTO articles (title, content, summary, category_id, author_id, sort_order, is_published)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(title, content, summary || '', categoryIdNum, user.id, sort_order || 0, publishedValue).run();
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
-  return c.json({ id: result.meta.last_row_id, message: '发布成功' }, 201);
+  return c.json({
+    id: result.meta.last_row_id,
+    message: publishedValue === 1 ? '发布成功' : '草稿已保存'
+  }, 201);
 });
 
 // 更新文章
@@ -173,10 +181,15 @@ articleRoutes.put('/:id', authMiddleware(), editorMiddleware(), async (c) => {
     return c.json({ error: '分类不存在' }, 404);
   }
 
+  // is_published 缺省保持已发布；显式传 0 / false 视为草稿（与 POST 归一逻辑保持一致）
+  const publishedValue = is_published === undefined || is_published === null
+    ? 1
+    : (is_published ? 1 : 0);
+
   await c.env.DB.prepare(`
     UPDATE articles SET title = ?, content = ?, summary = ?, category_id = ?,
     sort_order = ?, is_published = ?, updated_at = datetime('now') WHERE id = ?
-  `).bind(title, content, summary || '', categoryIdNum, sort_order || 0, is_published ?? 1, id).run();
+  `).bind(title, content, summary || '', categoryIdNum, sort_order || 0, publishedValue, id).run();
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
