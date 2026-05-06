@@ -169,6 +169,7 @@ class ArticleEditorFragment : Fragment() {
             binding.etSummary.setText(article.summary.orEmpty())
             binding.etContent.setText(article.content.orEmpty())
             selectedCategoryId = article.categoryId
+            binding.switchPublished.isChecked = article.isPublished == 1
 
             val index = categories.indexOfFirst { it.id == article.categoryId }
             if (index >= 0) {
@@ -265,19 +266,23 @@ class ArticleEditorFragment : Fragment() {
 
         if (!validateBeforeSave(title, content)) return
 
+        val publishedFlag = if (binding.switchPublished.isChecked) 1 else 0
+
         if (articleId != null) {
             viewModel.updateArticle(articleId!!, UpdateArticleRequest(
                 title = title,
                 content = content,
                 summary = summary,
-                categoryId = selectedCategoryId
+                categoryId = selectedCategoryId,
+                isPublished = publishedFlag,
             ))
         } else {
             viewModel.createArticle(CreateArticleRequest(
                 title = title,
                 content = content,
                 summary = summary,
-                categoryId = selectedCategoryId!!
+                categoryId = selectedCategoryId!!,
+                isPublished = publishedFlag,
             ))
         }
     }
