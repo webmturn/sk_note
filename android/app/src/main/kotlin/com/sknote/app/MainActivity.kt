@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -50,6 +51,29 @@ class MainActivity : AppCompatActivity() {
 
         binding.bottomNav.setupWithNavController(navController)
 
+        // Replace the default (animation-less, instant) bottom-nav navigation with a
+        // Material fade-through transition. setupWithNavController above already wires
+        // the reverse direction (destination changed -> update checked item), so we
+        // only need to override the click handler here.
+        val tabNavOptions = NavOptions.Builder()
+            .setLaunchSingleTop(true)
+            .setRestoreState(true)
+            .setPopUpTo(navController.graph.startDestinationId, /*inclusive*/ false, /*saveState*/ true)
+            .setEnterAnim(R.anim.nav_fade_in)
+            .setExitAnim(R.anim.nav_fade_out)
+            .setPopEnterAnim(R.anim.nav_fade_in)
+            .setPopExitAnim(R.anim.nav_fade_out)
+            .build()
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            if (navController.currentDestination?.id == item.itemId) return@setOnItemSelectedListener true
+            try {
+                navController.navigate(item.itemId, null, tabNavOptions)
+                true
+            } catch (_: IllegalArgumentException) {
+                false
+            }
+        }
+
         val topLevelDestinations = setOf(
             R.id.homeFragment,
             R.id.referenceFragment,
@@ -60,18 +84,24 @@ class MainActivity : AppCompatActivity() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val wrapper = binding.bottomNavWrapper
             if (destination.id in topLevelDestinations) {
-                if (wrapper.visibility != View.VISIBLE) {
-                    wrapper.translationY = wrapper.height.toFloat()
-                    wrapper.visibility = View.VISIBLE
-                    wrapper.animate().translationY(0f).setDuration(250).start()
-                }
+                wrapper.animate().cancel()
+                wrapper.visibility = View.VISIBLE
+                wrapper.isEnabled = true
+                binding.bottomNav.isEnabled = true
+                wrapper.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(300)
+                    .start()
             } else {
-                if (wrapper.visibility == View.VISIBLE) {
-                    wrapper.animate().translationY(wrapper.height.toFloat())
-                        .setDuration(250)
-                        .withEndAction { wrapper.visibility = View.GONE }
-                        .start()
-                }
+                wrapper.animate().cancel()
+                wrapper.isEnabled = false
+                binding.bottomNav.isEnabled = false
+                wrapper.animate()
+                    .translationY(wrapper.height.toFloat())
+                    .alpha(0f)
+                    .setDuration(300)
+                    .start()
             }
         }
 
