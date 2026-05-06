@@ -9,6 +9,18 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_pin"
+        android:title="置顶"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_close"
+        android:title="锁定回复"
+        android:visible="false"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_edit"
         android:icon="@drawable/ic_edit"
         android:title="编辑"

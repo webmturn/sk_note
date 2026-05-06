@@ -22,6 +22,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Comment
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
 import com.sknote.app.databinding.LayoutDiscussionDetailHeaderBinding
 import com.sknote.app.util.DiscussionCategoryDefaults
@@ -168,6 +170,13 @@ class DiscussionDetailFragment : Fragment() {
                     val bundle = Bundle().apply { putLong("user_id", comment.authorId) }
                     findNavController().navigate(R.id.publicProfileFragment, bundle, slideNavOptions())
                 }
+            },
+            onEditClick = { comment ->
+                if (comment.authorId == cachedUserId || cachedRole == "admin") {
+                    showEditCommentDialog(comment)
+                } else {
+                    Snackbar.make(binding.root, "你没有权限编辑这条评论", Snackbar.LENGTH_SHORT).show()
+                }
             }
         )
         binding.rvMain.apply {
@@ -276,8 +285,20 @@ class DiscussionDetailFragment : Fragment() {
             // Edit limited to author or admin (matches backend); delete includes editor for moderation.
             val canEdit = discussion.authorId == cachedUserId || cachedRole == "admin"
             val canDelete = canEdit || cachedRole == "editor"
+            val isAdmin = cachedRole == "admin"
             binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
             binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
+            binding.toolbar.menu.findItem(R.id.action_pin)?.apply {
+                isVisible = isAdmin
+                title = if (discussion.isPinned == 1) "取消置顶" else "置顶"
+            }
+            binding.toolbar.menu.findItem(R.id.action_close)?.apply {
+                isVisible = isAdmin
+                title = if (discussion.isClosed == 1) "解锁讨论" else "锁定讨论"
+            }
+
+            // 锁定的讨论：非 admin/editor 隐藏评论框
+            renderReplyComposer()
 
             binding.toolbar.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
@@ -289,6 +310,46 @@ class DiscussionDetailFragment : Fragment() {
                             putExtra(Intent.EXTRA_TEXT, shareText)
                         }
                         startActivity(Intent.createChooser(intent, "分享讨论"))
+                        true
+                    }
+                    R.id.action_pin -> {
+                        val newPinned = discussion.isPinned != 1
+                        viewModel.togglePin(discussionId, newPinned) { ok, msg ->
+                            if (_binding == null) return@togglePin
+                            Snackbar.make(
+                                binding.root,
+                                if (ok) (if (newPinned) "已置顶" else "已取消置顶") else (msg ?: "操作失败"),
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                            if (ok) {
+                                findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
+                            }
+                        }
+                        true
+                    }
+                    R.id.action_close -> {
+                        val newClosed = discussion.isClosed != 1
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(if (newClosed) "锁定讨论" else "解锁讨论")
+                            .setMessage(
+                                if (newClosed) "锁定后将禁止其他用户继续回复，仍可解锁恢复。"
+                                else "解锁后允许所有用户继续回复。"
+                            )
+                            .setPositiveButton("确定") { _, _ ->
+                                viewModel.toggleClose(discussionId, newClosed) { ok, msg ->
+                                    if (_binding == null) return@toggleClose
+                                    Snackbar.make(
+                                        binding.root,
+                                        if (ok) (if (newClosed) "已锁定" else "已解锁") else (msg ?: "操作失败"),
+                                        Snackbar.LENGTH_SHORT
+                                    ).show()
+                                    if (ok) {
+                                        findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
+                                    }
+                                }
+                            }
+                            .setNegativeButton("取消", null)
+                            .show()
                         true
                     }
                     R.id.action_edit -> {
@@ -393,9 +454,15 @@ class DiscussionDetailFragment : Fragment() {
     }
 
     private fun renderReplyComposer() {
-        binding.layoutReplyGuest.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
-        binding.layoutReply.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
-        if (!isLoggedIn) {
+        val isClosed = viewModel.discussion.value?.isClosed == 1
+        val canBypassLock = cachedRole == "admin" || cachedRole == "editor"
+        val locked = isClosed && !canBypassLock
+
+        binding.layoutReplyClosed.visibility = if (locked) View.VISIBLE else View.GONE
+        binding.layoutReplyGuest.visibility = if (!locked && !isLoggedIn) View.VISIBLE else View.GONE
+        binding.layoutReply.visibility = if (!locked && isLoggedIn) View.VISIBLE else View.GONE
+
+        if (locked || !isLoggedIn) {
             binding.etReply.text?.clear()
             clearReplyTarget()
         }
@@ -425,6 +492,74 @@ class DiscussionDetailFragment : Fragment() {
         val clip = ClipData.newPlainText("comment", content)
         clipboard.setPrimaryClip(clip)
         Snackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
+    }
+
+    private fun showEditCommentDialog(comment: Comment) {
+        val context = requireContext()
+        val density = resources.displayMetrics.density
+        val padding = (16 * density).toInt()
+
+        val inputLayout = TextInputLayout(context).apply {
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            isCounterEnabled = true
+            counterMaxLength = 5000
+            hint = "评论内容"
+        }
+        val editText = TextInputEditText(inputLayout.context).apply {
+            setText(comment.content.orEmpty())
+            setSelection(text?.length ?: 0)
+            minLines = 3
+            maxLines = 8
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        }
+        inputLayout.addView(editText)
+
+        val container = android.widget.FrameLayout(context).apply {
+            setPadding(padding, (8 * density).toInt(), padding, 0)
+            addView(inputLayout)
+        }
+
+        val dialog = MaterialAlertDialogBuilder(context)
+            .setTitle("编辑评论")
+            .setView(container)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("保存", null)
+            .create()
+
+        dialog.setOnShowListener {
+            val saveButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+            saveButton.setOnClickListener {
+                val newContent = editText.text?.toString()?.trim().orEmpty()
+                if (newContent.isEmpty()) {
+                    inputLayout.error = "评论内容不能为空"
+                    return@setOnClickListener
+                }
+                if (newContent.length > 5000) {
+                    inputLayout.error = "评论内容最长5000个字符"
+                    return@setOnClickListener
+                }
+                if (newContent == comment.content.orEmpty().trim()) {
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+                inputLayout.error = null
+                saveButton.isEnabled = false
+                viewModel.updateComment(discussionId, comment.id, newContent) { success, message ->
+                    if (_binding == null) return@updateComment
+                    saveButton.isEnabled = true
+                    if (success) {
+                        dialog.dismiss()
+                        Snackbar.make(binding.root, "评论已更新", Snackbar.LENGTH_SHORT).show()
+                    } else {
+                        Snackbar.make(binding.root, message ?: "更新失败", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
+        dialog.show()
     }
 
     override fun onDestroyView() {

@@ -17,7 +17,8 @@ class CommentAdapter(
     private val onCopyClick: (Comment) -> Unit = {},
     private val onDeleteClick: (Comment) -> Unit = {},
     private val onLikeClick: (Comment) -> Unit = {},
-    private val onAvatarClick: (Comment) -> Unit = {}
+    private val onAvatarClick: (Comment) -> Unit = {},
+    private val onEditClick: (Comment) -> Unit = {}
 ) : ListAdapter<Comment, CommentAdapter.ViewHolder>(DiffCallback) {
 
     private var currentUserId: Long = -1L
@@ -87,6 +88,10 @@ class CommentAdapter(
         holder.binding.btnLike.setOnClickListener { onLikeClick(comment) }
         holder.binding.btnReply.setOnClickListener { onReplyClick(comment) }
         holder.binding.btnCopy.setOnClickListener { onCopyClick(comment) }
+
+        val canEdit = comment.authorId == currentUserId || currentUserRole == "admin"
+        holder.binding.btnEdit.visibility = if (canEdit) View.VISIBLE else View.GONE
+        holder.binding.btnEdit.setOnClickListener { onEditClick(comment) }
 
         val canDelete = comment.authorId == currentUserId || currentUserRole == "admin" || currentUserRole == "editor"
         holder.binding.btnDelete.visibility = if (canDelete) View.VISIBLE else View.GONE

@@ -8,6 +8,9 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Comment
 import com.sknote.app.data.model.CreateCommentRequest
 import com.sknote.app.data.model.Discussion
+import com.sknote.app.data.model.UpdateCloseRequest
+import com.sknote.app.data.model.UpdateCommentRequest
+import com.sknote.app.data.model.UpdatePinRequest
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
 
@@ -109,6 +112,60 @@ class DiscussionDetailViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _error.value = ErrorUtil.friendlyMessage(e)
+            }
+        }
+    }
+
+    fun togglePin(discussionId: Long, pinned: Boolean, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.getService().pinDiscussion(
+                    discussionId, UpdatePinRequest(if (pinned) 1 else 0)
+                )
+                if (response.isSuccessful) {
+                    onResult(true, null)
+                    loadDiscussion(discussionId)
+                } else {
+                    onResult(false, "操作失败: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onResult(false, ErrorUtil.friendlyMessage(e))
+            }
+        }
+    }
+
+    fun toggleClose(discussionId: Long, closed: Boolean, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.getService().closeDiscussion(
+                    discussionId, UpdateCloseRequest(if (closed) 1 else 0)
+                )
+                if (response.isSuccessful) {
+                    onResult(true, null)
+                    loadDiscussion(discussionId)
+                } else {
+                    onResult(false, "操作失败: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onResult(false, ErrorUtil.friendlyMessage(e))
+            }
+        }
+    }
+
+    fun updateComment(discussionId: Long, commentId: Long, content: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = ApiClient.getService().updateComment(
+                    discussionId, commentId, UpdateCommentRequest(content)
+                )
+                if (response.isSuccessful) {
+                    onResult(true, null)
+                    loadDiscussion(discussionId)
+                } else {
+                    onResult(false, "更新评论失败: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                onResult(false, ErrorUtil.friendlyMessage(e))
             }
         }
     }
