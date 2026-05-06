@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
-import { authMiddleware, isOwnerOrAdmin } from '../middleware/auth';
+import { authMiddleware, adminMiddleware, isOwnerOrAdmin, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleLike } from '../likeUtils';
@@ -65,10 +65,26 @@ shareRoutes.get('/categories', edgeCache(300), async (c) => {
 });
 
 // 获取单个分享详情
-shareRoutes.get('/:id', async (c) => {
+shareRoutes.get('/:id', authMiddleware(false), async (c) => {
   const id = c.req.param('id');
-  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ? AND is_approved = 1').bind(id).first();
+  const share = await c.env.DB.prepare('SELECT * FROM shares WHERE id = ?').bind(id).first<any>();
   if (!share) return c.json({ error: '未找到' }, 404);
+
+  // 未审核分享：仅作者或管理员可预览
+  const isApproved = (share as any).is_approved === 1;
+  if (!isApproved) {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: '未找到' }, 404);
+    }
+    const role = await refreshCurrentUserRole(c);
+    const isOwner = (share as any).author_id === user.id;
+    if (role !== 'admin' && !isOwner) {
+      return c.json({ error: '未找到' }, 404);
+    }
+    // 预览不计入浏览量，直接返回
+    return c.json({ share });
+  }
 
   const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
     || c.req.header('x-real-ip')
@@ -228,6 +244,102 @@ shareRoutes.delete('/:id', authMiddleware(), async (c) => {
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
   return c.json({ message: '已删除' });
+});
+
+// 管理员：获取所有分享（含未批准），用于后台管理
+shareRoutes.get('/manage/list', authMiddleware(), adminMiddleware(), async (c) => {
+  try {
+    const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
+    const status = c.req.query('status'); // 'all' | 'approved' | 'pending'
+    const search = c.req.query('search') || '';
+    const offset = (page - 1) * limit;
+
+    let query = 'SELECT * FROM shares WHERE 1=1';
+    const params: any[] = [];
+
+    if (status === 'pending') {
+      query += ' AND is_approved = 0';
+    } else if (status === 'approved') {
+      query += ' AND is_approved = 1';
+    }
+
+    if (search) {
+      query += ' AND (title LIKE ? OR description LIKE ? OR author_name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    query += ' ORDER BY is_approved ASC, created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const shares = await c.env.DB.prepare(query).bind(...params).all();
+
+    let countQuery = 'SELECT COUNT(*) as total FROM shares WHERE 1=1';
+    const countParams: any[] = [];
+    if (status === 'pending') {
+      countQuery += ' AND is_approved = 0';
+    } else if (status === 'approved') {
+      countQuery += ' AND is_approved = 1';
+    }
+    if (search) {
+      countQuery += ' AND (title LIKE ? OR description LIKE ? OR author_name LIKE ?)';
+      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+    const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
+
+    return c.json({
+      shares: shares.results,
+      pagination: {
+        page,
+        limit,
+        total: countResult?.total || 0,
+        total_pages: Math.ceil((countResult?.total || 0) / limit),
+      }
+    });
+  } catch (e: any) {
+    console.error('获取分享管理列表失败:', e);
+    return c.json({ error: '获取列表失败' }, 500);
+  }
+});
+
+// 管理员：审核分享（批准/取消批准）
+shareRoutes.put('/:id/approve', authMiddleware(), adminMiddleware(), async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const approved = body.is_approved === undefined ? 1 : (body.is_approved ? 1 : 0);
+
+    const existing = await c.env.DB.prepare(
+      'SELECT id, author_id, title, is_approved FROM shares WHERE id = ?'
+    ).bind(id).first<{ id: number; author_id: number; title: string; is_approved: number }>();
+    if (!existing) return c.json({ error: '分享不存在' }, 404);
+
+    await c.env.DB.prepare(
+      `UPDATE shares SET is_approved = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(approved, id).run();
+
+    // 0 -> 1 时通知作者审核通过；1 -> 0 不通知（admin 主动隐藏，作者刷新即可看到）
+    const wasUnapproved = existing.is_approved === 0;
+    const adminUser = c.get('user')!;
+    if (approved === 1 && wasUnapproved && existing.author_id !== adminUser.id) {
+      await notifyActor(c.env.DB, {
+        ownerId: existing.author_id,
+        actorId: adminUser.id,
+        type: 'system',
+        title: '你的分享已通过审核',
+        content: (existing.title || '').slice(0, 100),
+        relatedType: 'share',
+        relatedId: existing.id,
+      });
+    }
+
+    const baseUrl = new URL(c.req.url).origin;
+    await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
+    return c.json({ message: approved ? '已批准' : '已取消批准', is_approved: approved });
+  } catch (e: any) {
+    console.error('审核分享失败:', e);
+    return c.json({ error: '审核失败' }, 500);
+  }
 });
 
 // 点赞分享
