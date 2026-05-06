@@ -116,16 +116,29 @@ class MainActivity : AppCompatActivity() {
     private fun showAutoUpdateDialog(info: AppUpdateManager.UpdateInfo) {
         val sizeText = if (info.fileSize > 0) "\n安装包大小：${AppUpdateManager.formatFileSize(info.fileSize)}" else ""
         val changelogText = if (info.changelog.isNotBlank()) "\n\n更新内容：\n${info.changelog}" else ""
+        val noLinkText = if (info.downloadUrl.isBlank() && info.htmlUrl.isBlank()) {
+            "\n\n注意：管理员暂未提供下载链接，请稍后手动检查更新。"
+        } else ""
 
         val builder = MaterialAlertDialogBuilder(this)
             .setTitle("发现新版本 v${info.versionName}")
-            .setMessage("当前版本：v${BuildConfig.VERSION_NAME}$sizeText$changelogText")
+            .setMessage("当前版本：v${BuildConfig.VERSION_NAME}$sizeText$changelogText$noLinkText")
 
-        if (info.downloadUrl.isNotBlank()) {
-            builder.setPositiveButton("立即更新") { _, _ -> startDownload(info) }
-        } else {
-            builder.setPositiveButton("前往下载") { _, _ ->
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
+        when {
+            info.downloadUrl.isNotBlank() -> {
+                builder.setPositiveButton("立即更新") { _, _ -> startDownload(info) }
+            }
+            info.htmlUrl.isNotBlank() -> {
+                builder.setPositiveButton("前往下载") { _, _ ->
+                    runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
+                    }.onFailure {
+                        Snackbar.make(binding.root, "无法打开下载页面", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            else -> {
+                builder.setPositiveButton("知道了", null)
             }
         }
 

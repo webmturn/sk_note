@@ -16,8 +16,6 @@ android {
 
         // 当前默认 API 地址为生产域名；如需切换环境，请修改这里
         buildConfigField("String", "API_BASE_URL", "\"https://api.wsqh.cn\"")
-        // GitHub 仓库 (owner/repo)，用于检查更新
-        buildConfigField("String", "GITHUB_REPO", "\"webmturn/sk_note\"")
 
     }
 

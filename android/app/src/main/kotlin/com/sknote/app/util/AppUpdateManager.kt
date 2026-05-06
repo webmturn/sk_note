@@ -10,17 +10,14 @@ import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
 import com.sknote.app.BuildConfig
+import com.sknote.app.data.api.ApiClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 object AppUpdateManager {
 
@@ -31,11 +28,6 @@ object AppUpdateManager {
 
     @Volatile
     private var startupPrefetchResult: UpdateResult? = null
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
 
     data class UpdateInfo(
         val versionName: String,
@@ -85,55 +77,31 @@ object AppUpdateManager {
 
     suspend fun checkForUpdate(): UpdateResult = withContext(Dispatchers.IO) {
         try {
-            val repo = BuildConfig.GITHUB_REPO
-            if (repo.isBlank()) return@withContext UpdateResult(false, error = "未配置 GitHub 仓库")
-
-            val url = "https://api.github.com/repos/$repo/releases/latest"
-            val request = Request.Builder()
-                .url(url)
-                .header("Accept", "application/vnd.github.v3+json")
-                .build()
-
-            val response = client.newCall(request).execute()
+            val response = ApiClient.getService().checkAppUpdate(BuildConfig.VERSION_NAME)
             if (!response.isSuccessful) {
-                return@withContext UpdateResult(false, error = "GitHub API 错误 (${response.code})")
+                return@withContext UpdateResult(false, error = "服务器错误 (${response.code()})")
             }
 
-            val body = response.body?.string() ?: return@withContext UpdateResult(false, error = "空响应")
-            val json = JSONObject(body)
+            val body = response.body() ?: return@withContext UpdateResult(false, error = "空响应")
 
-            val tagName = json.optString("tag_name", "")
-            val remoteVersion = tagName.removePrefix("v").removePrefix("V")
-            val changelog = json.optString("body", "").trim()
-            val htmlUrl = json.optString("html_url", "")
-
-            var downloadUrl = ""
-            var fileSize = 0L
-            val assets = json.optJSONArray("assets")
-            if (assets != null) {
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    val name = asset.optString("name", "")
-                    if (name.endsWith(".apk")) {
-                        downloadUrl = asset.optString("browser_download_url", "")
-                        fileSize = asset.optLong("size", 0)
-                        break
-                    }
-                }
-            }
-
+            val remoteVersion = body.latestVersion.orEmpty()
+                .trim()
+                .removePrefix("v")
+                .removePrefix("V")
             if (remoteVersion.isBlank()) {
-                return@withContext UpdateResult(false, error = "无法解析版本号")
+                // 后端尚无版本记录：视为无可更新版本，不报错
+                return@withContext UpdateResult(false)
             }
 
-            val hasUpdate = isNewerVersion(remoteVersion, BuildConfig.VERSION_NAME)
             val info = UpdateInfo(
                 versionName = remoteVersion,
-                changelog = changelog,
-                downloadUrl = downloadUrl,
-                fileSize = fileSize,
-                htmlUrl = htmlUrl
+                changelog = body.changelog.orEmpty().trim(),
+                downloadUrl = body.downloadUrl.orEmpty(),
+                fileSize = body.fileSize ?: 0L,
+                htmlUrl = body.releaseUrl.orEmpty()
             )
+            // 后端已经做过比较，但本地再校验一次以防版本号漂移
+            val hasUpdate = body.hasUpdate && isNewerVersion(remoteVersion, BuildConfig.VERSION_NAME)
             UpdateResult(hasUpdate, info)
         } catch (e: Exception) {
             UpdateResult(false, error = ErrorUtil.friendlyMessage(e))
