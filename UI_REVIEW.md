@@ -451,14 +451,66 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL；**`ContentDescription` 158 → 0**，warning 2517 → **2359**，error 保持 0。
 
+### 第八批（图标底板复用样式，已执行）
+
+内联图标底板迁移到 `Widget.SkNote.IconTile`。
+
+**先纠正我自己先前的估算**。我在第六批后写的是「42dp×20 / 40dp×11 / 38dp×7-8 / 36dp×3-4，共约 30 处」——这是凭印象写的。实际扫描 107 个 layout 后的事实是：
+
+| 规格 | 处数 | 结论 |
+|---|---|---|
+| 42dp / 圆角 12dp / padding 9dp | 25 | 与 `Widget.SkNote.IconTile` 精确相符 |
+| 38dp / 圆角 11dp / padding 8dp | 8 | 与 `IconTile.Small` 精确相符 |
+| 40dp / 圆角 10dp | 9 | 无对应样式，**未迁移** |
+| 40dp / 圆角 12dp | 3 | 无对应样式，**未迁移** |
+| 其余（24dp–80dp） | 21 | 角色各异（头像、圆形统计块等），**未迁移** |
+
+即真正同质且能零视觉变化迁移的是 **33 处**，分布在 7 个文件，且这 33 处的属性顺序**完全一致**（`layout_width, layout_height, cardCornerRadius, cardElevation, cardBackgroundColor, layout_marginEnd`）。40dp 那两组若迁移必须先把尺寸改成 42dp，属于视觉变更，不做。
+
+**为什么必须先取证而不能凭记忆**：这次迁移依赖一个关键假设——`layout_width`/`layout_height` 写在 style 里能否对布局中的子 View 生效。若假设错误，33 个底板会全部塌陷。查证过程：
+
+1. 扫 Gradle 缓存中 **163 个 Google/AndroidX AAR**：共 2009 个 `<style>`，其中 25 个声明了 `layout_width/height`，layout 中 `style=` 引用共 60 处，但**两者零交集**——即 Google 自己从不这样用。这是黄灯。
+2. 读本机 AOSP 源码（`sdk/sources/android-36.1`）定论：`ViewGroup.java:8379` 的 `LayoutParams(Context, AttributeSet)` 调用 `c.obtainStyledAttributes(attrs, R.styleable.ViewGroup_Layout)`，经 `Resources.java:2645` 走到 `Theme.obtainStyledAttributes(set, attrs, 0, 0)`，其 javadoc 明确写着 *"if the given AttributeSet specifies a style class (through the `style` attribute), that style will be applied on top of the base attributes it defines"*，且四级优先级中第二位就是 `The style resource specified in the AttributeSet`。**假设成立**。
+3. 另确认本项目主题未覆盖 `materialCardViewStyle`，故显式 `style=` 不会绕过主题默认值。
+
+**执行方式**：脚本按扫描得到的精确站点（按"最内层包含该 `cardBackgroundColor` 的 MaterialCardView"定位，因为这些底板嵌套在更大的内容卡片内）从文件底部向上改写；执行前备份 7 个文件。
+
+**改后校验**：独立验证器从备份与新文件分别解析每个底板的几何、底色、`layout_marginEnd`、子 `ImageView` 全部属性，新文件的几何**沿 style 链解析**后比对——55 项检查全部通过，几何仍为 25×42dp/12dp 与 8×38dp/11dp。
+
+**diff**：33 增 / 132 删（= 33 × 1 增 4 删）。
+
+### 第九批（筛选 Tab 复用样式，已执行）
+
+8 个 XML 声明的 `TabLayout` 中 6 个内联了完全相同的三行配色，迁移到 `Widget.SkNote.TabLayout`，layout 部分共 11 增 / 23 删（= 6 × 2 增 4 删中的三行配色，其中 `fragment_reference_container` 的 `tabTextColor` 非末行故为 1 增 3 删）。已确认 M3 主题的 `tabStyle` 默认值即 `Widget.Material3.TabLayout`（该样式的父级），且本项目主题未覆盖 `tabStyle`。
+
+另两个（`fragment_project_resource`、`fragment_share_manage`）**未声明任何配色属性**，套用样式会改变外观，故保留原状——这属于遗留不一致，需要时单独决策。
+
+**顺带删除 `Widget.SkNote.Card`**。它是我此前引入但从未被任何 layout 引用的死代码。动手前统计其候选点只有 12 处且角色并不同质：
+
+- `fragment_cache_manage.xml:44` 是 64dp **圆形**「总缓存大小」
+- `item_comment.xml:18` 是 32dp **圆形头像**
+- 6 个 `item_*_manage.xml` 是**布局根节点**（带 `xmlns` 声明）
+- 只有 5 个是真正的页面级内容卡片
+
+以 `Card` 之名归并这四类角色是误导，强行套用会换来 12 处回归面却只省 24 行，故**删除而非套用**。至此 `styles.xml` 中 3 个样式全部被引用。
+
+**门禁**：`:app:processDebugResources` 实际执行并成功（证明改后的 layout 与 `styles.xml` 真被编译链接，不是缓存命中）；`:app:compileDebugKotlin`、`:app:lintDebug` 通过；error 保持 0，本批 warning 2357 → **2355**（第八批为 2359 → 2357）。
+
 ---
 
 ## 九、剩余待办
 
-> 「第一批」到「第七批」均已完成。触控目标、无障碍描述、字号下限、下拉框标签、创建页去重、装饰性图片标记全部收口。
+> 「第一批」到「第九批」均已完成。触控目标、无障碍描述、字号下限、下拉框标签、创建页去重、装饰性图片标记、图标底板与筛选 Tab 的样式复用全部收口。
 
-**剩余**
-1. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
+**结构一致性（已评估，明确不做）**
+
+1. 40dp 图标底板 12 处（圆角 10dp 的 9 处、12dp 的 3 处）：迁移必须先把尺寸统一到 42dp，属视觉变更，需产品决策
+2. 其余 21 处 24dp–80dp 的 `MaterialCardView`+单 `ImageView`：角色各异（头像、圆形统计块、品牌 logo），非同一设计元素
+
+**本轮新发现**
+
+1. `Widget.SkNote.BottomNavigation` 与 `Widget.SkNote.BottomNavigation_ActiveIndicator` 被 Lint 报为未使用（**项目原有**，非本轮引入），待确认后清理
+2. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
