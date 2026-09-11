@@ -30,7 +30,7 @@ class DiscussionCategoryEditorFragment : Fragment() {
     private var currentDescription: String = ""
     private var hasLoadedInitialData = false
     private val categoryId: Long by lazy { arguments?.getLong(ARG_CATEGORY_ID) ?: 0L }
-    private var slugEditedManually = categoryId != 0L
+    private var slugEditedManually = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCategoryEditorBinding.inflate(inflater, container, false)
@@ -47,6 +47,11 @@ class DiscussionCategoryEditorFragment : Fragment() {
             currentDescription = it.getString(STATE_DESCRIPTION).orEmpty()
             slugEditedManually = it.getBoolean(STATE_SLUG_EDITED_MANUALLY, slugEditedManually)
             hasLoadedInitialData = it.getBoolean(STATE_HAS_LOADED_INITIAL_DATA, false)
+        }
+        // 必须在 onViewCreated 之后读 categoryId：属性初始化器在 Fragment 构造期执行，
+        // 那时 arguments 还没被 Navigation 赋值，lazy 会把 0L 永久缓存下来导致编辑变成新建。
+        if (savedInstanceState == null) {
+            slugEditedManually = categoryId != 0L
         }
 
         binding.tilSlug.visibility = View.VISIBLE

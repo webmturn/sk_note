@@ -45,6 +45,7 @@ class ReleaseEditorFragment : Fragment() {
         binding.etVersionCode.setText((BuildConfig.VERSION_CODE + 1).toString())
 
         binding.btnSave.setOnClickListener { submit() }
+        observeSubmitResult()
     }
 
     private fun submit() {
@@ -96,16 +97,29 @@ class ReleaseEditorFragment : Fragment() {
             fileSize = fileSize,
             releaseUrl = releaseUrl,
         )
-        viewModel.createRelease(request) { success, message ->
-            if (_binding == null) return@createRelease
-            binding.btnSave.isEnabled = true
-            if (success) {
-                findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_releases", true)
+        viewModel.createRelease(request)
+    }
+
+    private fun observeSubmitResult() {
+        viewModel.saveSuccess.observe(viewLifecycleOwner) { success ->
+            if (success == true) {
+                viewModel.onSaveHandled()
+                findNavController().previousBackStackEntry?.savedStateHandle?.set(RESULT_REFRESH_KEY, true)
                 findNavController().navigateUp()
-            } else {
-                Snackbar.make(binding.root, message ?: "发布失败", Snackbar.LENGTH_SHORT).show()
             }
         }
+
+        viewModel.error.observe(viewLifecycleOwner) { error ->
+            error?.let {
+                viewModel.onErrorHandled()
+                binding.btnSave.isEnabled = true
+                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    companion object {
+        const val RESULT_REFRESH_KEY = "refresh_releases"
     }
 
     override fun onDestroyView() {

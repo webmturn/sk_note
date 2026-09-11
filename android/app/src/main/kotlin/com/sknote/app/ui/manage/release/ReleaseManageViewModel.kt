@@ -22,6 +22,17 @@ class ReleaseManageViewModel : ViewModel() {
     private val _message = MutableLiveData<String?>()
     val message: LiveData<String?> = _message
 
+    // 发布结果用状态而非回调回传：回调会把 Fragment 的 binding 装进 ViewModel，
+    // 请求在途时旋转/切后台会因 _binding == null 直接丢弃结果，导致列表不刷新。
+    private val _saveSuccess = MutableLiveData<Boolean?>()
+    val saveSuccess: LiveData<Boolean?> = _saveSuccess
+
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
+
+    fun onSaveHandled() { _saveSuccess.value = null }
+    fun onErrorHandled() { _error.value = null }
+
     fun clearMessage() { _message.value = null }
 
     fun loadReleases() {
@@ -42,19 +53,19 @@ class ReleaseManageViewModel : ViewModel() {
         }
     }
 
-    fun createRelease(request: CreateAppReleaseRequest, onResult: (Boolean, String?) -> Unit) {
+    fun createRelease(request: CreateAppReleaseRequest) {
         viewModelScope.launch {
             try {
                 val response = ApiClient.getService().createAppRelease(request)
                 if (response.isSuccessful) {
-                    onResult(true, null)
                     _message.value = "版本发布成功"
                     loadReleases()
+                    _saveSuccess.value = true
                 } else {
-                    onResult(false, "发布失败: ${response.code()}")
+                    _error.value = "发布失败: ${response.code()}"
                 }
             } catch (e: Exception) {
-                onResult(false, ErrorUtil.friendlyMessage(e))
+                _error.value = ErrorUtil.friendlyMessage(e)
             }
         }
     }

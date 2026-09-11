@@ -228,10 +228,14 @@ class AdminFragment : Fragment() {
     }
 
     private fun setVisibility(view: View, show: Boolean, animate: Boolean) {
+        // 先取消在飞动画：只比较 visibility 会在淡出未结束时误判为"已是目标态"而提前返回，
+        // 遗留的 withEndAction 随后仍把 view 置为 GONE，导致入口彻底消失。
+        view.animate().cancel()
         val target = if (show) View.VISIBLE else View.GONE
-        if (view.visibility == target) return
+        val targetAlpha = if (show) 1f else 0f
+        if (view.visibility == target && view.alpha == targetAlpha) return
         if (!animate) {
-            view.alpha = 1f
+            view.alpha = targetAlpha
             view.visibility = target
             return
         }
@@ -241,7 +245,8 @@ class AdminFragment : Fragment() {
             view.animate().alpha(1f).setDuration(200).start()
         } else {
             view.animate().alpha(0f).setDuration(150).withEndAction {
-                view.visibility = View.GONE
+                // 期间被重新显示（alpha 已回升）则不要吞掉
+                if (view.alpha == 0f) view.visibility = View.GONE
             }.start()
         }
     }

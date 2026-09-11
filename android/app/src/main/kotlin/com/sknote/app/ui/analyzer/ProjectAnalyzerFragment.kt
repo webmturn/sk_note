@@ -988,6 +988,26 @@ class ProjectAnalyzerFragment : Fragment() {
         }
     }
 
+    /**
+     * Mirror of [adaptUserTextColor] for backgrounds: an opaque near-white/very light background
+     * (sk projects commonly use #F5F5F5) would stay light while its near-black text is swapped to
+     * onSurface (≈white in dark mode), producing unreadable light-on-light. Fall back to the theme
+     * surface so both sides move together. Returns null to mean "no user background".
+     */
+    private fun adaptUserBgColor(rawColor: Int): Int? {
+        val alpha = (rawColor ushr 24) and 0xFF
+        if (alpha == 0) return null
+        val r = (rawColor ushr 16) and 0xFF
+        val g = (rawColor ushr 8) and 0xFF
+        val b = rawColor and 0xFF
+        val isNearWhite = r > 0xE0 && g > 0xE0 && b > 0xE0
+        return if (alpha == 0xFF && isNearWhite) {
+            resolveColor(com.google.android.material.R.attr.colorSurfaceContainer)
+        } else {
+            rawColor
+        }
+    }
+
     // Simple project list adapter
     inner class ProjectAdapter(
         private val projects: List<SkProject>,
@@ -1245,12 +1265,10 @@ class ProjectAnalyzerFragment : Fragment() {
                 cornerRadius = dp(2).toFloat()
                 if (!isContainer) {
                     // Use surface-ish background for non-container views (theme-aware)
-                    val alpha = (node.bgColor ushr 24) and 0xFF
-                    if (alpha > 0 && node.bgColor != 0xFFFFFFFF.toInt()) {
-                        setColor(node.bgColor)
-                    } else {
-                        setColor(resolveColor(com.google.android.material.R.attr.colorSurfaceContainer))
-                    }
+                    setColor(
+                        adaptUserBgColor(node.bgColor)
+                            ?: resolveColor(com.google.android.material.R.attr.colorSurfaceContainer)
+                    )
                 }
             }
             background = gd

@@ -1714,11 +1714,14 @@ class LogicVisualizerFragment : Fragment() {
                 )
             }
             holder.chip.setOnClickListener {
+                // position 是绑定时快照，列表变化后会失效，点击时重新解析
+                val current = holder.bindingAdapterPosition
+                if (current == RecyclerView.NO_POSITION) return@setOnClickListener
                 val prev = selectedEventIndex
-                selectedEventIndex = position
+                selectedEventIndex = current
                 notifyItemChanged(prev)
-                notifyItemChanged(position)
-                onSelect(position)
+                notifyItemChanged(current)
+                onSelect(current)
             }
         }
 

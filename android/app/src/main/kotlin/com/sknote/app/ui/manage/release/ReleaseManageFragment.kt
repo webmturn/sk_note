@@ -60,11 +60,11 @@ class ReleaseManageFragment : Fragment() {
         }
 
         val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
-        navHandle?.getLiveData<Boolean>("refresh_releases")
+        navHandle?.getLiveData<Boolean>(ReleaseEditorFragment.RESULT_REFRESH_KEY)
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.loadReleases()
-                    navHandle.remove<Boolean>("refresh_releases")
+                    navHandle.remove<Boolean>(ReleaseEditorFragment.RESULT_REFRESH_KEY)
                 }
             }
 
