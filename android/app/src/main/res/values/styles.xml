@@ -26,13 +26,8 @@
         <item name="cardElevation">0dp</item>
     </style>
 
-    <!-- 页面级内容卡片：圆角 16dp、零高度，与应用卡片基线一致 -->
-    <style name="Widget.SkNote.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">0dp</item>
-    </style>
-
-    <!-- 筛选 Tab：统一指示条与文字配色，供 XML 声明的 TabLayout 复用 -->
+    <!-- 筛选 Tab：统一指示条与文字配色，供 XML 声明的 TabLayout 复用。
+         父级与 M3 主题的 tabStyle 默认值一致，故显式引用不会绕过主题。 -->
     <style name="Widget.SkNote.TabLayout" parent="Widget.Material3.TabLayout">
         <item name="tabIndicatorColor">?attr/colorPrimary</item>
         <item name="tabSelectedTextColor">?attr/colorPrimary</item>

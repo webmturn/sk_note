@@ -142,14 +142,12 @@
 
         <!-- Tabs: 概览 / 事件 / 视图 / 资源 -->
         <com.google.android.material.tabs.TabLayout
+            style="@style/Widget.SkNote.TabLayout"
             android:id="@+id/tabsView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="?attr/colorSurface"
-            app:tabMode="scrollable"
-            app:tabIndicatorColor="?attr/colorPrimary"
-            app:tabSelectedTextColor="?attr/colorPrimary"
-            app:tabTextColor="?attr/colorOnSurfaceVariant" />
+            app:tabMode="scrollable" />
 
         <View
             android:layout_width="match_parent"

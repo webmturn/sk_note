@@ -26,6 +26,7 @@
     </LinearLayout>
 
     <com.google.android.material.tabs.TabLayout
+        style="@style/Widget.SkNote.TabLayout"
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -34,9 +35,6 @@
         app:tabGravity="fill"
         app:tabIndicatorAnimationMode="elastic"
         app:tabIndicatorFullWidth="false"
-        app:tabIndicatorColor="?attr/colorPrimary"
-        app:tabSelectedTextColor="?attr/colorPrimary"
-        app:tabTextColor="?attr/colorOnSurfaceVariant"
         app:tabIconTint="@color/tab_icon_color"
         app:tabInlineLabel="true"
         app:tabPaddingStart="0dp"

@@ -247,14 +247,12 @@
 
             <!-- Tab: 讨论 / 片段 / 分享 -->
             <com.google.android.material.tabs.TabLayout
+                style="@style/Widget.SkNote.TabLayout"
                 android:id="@+id/tabLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:tabMode="fixed"
-                app:tabGravity="fill"
-                app:tabIndicatorColor="?attr/colorPrimary"
-                app:tabSelectedTextColor="?attr/colorPrimary"
-                app:tabTextColor="?attr/colorOnSurfaceVariant" />
+                app:tabGravity="fill" />
 
             <!-- 内容列表 -->
             <FrameLayout
