@@ -415,14 +415,31 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
+### 第六批（创建页去重，已执行）
+
+`fragment_create_snippet.xml` 与 `fragment_create_share.xml` 的**未登录占位块**（图标 + 主标题 + 说明 + 去登录按钮，44 行）完全一致，仅两处文案不同。抽出为 `layout_auth_required.xml`，两页改用 `<include>`，各减少 42 行重复。
+
+| 文件 | 变化 |
+|---|---|
+| `layout_auth_required.xml`（新增） | 52 行共享结构，两处文案留空由 Fragment 设置 |
+| `fragment_create_snippet.xml` / `fragment_create_share.xml` | 各 +2 / −44 |
+| `CreateSnippetFragment.kt` / `CreateShareFragment.kt` | 各 +6 / −2（补两行文案 + 调整 include 访问方式） |
+
+**过程中由编译器发现并确认了一个 include 绑定语义**：在 `<include>` 上写 `android:id` 后，生成的字段是**包含布局的绑定对象**（`LayoutAuthRequiredBinding`）而非根视图，根视图与子视图都要经由它访问——`binding.btnGoLogin` 与 `binding.layoutAuthRequired.visibility` 两处旧调用因此报 `Unresolved reference`，已改为 `binding.layoutAuthRequired.btnGoLogin` 与 `binding.layoutAuthRequired.root.visibility`。这一条已写入代码注释，避免后续再踩。
+
+**文案没有放进共享布局**，改由各 Fragment 设置（与 toolbar 标题的既有处理方式一致），避免为两行文字再拆出参数化布局。
+
+**门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL，error 0，warning 2523 → 2517。
+
+---
+
 ## 九、剩余待办（按建议顺序）
 
-> 「第一批」到「第五批」均已完成。触控目标（含 48dp 触控区方案）、无障碍描述、字号下限、下拉框标签全部收口。
+> 「第一批」到「第六批」均已完成。
 
 **下一批**
 1. 159 处装饰性图片补 `importantForAccessibility="no"`（建议脚本化 + 逐文件校验，勿用 `replace_all`）
 2. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
-3. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
