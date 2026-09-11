@@ -163,14 +163,12 @@
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnCopy"
                             android:layout_width="wrap_content"
-                            android:layout_height="32dp"
+                            android:layout_height="48dp"
                             android:text="复制"
                             android:textSize="12sp"
                             app:icon="@drawable/ic_copy"
                             app:iconSize="14dp"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp" />
+                            style="@style/Widget.Material3.Button.TextButton" />
                     </LinearLayout>
 
                     <com.google.android.material.divider.MaterialDivider

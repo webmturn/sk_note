@@ -269,28 +269,24 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLike"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             app:icon="@drawable/ic_favorite"
             app:iconSize="18dp"
             android:text="点赞"
             style="@style/Widget.Material3.Button.TonalButton"
             app:cornerRadius="20dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             android:layout_marginEnd="8dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnDownload"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             app:icon="@drawable/ic_download"
             app:iconSize="18dp"
             android:text="下载"
-            app:cornerRadius="20dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+            app:cornerRadius="20dp" />
     </LinearLayout>
 
 </LinearLayout>
