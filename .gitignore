@@ -32,5 +32,6 @@ ai_conversations/
 *.keystore
 .env
 .env.*
+!.env.example
 *.pem
 backend/deploy_now.py
