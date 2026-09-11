@@ -48,7 +48,7 @@
                 android:background="@drawable/bg_chip_secondary"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textColor="?attr/colorOnSecondaryContainer" />
         </LinearLayout>
 

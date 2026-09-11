@@ -24,7 +24,7 @@
             android:textColor="?attr/colorOnTertiaryContainer"
             android:paddingHorizontal="6dp"
             android:paddingVertical="1dp"
-            android:textSize="9sp"
+            android:textSize="11sp"
             android:layout_marginBottom="6dp" />
 
         <TextView
@@ -63,7 +63,7 @@
                 android:id="@+id/tvDownloads"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <View
@@ -75,7 +75,7 @@
                 android:id="@+id/tvAuthor"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:maxLines="1"
                 android:ellipsize="end"

@@ -84,7 +84,7 @@
                     android:textColor="?attr/colorOnPrimaryContainer"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="2dp"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
 
                 <TextView
                     android:id="@+id/tvCategory"
@@ -95,7 +95,7 @@
                     android:textColor="?attr/colorOnSecondaryContainer"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="2dp"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
             </LinearLayout>
 
             <TextView

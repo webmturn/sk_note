@@ -42,7 +42,7 @@
                 android:textColor="?attr/colorOnTertiaryContainer"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
-                android:textSize="10sp"
+                android:textSize="11sp"
                 android:textAllCaps="true" />
         </LinearLayout>
 
@@ -91,7 +91,7 @@
                 android:textColor="?attr/colorOnSecondaryContainer"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
-                android:textSize="10sp" />
+                android:textSize="11sp" />
 
             <View
                 android:layout_width="1dp"
