@@ -56,7 +56,7 @@ bookmarkRoutes.post('/:articleId', authMiddleware(), async (c) => {
   const user = c.get('user')!;
   const articleId = c.req.param('articleId');
 
-  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(articleId).first();
+  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ? AND is_published = 1').bind(articleId).first();
   if (!article) return c.json({ error: '文章不存在' }, 404);
 
   const result = await toggleRelation(c, {
@@ -110,7 +110,7 @@ bookmarkRoutes.post('/history/:articleId', authMiddleware(), async (c) => {
   const user = c.get('user')!;
   const articleId = c.req.param('articleId');
 
-  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ?').bind(articleId).first();
+  const article = await c.env.DB.prepare('SELECT id FROM articles WHERE id = ? AND is_published = 1').bind(articleId).first();
   if (!article) return c.json({ error: '文章不存在' }, 404);
 
   // 删除旧记录（避免重复），再插入新记录（更新时间）

@@ -110,12 +110,13 @@ export async function createNotification(
   title: string,
   content: string,
   relatedType?: string,
-  relatedId?: number
+  relatedId?: number,
+  actorId?: number
 ) {
   await db.prepare(`
-    INSERT INTO notifications (user_id, type, title, content, related_type, related_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).bind(userId, type, title, content, relatedType || null, relatedId || null).run();
+    INSERT INTO notifications (user_id, actor_id, type, title, content, related_type, related_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(userId, actorId ?? null, type, title, content, relatedType || null, relatedId || null).run();
 }
 
 export async function deleteNotificationsByRelatedTargets(
@@ -142,7 +143,8 @@ export async function getActorDisplayName(db: D1Database, actorId: number): Prom
   return nickname || (row?.username || '').trim() || '有人';
 }
 
-// 互动类通知的统一封装：跳过自我通知，失败只记录日志不阻断主流程
+// 互动类通知的统一封装：跳过自我通知；同一触发者对同一目标存在未读同类通知时去重
+// （防止“点赞→取消→再点赞”循环刷通知），失败只记录日志不阻断主流程
 export async function notifyActor(
   db: D1Database,
   params: {
@@ -159,8 +161,41 @@ export async function notifyActor(
   if (!Number.isInteger(ownerId) || ownerId <= 0) return;
   if (ownerId === actorId) return;
   try {
-    await createNotification(db, ownerId, type, title, content || '', relatedType, relatedId);
+    const existing = await db.prepare(`
+      SELECT id FROM notifications
+      WHERE user_id = ? AND actor_id = ? AND type = ? AND is_read = 0
+        AND related_type IS ? AND related_id IS ?
+      LIMIT 1
+    `).bind(ownerId, actorId, type, relatedType ?? null, relatedId ?? null).first();
+    if (existing) return;
+
+    await createNotification(db, ownerId, type, title, content || '', relatedType, relatedId, actorId);
   } catch (e) {
     console.error('通知创建失败:', e);
+  }
+}
+
+// 取消互动（取消点赞/取关）时，删除该触发者发出的对应未读通知
+export async function deleteActorNotification(
+  db: D1Database,
+  params: {
+    ownerId: number;
+    actorId: number;
+    type: string;
+    relatedType?: string;
+    relatedId?: number;
+  }
+): Promise<void> {
+  const { ownerId, actorId, type, relatedType, relatedId } = params;
+  if (!Number.isInteger(ownerId) || ownerId <= 0) return;
+  if (ownerId === actorId) return;
+  try {
+    await db.prepare(`
+      DELETE FROM notifications
+      WHERE user_id = ? AND actor_id = ? AND type = ? AND is_read = 0
+        AND related_type IS ? AND related_id IS ?
+    `).bind(ownerId, actorId, type, relatedType ?? null, relatedId ?? null).run();
+  } catch (e) {
+    console.error('通知清理失败:', e);
   }
 }

@@ -44,7 +44,7 @@ export function setupApp(app: Hono<AppEnv>) {
       const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : fallbackOrigins;
       return allowedOrigins.includes(origin) ? origin : null;
     },
-    allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowHeaders: ['Content-Type', 'Authorization'],
   }));
 

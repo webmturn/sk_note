@@ -1,5 +1,6 @@
 import { Context, Next } from 'hono';
 import type { AppEnv } from '../index';
+import { getClientIp } from '../clientIp';
 
 type IdentifierResolver = (c: Context<AppEnv>) => string;
 
@@ -24,8 +25,7 @@ setInterval(() => {
 }, 5 * 60 * 1000).unref();
 
 function defaultIdentifier(c: Context<AppEnv>): string {
-  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip')
+  return getClientIp(c)
     || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
 }
 

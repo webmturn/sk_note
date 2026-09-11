@@ -37,7 +37,7 @@ aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
   }
 });
 
-// 管理面板统计：未读通知数 + 文章总数 + 讨论总数（合并 3 次调用为 1 次）
+// 统计数据：个人未读通知/作品数 + 全站内容计数（登录即可访问，非管理员专属；合并多次调用为 1 次）
 aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
   try {
     const user = c.get('user')!;

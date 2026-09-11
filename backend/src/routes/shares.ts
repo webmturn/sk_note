@@ -3,8 +3,10 @@ import type { AppEnv } from '../index';
 import { authMiddleware, adminMiddleware, isOwnerOrAdmin, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { buildViewerKey } from '../clientIp';
+import { escapeLike } from '../sqlUtils';
 import { toggleLike } from '../likeUtils';
-import { deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
+import { deleteActorNotification, deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const shareRoutes = new Hono<AppEnv>();
 
@@ -13,7 +15,7 @@ shareRoutes.get('/', edgeCache(120), async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const category = c.req.query('category');
-  const search = c.req.query('search');
+  const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
   let query = 'SELECT * FROM shares WHERE is_approved = 1';
@@ -24,8 +26,8 @@ shareRoutes.get('/', edgeCache(120), async (c) => {
     params.push(category);
   }
   if (search) {
-    query += ' AND (title LIKE ? OR description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    query += " AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')";
+    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
 
   query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
@@ -40,8 +42,8 @@ shareRoutes.get('/', edgeCache(120), async (c) => {
     countParams.push(category);
   }
   if (search) {
-    countQuery += ' AND (title LIKE ? OR description LIKE ?)';
-    countParams.push(`%${search}%`, `%${search}%`);
+    countQuery += " AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')";
+    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
   const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
@@ -86,11 +88,9 @@ shareRoutes.get('/:id', authMiddleware(false), async (c) => {
     return c.json({ share });
   }
 
-  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip')
-    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
+  const viewerKey = buildViewerKey(c);
   const viewResult = await c.env.DB.prepare(
-    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)' 
+    'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'share', id).run();
   if (viewResult.meta.changes > 0) {
     await c.env.DB.prepare('UPDATE shares SET view_count = view_count + 1 WHERE id = ?').bind(id).run();
@@ -101,19 +101,15 @@ shareRoutes.get('/:id', authMiddleware(false), async (c) => {
   return c.json({ share });
 });
 
-// 记录下载次数（IP 去重）
-shareRoutes.post('/:id/download', async (c) => {
+// 记录下载次数（登录用户按用户 ID 去重，匿名按客户端真实 IP 去重）
+shareRoutes.post('/:id/download', authMiddleware(false), async (c) => {
   const id = c.req.param('id');
   const share = await c.env.DB.prepare(
     'SELECT id, title, author_id FROM shares WHERE id = ? AND is_approved = 1'
   ).bind(id).first<{ id: number; title: string; author_id: number }>();
   if (!share) return c.json({ error: '分享不存在' }, 404);
 
-  const viewerKey = 'dl:' + (
-    c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip')
-    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`
-  );
+  const viewerKey = 'dl:' + buildViewerKey(c);
   const result = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'share', id).run();
@@ -178,7 +174,7 @@ shareRoutes.post('/', authMiddleware(), rateLimit({ key: 'share:create', maxRequ
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ message: '分享成功', id: result.meta.last_row_id }, 201);
 });
 
@@ -225,7 +221,7 @@ shareRoutes.put('/:id', authMiddleware(), async (c) => {
   ).run();
 
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`]);
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/home`]);
   return c.json({ message: '更新成功' });
 });
 
@@ -240,9 +236,14 @@ shareRoutes.delete('/:id', authMiddleware(), async (c) => {
   }
 
   await c.env.DB.prepare('DELETE FROM shares WHERE id = ?').bind(id).run();
+  // 清理该分享的点赞与浏览去重记录，避免孤儿数据累积
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM likes WHERE target_type = 'share' AND target_id = ?").bind(Number.parseInt(id, 10)),
+    c.env.DB.prepare("DELETE FROM content_views WHERE target_type = 'share' AND target_id = ?").bind(Number.parseInt(id, 10)),
+  ]);
   await deleteNotificationsByRelatedTargets(c.env.DB, 'share', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
-  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/stats`]);
+  await purgeCache([`${baseUrl}/api/shares`, `${baseUrl}/api/shares/${id}`, `${baseUrl}/api/shares/categories`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
   return c.json({ message: '已删除' });
 });
 
@@ -252,7 +253,7 @@ shareRoutes.get('/manage/list', authMiddleware(), adminMiddleware(), async (c) =
     const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
     const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
     const status = c.req.query('status'); // 'all' | 'approved' | 'pending'
-    const search = c.req.query('search') || '';
+    const search = (c.req.query('search') || '').slice(0, 100);
     const offset = (page - 1) * limit;
 
     let query = 'SELECT * FROM shares WHERE 1=1';
@@ -265,8 +266,8 @@ shareRoutes.get('/manage/list', authMiddleware(), adminMiddleware(), async (c) =
     }
 
     if (search) {
-      query += ' AND (title LIKE ? OR description LIKE ? OR author_name LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      query += " AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR author_name LIKE ? ESCAPE '\\')";
+      params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
     }
 
     query += ' ORDER BY is_approved ASC, created_at DESC LIMIT ? OFFSET ?';
@@ -282,8 +283,8 @@ shareRoutes.get('/manage/list', authMiddleware(), adminMiddleware(), async (c) =
       countQuery += ' AND is_approved = 1';
     }
     if (search) {
-      countQuery += ' AND (title LIKE ? OR description LIKE ? OR author_name LIKE ?)';
-      countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      countQuery += " AND (title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR author_name LIKE ? ESCAPE '\\')";
+      countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
     }
     const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
@@ -343,7 +344,7 @@ shareRoutes.put('/:id/approve', authMiddleware(), adminMiddleware(), async (c) =
 });
 
 // 点赞分享
-shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
+shareRoutes.post('/:id/like', authMiddleware(), rateLimit({ key: 'like:toggle', maxRequests: 30, windowMs: 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user')!;
 
@@ -369,6 +370,15 @@ shareRoutes.post('/:id/like', authMiddleware(), async (c) => {
       type: 'like',
       title: `${actorName} 点赞了你的分享`,
       content: (share.title || '').slice(0, 100),
+      relatedType: 'share',
+      relatedId: share.id,
+    });
+  } else {
+    // 取消点赞时移除对应未读通知，防止 toggle 循环刷通知
+    await deleteActorNotification(c.env.DB, {
+      ownerId: share.author_id,
+      actorId: user.id,
+      type: 'like',
       relatedType: 'share',
       relatedId: share.id,
     });

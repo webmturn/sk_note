@@ -2,8 +2,11 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { authMiddleware, editorMiddleware, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { buildViewerKey } from '../clientIp';
+import { escapeLike } from '../sqlUtils';
 import { toggleLike } from '../likeUtils';
-import { deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
+import { deleteActorNotification, deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const articleRoutes = new Hono<AppEnv>();
 
@@ -12,7 +15,7 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const categoryId = c.req.query('category_id');
-  const search = c.req.query('search');
+  const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
   let query = `
@@ -30,8 +33,8 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
     params.push(categoryId);
   }
   if (search) {
-    query += ' AND (a.title LIKE ? OR a.content LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    query += " AND (a.title LIKE ? ESCAPE '\\' OR a.content LIKE ? ESCAPE '\\')";
+    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
 
   query += ' ORDER BY a.sort_order ASC, a.created_at DESC LIMIT ? OFFSET ?';
@@ -47,8 +50,8 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
     countParams.push(categoryId);
   }
   if (search) {
-    countQuery += ' AND (title LIKE ? OR content LIKE ?)';
-    countParams.push(`%${search}%`, `%${search}%`);
+    countQuery += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')";
+    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
   const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
@@ -89,10 +92,8 @@ articleRoutes.get('/:id', authMiddleware(false), async (c) => {
     }
   }
 
-  // 增加阅读量（去重）
-  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip')
-    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
+  // 增加阅读量（去重：登录用户按用户 ID，匿名按客户端真实 IP）
+  const viewerKey = buildViewerKey(c);
   const viewResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'article', id).run();
@@ -214,6 +215,11 @@ articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => 
   if (result.meta.changes === 0) {
     return c.json({ error: '文章不存在' }, 404);
   }
+  // 清理该文章的点赞与浏览去重记录，避免孤儿数据累积
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM likes WHERE target_type = 'article' AND target_id = ?").bind(Number.parseInt(id, 10)),
+    c.env.DB.prepare("DELETE FROM content_views WHERE target_type = 'article' AND target_id = ?").bind(Number.parseInt(id, 10)),
+  ]);
   await deleteNotificationsByRelatedTargets(c.env.DB, 'article', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/articles`, `${baseUrl}/api/articles/${id}`, `${baseUrl}/api/home`, `${baseUrl}/api/stats`]);
@@ -221,7 +227,7 @@ articleRoutes.delete('/:id', authMiddleware(), editorMiddleware(), async (c) => 
 });
 
 // 点赞文章
-articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
+articleRoutes.post('/:id/like', authMiddleware(), rateLimit({ key: 'like:toggle', maxRequests: 30, windowMs: 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const id = c.req.param('id');
   const user = c.get('user')!;
 
@@ -247,6 +253,15 @@ articleRoutes.post('/:id/like', authMiddleware(), async (c) => {
       type: 'like',
       title: `${actorName} 点赞了你的文章`,
       content: (article.title || '').slice(0, 100),
+      relatedType: 'article',
+      relatedId: article.id,
+    });
+  } else {
+    // 取消点赞时移除对应未读通知，防止 toggle 循环刷通知
+    await deleteActorNotification(c.env.DB, {
+      ownerId: article.author_id,
+      actorId: user.id,
+      type: 'like',
       relatedType: 'article',
       relatedId: article.id,
     });

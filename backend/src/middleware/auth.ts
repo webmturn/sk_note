@@ -1,15 +1,14 @@
 import { Context, Next } from 'hono';
 import type { AppEnv, JwtPayload } from '../index';
 
-// base64url 编码/解码（RFC 7515）
+// base64url 编码/解码（RFC 7515，UTF-8 安全：payload 含中文用户名等非 Latin-1 字符时不会抛错）
+// 对 ASCII 字符串的编码结果与旧实现（直接 btoa）完全一致，已签发的旧 token 不受影响
 function base64urlEncode(str: string): string {
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return base64urlEncodeBytes(new TextEncoder().encode(str));
 }
 
 function base64urlDecode(str: string): string {
-  let s = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (s.length % 4) s += '=';
-  return atob(s);
+  return new TextDecoder().decode(base64urlDecodeBytes(str));
 }
 
 function base64urlEncodeBytes(bytes: Uint8Array): string {
@@ -115,6 +114,15 @@ export function authMiddleware(required = true) {
 
     const payload = await verifyToken(token, c.env.JWT_SECRET);
     if (!payload) {
+      if (required) return c.json({ error: '登录已过期，请重新登录' }, 401);
+      await next();
+      return;
+    }
+
+    // 校验用户仍然存在（防止已删除用户凭有效签名 token 继续操作）
+    const userExists = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?')
+      .bind(payload.id).first();
+    if (!userExists) {
       if (required) return c.json({ error: '登录已过期，请重新登录' }, 401);
       await next();
       return;

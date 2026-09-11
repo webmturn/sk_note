@@ -134,6 +134,7 @@ CREATE INDEX IF NOT EXISTS idx_discussion_categories_slug ON discussion_categori
 CREATE TABLE IF NOT EXISTS notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    actor_id INTEGER DEFAULT NULL,
     type TEXT NOT NULL CHECK(type IN ('reply', 'like', 'mention', 'system')),
     title TEXT NOT NULL,
     content TEXT DEFAULT '',
@@ -145,6 +146,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_actor ON notifications(user_id, actor_id, type, is_read);
 
 -- 收藏表
 CREATE TABLE IF NOT EXISTS bookmarks (

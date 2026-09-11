@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
+import { escapeLike } from '../sqlUtils';
 
 export const referenceRoutes = new Hono<AppEnv>();
 
@@ -11,7 +12,7 @@ referenceRoutes.get('/', edgeCache(600), async (c) => {
   const limit = Math.min(200, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
   const type = c.req.query('type');
   const category = c.req.query('category');
-  const search = c.req.query('search');
+  const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
   let query = 'SELECT * FROM references_doc WHERE 1=1';
@@ -26,8 +27,8 @@ referenceRoutes.get('/', edgeCache(600), async (c) => {
     params.push(category);
   }
   if (search) {
-    query += ' AND (name LIKE ? OR description LIKE ? OR category LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    query += " AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\')";
+    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
 
   query += ' ORDER BY type ASC, category ASC, name ASC LIMIT ? OFFSET ?';
@@ -41,8 +42,8 @@ referenceRoutes.get('/', edgeCache(600), async (c) => {
   if (type) { countQuery += ' AND type = ?'; countParams.push(type); }
   if (category) { countQuery += ' AND category = ?'; countParams.push(category); }
   if (search) {
-    countQuery += ' AND (name LIKE ? OR description LIKE ? OR category LIKE ?)';
-    countParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    countQuery += " AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR category LIKE ? ESCAPE '\\')";
+    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
   const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 

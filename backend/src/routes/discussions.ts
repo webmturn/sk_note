@@ -3,8 +3,10 @@ import type { AppEnv } from '../index';
 import { adminMiddleware, authMiddleware, isOwnerOrAdmin, isOwnerOrEditorOrAdmin, refreshCurrentUserRole } from '../middleware/auth';
 import { edgeCache, purgeCache } from '../middleware/cache';
 import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
+import { buildViewerKey } from '../clientIp';
+import { escapeLike } from '../sqlUtils';
 import { toggleLike } from '../likeUtils';
-import { createNotification, deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
+import { createNotification, deleteActorNotification, deleteNotificationsByRelatedTargets, getActorDisplayName, notifyActor } from './notifications';
 
 export const discussionRoutes = new Hono<AppEnv>();
 
@@ -14,7 +16,7 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const category = c.req.query('category');
   const articleId = c.req.query('article_id');
-  const search = c.req.query('search');
+  const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
   let query = `
@@ -38,8 +40,8 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
     params.push(articleId);
   }
   if (search) {
-    query += ' AND (d.title LIKE ? OR d.content LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    query += " AND (d.title LIKE ? ESCAPE '\\' OR d.content LIKE ? ESCAPE '\\')";
+    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
 
   query += ' ORDER BY d.is_pinned DESC, d.updated_at DESC LIMIT ? OFFSET ?';
@@ -52,8 +54,8 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   if (category) { countQuery += ' AND category = ?'; countParams.push(category); }
   if (articleId) { countQuery += ' AND article_id = ?'; countParams.push(articleId); }
   if (search) {
-    countQuery += ' AND (title LIKE ? OR content LIKE ?)';
-    countParams.push(`%${search}%`, `%${search}%`);
+    countQuery += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')";
+    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
   const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
@@ -68,17 +70,15 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
 });
 
 // 获取单个讨论（含评论）
-discussionRoutes.get('/:id', async (c) => {
+discussionRoutes.get('/:id', authMiddleware(false), async (c) => {
   const id = c.req.param('id');
 
   // 先检查是否存在
   const exists = await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?').bind(id).first();
   if (!exists) return c.json({ error: '讨论不存在' }, 404);
 
-  // 增加阅读量（去重） —— 在读取详情之前完成，确保返回值包含最新 view_count
-  const viewerKey = c.req.header('x-forwarded-for')?.split(',')[0]?.trim()
-    || c.req.header('x-real-ip')
-    || `anon:${(c.req.header('user-agent') || 'unknown').slice(0, 64)}`;
+  // 增加阅读量（去重：登录用户按用户 ID，匿名按客户端真实 IP） —— 在读取详情之前完成，确保返回值包含最新 view_count
+  const viewerKey = buildViewerKey(c);
   const viewResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO content_views (viewer_key, target_type, target_id) VALUES (?, ?, ?)'
   ).bind(viewerKey, 'discussion', id).run();
@@ -341,7 +341,8 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
         `${commenterName} 回复了你的讨论`,
         content.substring(0, 100),
         'discussion',
-        discussionIdNum
+        discussionIdNum,
+        user.id
       );
     }
 
@@ -354,7 +355,8 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
           `${commenterName} 回复了你的评论`,
           content.substring(0, 100),
           'discussion',
-          discussionIdNum
+          discussionIdNum,
+          user.id
         );
     }
   } catch (e) {
@@ -367,7 +369,7 @@ discussionRoutes.post('/:id/comments', authMiddleware(), rateLimit({ key: 'discu
   return c.json({ id: result.meta.last_row_id, message: '回复成功' }, 201);
 });
 
-// 删除讨论（仅作者或管理员）
+// 删除讨论（作者/编辑/管理员）
 discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
 
@@ -380,7 +382,25 @@ discussionRoutes.delete('/:id', authMiddleware(), async (c) => {
     return c.json({ error: '无权删除' }, 403);
   }
 
+  // 收集该讨论下所有评论 ID（ON DELETE CASCADE 会连带删除，其点赞记录需手动清理）
+  const discussionIdNum = Number.parseInt(id, 10);
+  const commentIdsResult = await c.env.DB.prepare(
+    'SELECT id FROM comments WHERE discussion_id = ?'
+  ).bind(id).all<{ id: number }>();
+  const commentIds = commentIdsResult.results.map((row) => row.id);
+
   await c.env.DB.prepare('DELETE FROM discussions WHERE id = ?').bind(id).run();
+
+  // 清理讨论及其评论的点赞/浏览去重孤儿记录
+  const cleanupStmts = [
+    c.env.DB.prepare("DELETE FROM likes WHERE target_type = 'discussion' AND target_id = ?").bind(discussionIdNum),
+    c.env.DB.prepare("DELETE FROM content_views WHERE target_type = 'discussion' AND target_id = ?").bind(discussionIdNum),
+  ];
+  for (const commentId of commentIds) {
+    cleanupStmts.push(c.env.DB.prepare("DELETE FROM likes WHERE target_type = 'comment' AND target_id = ?").bind(commentId));
+  }
+  await c.env.DB.batch(cleanupStmts);
+
   await deleteNotificationsByRelatedTargets(c.env.DB, 'discussion', [Number.parseInt(id, 10)]);
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
@@ -526,6 +546,15 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
     'UPDATE discussions SET reply_count = MAX(0, reply_count - ?) WHERE id = ?'
   ).bind(deleteCount, discussionIdNum).run();
 
+  // 清理被删评论（含子孙评论）的点赞记录
+  if (deletedCommentIds.length > 0) {
+    await c.env.DB.batch(
+      deletedCommentIds.map((cid) =>
+        c.env.DB.prepare("DELETE FROM likes WHERE target_type = 'comment' AND target_id = ?").bind(cid)
+      )
+    );
+  }
+
   if (deletedCommentIds.length > 0) {
     await deleteNotificationsByRelatedTargets(c.env.DB, 'comment', deletedCommentIds);
   }
@@ -536,7 +565,7 @@ discussionRoutes.delete('/:id/comments/:commentId', authMiddleware(), async (c) 
 });
 
 // 点赞评论
-discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (c) => {
+discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), rateLimit({ key: 'like:toggle', maxRequests: 30, windowMs: 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const discussionId = c.req.param('id');
   const commentId = c.req.param('commentId');
   const user = c.get('user')!;
@@ -571,6 +600,15 @@ discussionRoutes.post('/:id/comments/:commentId/like', authMiddleware(), async (
       type: 'like',
       title: `${actorName} 点赞了你的评论`,
       content: (comment.content || '').slice(0, 100),
+      relatedType: 'discussion',
+      relatedId: comment.discussion_id,
+    });
+  } else {
+    // 取消点赞时移除对应未读通知，防止 toggle 循环刷通知
+    await deleteActorNotification(c.env.DB, {
+      ownerId: comment.author_id,
+      actorId: user.id,
+      type: 'like',
       relatedType: 'discussion',
       relatedId: comment.discussion_id,
     });

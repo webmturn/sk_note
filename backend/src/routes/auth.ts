@@ -4,6 +4,7 @@ import { createToken, authMiddleware, adminMiddleware } from '../middleware/auth
 import { purgeCache } from '../middleware/cache';
 import { rateLimit } from '../middleware/rateLimit';
 import { deleteNotificationsByRelatedTargets } from './notifications';
+import { escapeLike } from '../sqlUtils';
 import bcrypt from 'bcryptjs';
 
 export const authRoutes = new Hono<AppEnv>();
@@ -144,16 +145,25 @@ authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, w
     if (email.length > 100) {
       return c.json({ error: '邮箱最长100个字符' }, 400);
     }
-    if (password.length < 6) {
+    if (typeof password !== 'string' || password.length < 6) {
       return c.json({ error: '密码至少6位' }, 400);
     }
     if (password.length > 128) {
       return c.json({ error: '密码最长128个字符' }, 400);
     }
+    if (nickname !== undefined && nickname !== null && typeof nickname !== 'string') {
+      return c.json({ error: '昵称格式不正确' }, 400);
+    }
+    if (nickname && nickname.trim().length > 20) {
+      return c.json({ error: '昵称最长20个字符' }, 400);
+    }
+
+    // 邮箱统一小写存储（配合登录侧 LOWER 匹配，避免大小写差异注册出多个账号）
+    const normalizedEmail = email.toLowerCase();
 
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM users WHERE username = ? OR email = ?'
-    ).bind(username, email).first();
+      'SELECT id FROM users WHERE username = ? OR LOWER(email) = LOWER(?)'
+    ).bind(username, normalizedEmail).first();
 
     if (existing) {
       return c.json({ error: '账号或邮箱已被注册' }, 409);
@@ -163,7 +173,7 @@ authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, w
     const passwordHash = await hashPassword(password);
     const result = await c.env.DB.prepare(
       'INSERT INTO users (username, email, password_hash, nickname) VALUES (?, ?, ?, ?)'
-    ).bind(username, email, passwordHash, displayName).run();
+    ).bind(username, normalizedEmail, passwordHash, displayName).run();
 
     const userId = result.meta.last_row_id;
     const token = await createToken(
@@ -173,7 +183,7 @@ authRoutes.post('/register', rateLimit({ key: 'auth:register', maxRequests: 5, w
 
     return c.json({
       token,
-      user: { id: userId, username, nickname: displayName, email, role: 'user' }
+      user: { id: userId, username, nickname: displayName, email: normalizedEmail, role: 'user' }
     }, 201);
   } catch (e: any) {
     console.error('注册失败:', e);
@@ -186,12 +196,12 @@ authRoutes.post('/login', rateLimit({ key: 'auth:login', maxRequests: 10, window
   try {
     const { username, password } = await c.req.json();
 
-    if (!username || !password) {
+    if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
       return c.json({ error: '用户名和密码不能为空' }, 400);
     }
 
     const user = await c.env.DB.prepare(
-      'SELECT id, username, nickname, email, password_hash, role, avatar_url, bio FROM users WHERE username = ? OR email = ?'
+      'SELECT id, username, nickname, email, password_hash, role, avatar_url, bio FROM users WHERE username = ? OR LOWER(email) = LOWER(?)'
     ).bind(username, username).first<{
       id: number; username: string; nickname: string; email: string;
       password_hash: string; role: string; avatar_url: string; bio: string;
@@ -302,6 +312,10 @@ authRoutes.put('/me', authMiddleware(), async (c) => {
     if (newUsername.length > 30) {
       return c.json({ error: '用户名最长30个字符' }, 400);
     }
+    // 与注册接口保持一致的字符集校验，防止通过更新接口写入空格/HTML/emoji 等字符
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(newUsername)) {
+      return c.json({ error: '用户名只能包含字母、数字、下划线和中文' }, 400);
+    }
     const existing = await c.env.DB.prepare(
       'SELECT id FROM users WHERE username = ? AND id != ?'
     ).bind(newUsername, payload.id).first();
@@ -333,7 +347,7 @@ authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
   try {
     const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
     const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50') || 50));
-    const search = c.req.query('search') || '';
+    const search = (c.req.query('search') || '').slice(0, 100);
     const offset = (page - 1) * limit;
 
     let countQuery = 'SELECT COUNT(*) as total FROM users';
@@ -341,10 +355,10 @@ authRoutes.get('/users', authMiddleware(), adminMiddleware(), async (c) => {
     const bindings: any[] = [];
 
     if (search) {
-      const where = ' WHERE username LIKE ? OR email LIKE ?';
+      const where = " WHERE username LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\'";
       countQuery += where;
       dataQuery += where;
-      bindings.push(`%${search}%`, `%${search}%`);
+      bindings.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
     }
 
     dataQuery += ' ORDER BY id DESC LIMIT ? OFFSET ?';
@@ -452,6 +466,12 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
     ).bind(userId).all<{ id: number }>();
     const deletedCommentIds = deletedCommentsResult.results.map((row) => row.id);
 
+    // 收集该用户点赞过的内容目标（likes 删除后需重算对应内容的 like_count，避免计数虚高）
+    const likedTargetsResult = await c.env.DB.prepare(
+      'SELECT target_type, target_id FROM likes WHERE user_id = ?'
+    ).bind(userId).all<{ target_type: string; target_id: number }>();
+    const likedTargets = likedTargetsResult.results;
+
     await c.env.DB.batch([
       c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(userId),
@@ -465,6 +485,29 @@ authRoutes.delete('/users/:id', authMiddleware(), adminMiddleware(), async (c) =
       c.env.DB.prepare('DELETE FROM reading_history WHERE user_id = ?').bind(userId),
       c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
     ]);
+
+    // 回减受影响内容的点赞计数（该用户的 likes 行已删，按目标重算即自然回减）
+    const countTableByTargetType: Record<string, string> = {
+      article: 'articles',
+      comment: 'comments',
+      snippet: 'snippets',
+      share: 'shares',
+    };
+    const recountStmts = [];
+    const seenTargets = new Set<string>();
+    for (const target of likedTargets) {
+      const key = `${target.target_type}:${target.target_id}`;
+      if (seenTargets.has(key)) continue;
+      seenTargets.add(key);
+      const table = countTableByTargetType[target.target_type];
+      if (!table) continue;
+      recountStmts.push(c.env.DB.prepare(
+        `UPDATE ${table} SET like_count = (SELECT COUNT(*) FROM likes WHERE target_type = ? AND target_id = ?) WHERE id = ?`
+      ).bind(target.target_type, target.target_id, target.target_id));
+    }
+    if (recountStmts.length > 0) {
+      await c.env.DB.batch(recountStmts);
+    }
 
     if (affectedDiscussionIds.length > 0) {
       await c.env.DB.batch(
@@ -531,8 +574,11 @@ authRoutes.put('/users/:id/password', authMiddleware(), adminMiddleware(), async
     if (isNaN(userId) || userId <= 0) return c.json({ error: '无效的用户ID' }, 400);
     const { new_password } = await c.req.json();
 
-    if (!new_password || new_password.length < 6) {
+    if (typeof new_password !== 'string' || new_password.length < 6) {
       return c.json({ error: '新密码至少6位' }, 400);
+    }
+    if (new_password.length > 128) {
+      return c.json({ error: '新密码最长128个字符' }, 400);
     }
 
     const target = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?')
@@ -556,11 +602,14 @@ authRoutes.put('/password', rateLimit({ key: 'auth:password', maxRequests: 5, wi
   const payload = c.get('user')!;
   const { old_password, new_password } = await c.req.json();
 
-  if (!old_password || !new_password) {
+  if (!old_password || !new_password || typeof old_password !== 'string' || typeof new_password !== 'string') {
     return c.json({ error: '旧密码和新密码不能为空' }, 400);
   }
   if (new_password.length < 6) {
     return c.json({ error: '新密码至少6位' }, 400);
+  }
+  if (new_password.length > 128) {
+    return c.json({ error: '新密码最长128个字符' }, 400);
   }
 
   try {

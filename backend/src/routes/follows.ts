@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../index';
 import { authMiddleware } from '../middleware/auth';
+import { rateLimit, userOrIpIdentifier } from '../middleware/rateLimit';
 import { toggleRelation } from '../likeUtils';
-import { getActorDisplayName, notifyActor } from './notifications';
+import { deleteActorNotification, getActorDisplayName, notifyActor } from './notifications';
 
 export const followRoutes = new Hono<AppEnv>();
 
@@ -13,7 +14,7 @@ function parsePositiveInt(value: string): number | null {
 }
 
 // 关注/取消关注
-followRoutes.post('/:userId', authMiddleware(), async (c) => {
+followRoutes.post('/:userId', authMiddleware(), rateLimit({ key: 'follow:toggle', maxRequests: 20, windowMs: 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   try {
     const currentUser = c.get('user')!;
     const targetId = parsePositiveInt(c.req.param('userId'));
@@ -35,20 +36,28 @@ followRoutes.post('/:userId', authMiddleware(), async (c) => {
       activateSuccessMessage: '已关注',
       deactivateSuccessMessage: '已取消关注',
     });
-if (result.active) {
-      const actorName = await getActorDisplayName(c.env.DB, currentUser.id);
-      await notifyActor(c.env.DB, {
-        ownerId: targetId,
-        actorId: currentUser.id,
-        type: 'system',
-        title: `${actorName} 关注了你`,
-        content: '',
-        relatedType: 'user',
-        relatedId: currentUser.id,
-      });
-    }
+  if (result.active) {
+    const actorName = await getActorDisplayName(c.env.DB, currentUser.id);
+    await notifyActor(c.env.DB, {
+      ownerId: targetId,
+      actorId: currentUser.id,
+      type: 'system',
+      title: `${actorName} 关注了你`,
+      content: '',
+      relatedType: 'user',
+      relatedId: currentUser.id,
+    });
+  } else {
+    // 取关时移除对应未读通知，防止 toggle 循环刷通知
+    await deleteActorNotification(c.env.DB, {
+      ownerId: targetId,
+      actorId: currentUser.id,
+      type: 'system',
+      relatedType: 'user',
+      relatedId: currentUser.id,
+    });
+  }
 
-    
     return c.json({ message: result.message, following: result.active });
   } catch (e: any) {
     console.error('关注操作失败:', e);
@@ -144,8 +153,8 @@ followRoutes.get('/profile/:userId', async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) as count FROM follows WHERE follower_id = ?').bind(userId),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM follows WHERE following_id = ?').bind(userId),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM discussions WHERE author_id = ?').bind(userId),
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets WHERE author_id = ?').bind(userId),
-      c.env.DB.prepare('SELECT COUNT(*) as count FROM shares WHERE author_id = ?').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets WHERE author_id = ? AND is_approved = 1').bind(userId),
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM shares WHERE author_id = ? AND is_approved = 1').bind(userId),
     ]);
 
     return c.json({
@@ -204,12 +213,12 @@ followRoutes.get('/profile/:userId/snippets', async (c) => {
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
-      'SELECT COUNT(*) as total FROM snippets WHERE author_id = ?'
+      'SELECT COUNT(*) as total FROM snippets WHERE author_id = ? AND is_approved = 1'
     ).bind(userId).first<{ total: number }>();
     const total = countResult?.total || 0;
 
     const results = await c.env.DB.prepare(
-      'SELECT * FROM snippets WHERE author_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      `SELECT * FROM snippets WHERE author_id = ? AND is_approved = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?`
     ).bind(userId, limit, offset).all();
 
     return c.json({
@@ -232,12 +241,12 @@ followRoutes.get('/profile/:userId/shares', async (c) => {
     const offset = (page - 1) * limit;
 
     const countResult = await c.env.DB.prepare(
-      'SELECT COUNT(*) as total FROM shares WHERE author_id = ?'
+      'SELECT COUNT(*) as total FROM shares WHERE author_id = ? AND is_approved = 1'
     ).bind(userId).first<{ total: number }>();
     const total = countResult?.total || 0;
 
     const results = await c.env.DB.prepare(
-      'SELECT * FROM shares WHERE author_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      `SELECT * FROM shares WHERE author_id = ? AND is_approved = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?`
     ).bind(userId, limit, offset).all();
 
     return c.json({
