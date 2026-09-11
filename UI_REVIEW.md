@@ -352,17 +352,40 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL，error 保持 0。
 
+#### 第三批的复审与更正（重要）
+
+上表的扫描器有**两处盲区**，导致"零遗漏"的结论不成立，复审后更正如下：
+
+1. 只匹配 `<ImageButton>` 标签 → 漏掉用 `ImageView`/`TextView` + `android:clickable="true"` 实现的按钮（如 24dp 排序、28dp 点赞，前文已述）。
+2. 跳过 `wrap_content` 尺寸 → 漏掉高度由内容决定但实测不足 48dp 的控件。
+
+复审（带父容器解析）额外发现并已修复：
+
+| 位置 | 原尺寸 | 说明 |
+|---|---|---|
+| `item_comment.xml` 回复/复制/编辑/删除 | 约 24dp | 同行点赞图标已是 48dp 并撑高整行，四个文字按钮改 `match_parent` 即随行高达标，**可见文字与行高均不变** |
+| `item_notification.xml` 删除按钮 | 约 26dp | 补 `minHeight`/`minWidth` = 48dp |
+| `fragment_reference.xml` 细分按钮 | 约 33dp | 补 `minHeight` = 48dp |
+
+**复审同时抓出我自己引入的 3 处误伤**（批量替换 `layout_height="wrap_content"` 时波及了同文件内的非交互 TextView）：`tvAuthor`、`tvTime`、`tvLikeCount` 被误改为 `match_parent`，已全部改回。这说明对该文件做 `replace_all` 是不安全的——已改为逐控件精确替换。
+
+**仍然存在、未修复的 <48dp 控件（22 处）**，按类型分成两类：
+
+- **`ImageButton`（无自动扩展机制，建议修）**：`item_image_preview.xml` 移除图片 22dp、`fragment_create_discussion.xml` 清除附件 28dp / 添加图片 40dp、`fragment_snippet_detail.xml` 复制 32dp、`fragment_reference_detail.xml` 复制代码 32dp、`fragment_share_detail.xml` 点赞与下载 40dp
+- **`MaterialButton`（M3 样式自带状态层与语义，影响较小）**：`fragment_create_discussion.xml` 格式工具栏 7 个 36dp / 提交 42dp、`fragment_public_profile.xml` 关注 36dp、`fragment_palette_detail.xml` 全部导入 36dp、`item_block_share_preview.xml` 复制代码与导入 36dp、`fragment_notifications.xml` 全部已读/全部删除 40dp 等
+
 ---
 
 ## 九、剩余待办（按建议顺序）
 
-> 原「第一批（功能正确性）」「第二批（规范一致性）」及触控目标清理均已完成。
+> 原「第一批（功能正确性）」「第二批（规范一致性）」已完成；触控目标已完成高价值部分，剩余 22 处见上。
 
 **下一批**
-1. 165 处 `ContentDescription`（先做 `fragment_about.xml` 与各 `item_*.xml`）——无障碍硬缺口，纯增量、可放心批量
-2. 22 处 `SmallSp`（10sp → 11sp）、4 处补 `labelFor` / `hint`
-3. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
-4. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
+1. 剩余 22 处触控目标（优先 6 个 `ImageButton`，它们没有自动扩展机制）
+2. 165 处 `ContentDescription`（先做 `fragment_about.xml` 与各 `item_*.xml`）——无障碍硬缺口，纯增量、可放心批量
+3. 22 处 `SmallSp`（10sp → 11sp）、4 处补 `labelFor` / `hint`
+4. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
+5. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
