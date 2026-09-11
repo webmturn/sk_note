@@ -175,6 +175,9 @@ sqlite3 data/sk-note.db < migrate_discussion_categories.sql
 # 结构迁移：通知 related_type 支持 share
 sqlite3 data/sk-note.db < migrate_notifications_share.sql
 
+# 结构迁移：通知表增加 actor_id（点赞/关注通知去重与取消清理）
+sqlite3 data/sk-note.db < migrate_notifications_actor.sql
+
 # 数据维护：清理过期浏览去重记录和超量阅读历史，可按月执行
 sqlite3 data/sk-note.db < migrate_cleanup_old_data.sql
 ```
@@ -193,6 +196,8 @@ Nginx 反代需将 `api.wsqh.cn` 反向代理到 `127.0.0.1:3000`，例配置位
 
 ### 6. 构建 Android App
 
+构建环境要求：JDK 17 或 21（与 `jvmTarget = 17`、Gradle 8.7 匹配）、Android SDK Platform 34 及 Build-Tools 34.0.0。Gradle 通过 `JAVA_HOME` 探测 JDK，请勿在 `gradle.properties` 中写死本机 JDK 路径。
+
 ```bash
 cd android
 
@@ -201,6 +206,14 @@ cd android
 ./gradlew assembleDebug
 ./gradlew installDebug
 ```
+
+若本机 `JAVA_HOME` 未指向上述版本，可临时覆盖，无需改动仓库文件：
+
+```bash
+./gradlew assembleDebug -Dorg.gradle.java.home=/path/to/jdk-21
+```
+
+Windows 下同样需要设置 `ANDROID_HOME`（或 `local.properties` 中的 `sdk.dir`）指向 Android SDK 根目录。
 
 ### 7. 创建管理员账号
 
@@ -218,7 +231,7 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
 | GET | /api/home | 首页数据（分类 + 最新文章 + 最新分享） | 公开 |
-| GET | /api/stats | 管理统计（未读通知/文章/讨论/片段/用户/分享数） | 登录 |
+| GET | /api/stats | 统计数据（未读通知/文章/讨论/片段/用户/分享数） | 登录 |
 
 ### 认证与用户
 
@@ -318,10 +331,10 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 | GET | /api/follows/check/:userId | 检查是否已关注 | 登录 |
 | GET | /api/follows/:userId/following | 关注列表 | 公开 |
 | GET | /api/follows/:userId/followers | 粉丝列表 | 公开 |
-| GET | /api/follows/profile/:userId | 用户公开资料与作品统计 | 公开 |
+| GET | /api/follows/profile/:userId | 用户公开资料与作品统计（仅统计已审核内容） | 公开 |
 | GET | /api/follows/profile/:userId/discussions | 用户讨论列表 | 公开 |
-| GET | /api/follows/profile/:userId/snippets | 用户片段列表 | 公开 |
-| GET | /api/follows/profile/:userId/shares | 用户分享列表 | 公开 |
+| GET | /api/follows/profile/:userId/snippets | 用户片段列表（仅已审核） | 公开 |
+| GET | /api/follows/profile/:userId/shares | 用户分享列表（仅已审核） | 公开 |
 
 ### 收藏与阅读历史
 
