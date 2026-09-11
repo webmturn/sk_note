@@ -376,15 +376,30 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
+### 第四批（无障碍与字号，已执行）
+
+| 项 | 结果 |
+|---|---|
+| 功能性控件无障碍描述 | Lint 报的 165 处 `ContentDescription` 里，**只有 6 处是真正缺描述的可交互控件**：逻辑可视化新建调色板 FAB、项目资源添加 FAB、参考页回到顶部 FAB、参考页排序按钮、讨论详情取消回复、评论点赞。已全部补齐中文描述（图标按钮缺描述时读屏只能念出资源名）。`ContentDescription` 165 → 159 |
+| `SmallSp` 字号下限 | 22 处低于 11sp（21 处 10sp + 1 处 9sp），集中在参考页统计块与列表项的分类/类型/状态徽章、下载量等元信息。统一提升到 11sp，**`SmallSp` 22 → 0**，全仓已无 <11sp 的 `textSize` |
+
+两项都做了防误改核对：`ContentDescription` 的分类覆盖了 `ImageButton` 与 `FloatingActionButton`（它们默认可点击、不含 `android:clickable`，是先前判定的漏洞）；`SmallSp` 改动前逐文件比对 `textSize` 出现次数与 Lint 报数，确认没有误伤不同用途的字号。
+
+**关于剩余 159 处装饰性图片**：它们不是缺陷——头像占位、`ic_chevron_right` 箭头、图标底板等，按 Material 指引可用 `android:importantForAccessibility="no"` 显式排除。**没有做批量脚本改写**：这 159 处涉及约 40 个文件，属于零行为变化的机械改动，用脚本一次性改写风险高于收益（本批已经出现过一次 `replace_all` 误伤同文件非目标控件的先例）。建议在后续改到对应布局时顺带补，或单独做一次带备份与逐文件校验的批量处理。
+
+**门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL，error 保持 0；warning 2545 → 2523。
+
+---
+
 ## 九、剩余待办（按建议顺序）
 
-> 原「第一批（功能正确性）」「第二批（规范一致性）」已完成；触控目标已完成高价值部分，剩余 22 处见上。
+> 原「第一批（功能正确性）」「第二批（规范一致性）」已完成；触控目标已完成高价值部分（剩余 22 处见上）；无障碍与字号已完成。
 
 **下一批**
 1. 剩余 22 处触控目标（优先 6 个 `ImageButton`，它们没有自动扩展机制）
-2. 165 处 `ContentDescription`（先做 `fragment_about.xml` 与各 `item_*.xml`）——无障碍硬缺口，纯增量、可放心批量
-3. 22 处 `SmallSp`（10sp → 11sp）、4 处补 `labelFor` / `hint`
-4. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
+2. 159 处装饰性图片补 `importantForAccessibility="no"`（建议脚本化 + 逐文件校验，勿用 `replace_all`）
+3. 4 处补 `labelFor` / `hint`：`fragment_article_editor.xml:90`、`fragment_create_share.xml:114`、`fragment_create_snippet.xml:114,129`
+4. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
 5. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
