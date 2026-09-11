@@ -23,7 +23,8 @@ class SnippetManageAdapter(
         if (currentUserId == userId && currentRole == effective) return
         currentUserId = userId
         currentRole = effective
-        notifyDataSetChanged()
+        // 仅权限相关的可见性变化，局部刷新即可，避免 notifyDataSetChanged 丢失动画
+        if (itemCount > 0) notifyItemRangeChanged(0, itemCount)
     }
 
     class ViewHolder(val binding: ItemSnippetManageBinding) : RecyclerView.ViewHolder(binding.root)
@@ -41,7 +42,9 @@ class SnippetManageAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         holder.binding.tvTitle.text = item.title
-        holder.binding.tvMeta.text = "${item.authorName.orEmpty()} · ${item.language.orEmpty()} · ${item.category.orEmpty()} · ❤ ${item.likeCount} · ${TimeUtil.formatRelative(item.createdAt)}"
+        holder.binding.tvMeta.text = "${item.authorName.orEmpty()} · ${item.language.orEmpty()} · ${item.category.orEmpty()}"
+        holder.binding.tvLikeCount.text = "${item.likeCount}"
+        holder.binding.tvTime.text = TimeUtil.formatRelative(item.createdAt)
 
         // Backend snippet DELETE is author-or-admin only; hide delete on rows the current editor cannot remove.
         val canDelete = item.authorId == currentUserId || currentRole == "admin"

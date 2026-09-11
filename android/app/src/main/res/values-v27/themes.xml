@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- android:windowLightNavigationBar 需要 API 27，基座主题里不能直接声明，否则 minSdk 24 会报 NewApi。
+         parent 必须显式写出：点号命名在本文件只提供两项时会推断出不存在的父样式 Theme -->
+    <style name="Theme.SkNote" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

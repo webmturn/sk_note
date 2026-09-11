@@ -187,6 +187,8 @@ object AppUpdateManager {
                 Context.RECEIVER_NOT_EXPORTED
             )
         } else {
+            // API 33 以下没有三参数重载，RECEIVER_NOT_EXPORTED 参数不存在，此处只能两参数注册
+            @Suppress("UnspecifiedRegisterReceiverFlag")
             appContext.registerReceiver(
                 receiver,
                 IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)

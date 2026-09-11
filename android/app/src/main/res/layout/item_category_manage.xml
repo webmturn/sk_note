@@ -32,7 +32,7 @@
                 android:padding="8dp"
                 android:scaleType="centerInside"
                 android:contentDescription="@null"
-                android:tint="?attr/colorOnSecondaryContainer" />
+                app:tint="?attr/colorOnSecondaryContainer" />
 
             <TextView
                 android:id="@+id/tvIcon"
@@ -73,7 +73,7 @@
             android:layout_height="36dp"
             android:src="@drawable/ic_edit"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="?attr/colorPrimary"
+            app:tint="?attr/colorPrimary"
             android:contentDescription="编辑" />
 
         <ImageButton
@@ -82,7 +82,7 @@
             android:layout_height="36dp"
             android:src="@drawable/ic_delete"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="?attr/colorError"
+            app:tint="?attr/colorError"
             android:contentDescription="删除" />
     </LinearLayout>
 

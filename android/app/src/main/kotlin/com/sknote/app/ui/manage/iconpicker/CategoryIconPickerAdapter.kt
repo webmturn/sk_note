@@ -35,7 +35,7 @@ class CategoryIconPickerAdapter(
         binding.ivIcon.imageTintList = ColorStateList.valueOf(MaterialColors.getColor(binding.root, iconColorAttr))
         binding.cardRoot.strokeColor = MaterialColors.getColor(binding.root, strokeColorAttr)
         binding.cardRoot.setCardBackgroundColor(MaterialColors.getColor(binding.root, backgroundColorAttr))
-        binding.cardRoot.strokeWidth = if (isSelected) 2 else 1
+        binding.cardRoot.strokeWidth = ((if (isSelected) 2 else 1) * binding.root.resources.displayMetrics.density + 0.5f).toInt()
         binding.cardRoot.setOnClickListener { onSelected(option) }
     }
 }

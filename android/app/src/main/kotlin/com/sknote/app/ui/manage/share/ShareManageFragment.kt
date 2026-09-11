@@ -82,6 +82,15 @@ class ShareManageFragment : Fragment() {
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
         })
 
+        // TabLayout 重建后默认选中第 0 项且监听器注册晚于选中，不会回调，
+        // 需要按 ViewModel 里保留的筛选状态回填，否则旋转后 Tab 与列表内容不一致
+        val selectedIndex = when (viewModel.filter.value) {
+            ShareManageViewModel.FilterStatus.PENDING -> 1
+            ShareManageViewModel.FilterStatus.APPROVED -> 2
+            else -> 0
+        }
+        binding.tabFilter.getTabAt(selectedIndex)?.select()
+
         observeData()
         viewModel.loadShares()
     }

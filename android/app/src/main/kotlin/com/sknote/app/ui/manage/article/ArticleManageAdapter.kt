@@ -23,7 +23,8 @@ class ArticleManageAdapter(
         if (currentUserId == userId && currentRole == effective) return
         currentUserId = userId
         currentRole = effective
-        notifyDataSetChanged()
+        // 仅权限相关的可见性变化，局部刷新即可，避免 notifyDataSetChanged 丢失动画
+        if (itemCount > 0) notifyItemRangeChanged(0, itemCount)
     }
 
     class ViewHolder(val binding: ItemArticleManageBinding) : RecyclerView.ViewHolder(binding.root)

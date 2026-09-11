@@ -35,15 +35,13 @@ suspend fun Fragment.requireLoggedIn(anchorView: View, message: String = "请先
 
 suspend fun Fragment.requireRolesOrExit(
     allowedRoles: Set<String>,
-    deniedMessage: String = "无权访问此页面"
+    deniedMessage: String = "无权访问此页面",
+    anchorView: View? = null
 ): Boolean {
     val tokenManager = ApiClient.getTokenManager()
     val isLoggedIn = tokenManager.isLoggedIn().first()
     if (!isLoggedIn) {
-        Toast.makeText(requireContext(), "请先登录", Toast.LENGTH_SHORT).show()
-        if (isAdded) {
-            findNavController().navigateUp()
-        }
+        notifyAndExit("请先登录", anchorView)
         return false
     }
 
@@ -52,9 +50,21 @@ suspend fun Fragment.requireRolesOrExit(
         return true
     }
 
-    Toast.makeText(requireContext(), deniedMessage, Toast.LENGTH_SHORT).show()
+    notifyAndExit(deniedMessage, anchorView)
+    return false
+}
+
+/**
+ * 门禁提示：本函数随后就会 navigateUp()，Fragment 的 Snackbar 会随视图销毁一起消失，
+ * 因此有锚点视图时优先用 Snackbar，没有时退回 Toast 才能保证用户看得到。
+ */
+private fun Fragment.notifyAndExit(message: String, anchorView: View?) {
+    if (anchorView != null) {
+        Snackbar.make(anchorView, message, Snackbar.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
     if (isAdded) {
         findNavController().navigateUp()
     }
-    return false
 }

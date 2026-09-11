@@ -1,13 +1,13 @@
 package com.sknote.app.ui.manage.user
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.os.Parcelable
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
-import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.User
@@ -62,12 +63,12 @@ class UserManageFragment : Fragment() {
         }
     }
 
-    private fun setupManageUi() {
+    private suspend fun setupManageUi() {
 
-        adapter = UserManageAdapter { user, anchorView ->
-            showUserMenu(user, anchorView)
+        adapter = UserManageAdapter { user ->
+            showUserMenu(user)
         }
-        binding.rvUsers.layoutManager = LinearLayoutManager(context)
+        binding.rvUsers.layoutManager = LinearLayoutManager(requireContext())
         binding.rvUsers.adapter = adapter
         if (currentQuery.isNotEmpty()) {
             binding.etSearch.setText(currentQuery)
@@ -87,9 +88,9 @@ class UserManageFragment : Fragment() {
             viewModel.loadUsers(force = true, search = query?.ifEmpty { null })
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            currentUsername = ApiClient.getTokenManager().getUsername().first()
-        }
+        // 必须在建 adapter 之前取到自身标识：异步填充会让 isSelf() 在首帧恒为 false，
+        // 从而给自己那行错误地显示"删除用户"（后端 auth.ts 已有护栏，这里只保证 UI 正确）
+        currentUsername = ApiClient.getTokenManager().getUsername().first()
 
         observeData()
         viewModel.loadUsers(search = currentQuery.ifEmpty { null })
@@ -121,27 +122,24 @@ class UserManageFragment : Fragment() {
 
     private fun isSelf(user: User): Boolean = user.username == currentUsername
 
-    private fun showUserMenu(user: User, anchorView: View) {
-        val popup = PopupMenu(requireContext(), anchorView)
-        popup.menu.add(0, 1, 0, "设为管理员")
-        popup.menu.add(0, 2, 0, "设为编辑")
-        popup.menu.add(0, 3, 0, "设为普通用户")
-        popup.menu.add(0, 4, 0, "重置密码")
-        if (!isSelf(user)) {
-            popup.menu.add(0, 5, 0, "删除用户")
-        }
-
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> confirmRoleChange(user, "admin")
-                2 -> confirmRoleChange(user, "editor")
-                3 -> confirmRoleChange(user, "user")
-                4 -> showResetPasswordDialog(user)
-                5 -> showDeleteConfirm(user)
+    private fun showUserMenu(user: User) {
+        val isSelfUser = isSelf(user)
+        // Dialog 而非 PopupMenu：锚点 btnMore 在列表复用时会被回收，且弹窗期间一直持有该 View
+        val actions = buildList {
+            add("设为管理员" to { confirmRoleChange(user, "admin") })
+            add("设为编辑" to { confirmRoleChange(user, "editor") })
+            add("设为普通用户" to { confirmRoleChange(user, "user") })
+            add("重置密码" to { showResetPasswordDialog(user) })
+            if (!isSelfUser) {
+                add("删除用户" to { showDeleteConfirm(user) })
             }
-            true
         }
-        popup.show()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(user.username)
+            .setItems(actions.map { it.first }.toTypedArray()) { _, index ->
+                actions[index].second()
+            }
+            .show()
     }
 
     private fun confirmRoleChange(user: User, newRole: String) {
@@ -163,26 +161,44 @@ class UserManageFragment : Fragment() {
     }
 
     private fun showResetPasswordDialog(user: User) {
-        val input = EditText(requireContext()).apply {
-            hint = "输入新密码（至少6位）"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-            setPadding(48, 32, 48, 16)
+        val density = resources.displayMetrics.density
+        val corner = 12f * density
+        val inputLayout = TextInputLayout(requireContext()).apply {
+            hint = "新密码（至少 6 位）"
+            setBoxCornerRadii(corner, corner, corner, corner)
+            setPadding(dp(24), dp(16), dp(24), 0)
         }
+        val input = TextInputEditText(inputLayout.context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        inputLayout.addView(input)
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("重置密码")
             .setMessage("为用户「${user.username}」设置新密码")
-            .setView(input)
-            .setPositiveButton("重置") { _, _ ->
-                val pwd = input.text.toString().trim()
-                if (pwd.length < 6) {
-                    Snackbar.make(binding.root, "密码至少6位", Snackbar.LENGTH_SHORT).show()
-                } else {
-                    viewModel.resetPassword(user.id, pwd)
-                }
-            }
+            .setView(inputLayout)
+            .setPositiveButton("重置", null)
             .setNegativeButton("取消", null)
-            .show()
+            .create()
+            .also { dialog ->
+                // 用字段级 error 而非 Snackbar：校验不通过时不关闭对话框，用户可直接修正
+                dialog.setOnShowListener {
+                    dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                        val pwd = input.text.toString().trim()
+                        if (pwd.length < 6) {
+                            inputLayout.error = "密码至少 6 位"
+                        } else {
+                            inputLayout.error = null
+                            viewModel.resetPassword(user.id, pwd)
+                            dialog.dismiss()
+                        }
+                    }
+                }
+                dialog.show()
+            }
     }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun showDeleteConfirm(user: User) {
         MaterialAlertDialogBuilder(requireContext())

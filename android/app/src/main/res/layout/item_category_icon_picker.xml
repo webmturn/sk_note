@@ -22,7 +22,7 @@
             android:layout_gravity="center"
             android:contentDescription="@null"
             android:scaleType="centerInside"
-            android:tint="?attr/colorOnSurfaceVariant" />
+            app:tint="?attr/colorOnSurfaceVariant" />
     </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

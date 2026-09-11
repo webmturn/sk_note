@@ -12,7 +12,7 @@ import com.sknote.app.databinding.ItemUserManageBinding
 import com.sknote.app.util.TimeUtil
 
 class UserManageAdapter(
-    private val onMoreClick: (User, android.view.View) -> Unit
+    private val onMoreClick: (User) -> Unit
 ) : ListAdapter<User, UserManageAdapter.ViewHolder>(DiffCallback()) {
 
     class ViewHolder(val binding: ItemUserManageBinding) : RecyclerView.ViewHolder(binding.root)
@@ -40,12 +40,13 @@ class UserManageAdapter(
 
         val badge = holder.binding.tvRoleBadge
         val context = holder.binding.root.context
+        val badgeCorner = 8f * context.resources.displayMetrics.density
         when (user.role) {
             "admin" -> {
                 badge.text = "管理员"
                 badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnErrorContainer, 0))
                 val bg = GradientDrawable().apply {
-                    cornerRadius = 8f
+                    cornerRadius = badgeCorner
                     setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorErrorContainer, 0))
                 }
                 badge.background = bg
@@ -54,7 +55,7 @@ class UserManageAdapter(
                 badge.text = "编辑"
                 badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer, 0))
                 val bg = GradientDrawable().apply {
-                    cornerRadius = 8f
+                    cornerRadius = badgeCorner
                     setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorPrimaryContainer, 0))
                 }
                 badge.background = bg
@@ -63,15 +64,15 @@ class UserManageAdapter(
                 badge.text = "用户"
                 badge.setTextColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorOnSurfaceVariant, 0))
                 val bg = GradientDrawable().apply {
-                    cornerRadius = 8f
+                    cornerRadius = badgeCorner
                     setColor(MaterialColors.getColor(context, com.google.android.material.R.attr.colorSurfaceVariant, 0))
                 }
                 badge.background = bg
             }
         }
 
-        holder.binding.btnMore.setOnClickListener { view ->
-            onMoreClick(user, view)
+        holder.binding.btnMore.setOnClickListener {
+            onMoreClick(user)
         }
     }
 }

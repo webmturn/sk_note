@@ -24,7 +24,8 @@ class ShareManageAdapter(
         if (currentUserId == userId && currentRole == effective) return
         currentUserId = userId
         currentRole = effective
-        notifyDataSetChanged()
+        // 仅权限相关的可见性变化，局部刷新即可，避免 notifyDataSetChanged 丢失动画
+        if (itemCount > 0) notifyItemRangeChanged(0, itemCount)
     }
 
     class ViewHolder(val binding: ItemShareManageBinding) : RecyclerView.ViewHolder(binding.root)
@@ -49,7 +50,10 @@ class ShareManageAdapter(
 
         val authorLabel = item.authorName.orEmpty().ifEmpty { "匿名" }
         val categoryLabel = item.category.orEmpty().ifEmpty { "general" }
-        holder.binding.tvMeta.text = "$authorLabel · $categoryLabel · ↓ ${item.downloadCount} · ❤ ${item.likeCount} · ${TimeUtil.formatRelative(item.createdAt)}"
+        holder.binding.tvMeta.text = "$authorLabel · $categoryLabel"
+        holder.binding.tvDownloadCount.text = "${item.downloadCount}"
+        holder.binding.tvLikeCount.text = "${item.likeCount}"
+        holder.binding.tvTime.text = TimeUtil.formatRelative(item.createdAt)
 
         holder.binding.btnApprove.text = if (approved) "取消批准" else "批准"
         // 只有管理员可以审核（这里页面已限制 admin 才能进入）

@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -250,8 +251,9 @@ class BlockCompareDialog : BottomSheetDialogFragment() {
             textSize = 12f
             setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface))
             setPadding(dp(10), dp(8), dp(10), dp(8))
-            lineHeight = (textSize * 1.5).toInt()
         }
+        // lineHeight 的属性 setter 需要 API 28，用 compat 版本兼容 minSdk 24
+        TextViewCompat.setLineHeight(tv, (tv.textSize * 1.5).toInt())
         card.addView(tv)
         return card
     }

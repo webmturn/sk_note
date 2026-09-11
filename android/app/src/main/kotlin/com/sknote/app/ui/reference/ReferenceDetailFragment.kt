@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -660,7 +661,8 @@ class ReferenceDetailFragment : Fragment() {
                 textSize = 13f
                 setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(dp(8), dp(2), 0, dp(2))
-                lineHeight = (textSize * 1.6).toInt()
+                // lineHeight 的属性 setter 需要 API 28，用 compat 版本兼容 minSdk 24
+                TextViewCompat.setLineHeight(this, (textSize * 1.6).toInt())
             }
         }
 
@@ -689,7 +691,7 @@ class ReferenceDetailFragment : Fragment() {
                 textSize = 13f
                 setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(dp(8), dp(2), 0, dp(2))
-                lineHeight = (textSize * 1.6).toInt()
+                TextViewCompat.setLineHeight(this, (textSize * 1.6).toInt())
             }
             markwon.setMarkdown(tvParams, fixMarkdownBreaks(ref.parameters.orEmpty()))
             binding.layoutManual.addView(tvParams)
@@ -703,7 +705,7 @@ class ReferenceDetailFragment : Fragment() {
                 textSize = 13f
                 setTextColor(resolveThemeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
                 setPadding(dp(8), dp(2), 0, dp(2))
-                lineHeight = (textSize * 1.6).toInt()
+                TextViewCompat.setLineHeight(this, (textSize * 1.6).toInt())
             }
             markwon.setMarkdown(tvUsage, fixMarkdownBreaks(ref.usage.orEmpty()))
             binding.layoutManual.addView(tvUsage)
