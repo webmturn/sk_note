@@ -111,8 +111,8 @@
 
             <ImageButton
                 android:id="@+id/btnView"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:src="@drawable/ic_chevron_right"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="查看" />
@@ -131,7 +131,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="批准"
-                android:minHeight="36dp"
+                android:minHeight="48dp"
                 android:textSize="13sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -142,7 +142,7 @@
                 android:layout_marginStart="4dp"
                 android:text="删除"
                 android:textColor="?attr/colorError"
-                android:minHeight="36dp"
+                android:minHeight="48dp"
                 android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>

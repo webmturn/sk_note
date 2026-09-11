@@ -85,7 +85,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="下架"
-                android:minHeight="36dp"
+                android:minHeight="48dp"
                 android:textSize="13sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -96,7 +96,7 @@
                 android:layout_marginStart="4dp"
                 android:text="删除"
                 android:textColor="?attr/colorError"
-                android:minHeight="36dp"
+                android:minHeight="48dp"
                 android:textSize="13sp" />
         </LinearLayout>
     </LinearLayout>

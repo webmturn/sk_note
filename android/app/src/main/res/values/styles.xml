@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      图标底板：MaterialCardView 内嵌一个 ImageView 的「图标 + 底色」组合。
+      尺寸取自规范模板 42dp + padding 9dp，圆角 12dp 与全项目多数用法一致。
+      Small 变体用于列表行内更紧凑的场合。
+      用法：
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.SkNote.IconTile"
+            app:cardBackgroundColor="@color/icon_bg_green"
+            android:layout_marginEnd="16dp">
+            <ImageView ... android:padding="9dp" />
+        </com.google.android.material.card.MaterialCardView>
+    -->
+    <style name="Widget.SkNote.IconTile" parent="Widget.Material3.CardView.Elevated">
+        <item name="android:layout_width">42dp</item>
+        <item name="android:layout_height">42dp</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <style name="Widget.SkNote.IconTile.Small">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+        <item name="cardCornerRadius">11dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <!-- 页面级内容卡片：圆角 16dp、零高度，与应用卡片基线一致 -->
+    <style name="Widget.SkNote.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <!-- 筛选 Tab：统一指示条与文字配色，供 XML 声明的 TabLayout 复用 -->
+    <style name="Widget.SkNote.TabLayout" parent="Widget.Material3.TabLayout">
+        <item name="tabIndicatorColor">?attr/colorPrimary</item>
+        <item name="tabSelectedTextColor">?attr/colorPrimary</item>
+        <item name="tabTextColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+</resources>
