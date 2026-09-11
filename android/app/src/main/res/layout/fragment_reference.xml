@@ -238,7 +238,8 @@
                 android:src="@drawable/ic_sort"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
-                android:focusable="true" />
+                android:focusable="true"
+                android:contentDescription="切换排序" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -470,6 +471,7 @@
             android:layout_marginBottom="88dp"
             android:src="@drawable/ic_arrow_up"
             android:visibility="gone"
+            android:contentDescription="回到顶部"
             app:fabSize="mini"
             app:backgroundTint="?attr/colorPrimaryContainer"
             app:tint="?attr/colorOnPrimaryContainer" />

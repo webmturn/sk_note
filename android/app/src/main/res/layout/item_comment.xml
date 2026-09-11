@@ -93,7 +93,8 @@
                 android:padding="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
-                android:focusable="true" />
+                android:focusable="true"
+                android:contentDescription="点赞" />
 
             <TextView
                 android:id="@+id/tvLikeCount"

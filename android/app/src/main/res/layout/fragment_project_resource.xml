@@ -113,6 +113,7 @@
             android:layout_gravity="end|bottom"
             android:layout_margin="16dp"
             android:src="@drawable/ic_add"
+            android:contentDescription="添加资源"
             app:tint="?attr/colorOnPrimaryContainer"
             app:backgroundTint="?attr/colorPrimaryContainer" />
     </FrameLayout>

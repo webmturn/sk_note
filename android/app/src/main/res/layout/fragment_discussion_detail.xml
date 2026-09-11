@@ -124,6 +124,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
+                android:contentDescription="取消回复"
                 app:tint="?attr/colorOnSecondaryContainer" />
         </LinearLayout>
 
