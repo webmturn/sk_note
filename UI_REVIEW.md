@@ -391,16 +391,38 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
+### 第五批（触控目标收尾与下拉框标签，已执行）
+
+| 项 | 结果 |
+|---|---|
+| 剩余 7 处 <48dp 控件 | 见下表 |
+| `LabelFor` | 4 处 → **0** |
+
+**叠在缩略图上的圆形按钮**（不能直接放大，否则遮住图片内容）：改为 48dp 触控区 + `inset` 把可见圆形还原成原尺寸 + 等量负边距保持位置。
+
+| 位置 | 处理 |
+|---|---|
+| `item_image_preview.xml` `btnRemove` | 22dp → 48dp 触控区，`inset*=13dp` + `margin=-13dp`，可见圆形仍 22dp、位置不变 |
+| `fragment_create_discussion.xml` `btnClearAttachment` | 28dp → 48dp 触控区，`inset*=10dp` + `margin=-4dp`，可见圆形仍 28dp、外边距仍 6dp |
+| `fragment_snippet_detail.xml` `btnCopy` | 32dp → 48dp，并移除覆盖 M3 默认高度的 `insetTop/Bottom=0dp` |
+| `fragment_reference_detail.xml` `btnCopyCode` | 32dp → 48dp |
+| `fragment_create_discussion.xml` `btnAddImage` | 40dp → 48dp |
+| `fragment_share_detail.xml` `btnLike` / `btnDownload` | 40dp → 48dp，移除 `inset`，底栏 56 → 64dp |
+
+**下拉框无障碍标签**：4 处 `ExposedDropdownMenu` 的 `AutoCompleteTextView` 既无 `hint` 也无 `labelFor`，读屏无法识别字段含义（`选择分类` / `分类` / `编程语言`）。补上与父 `TextInputLayout` 一致的 `hint`，浮动标签行为不变。
+
+**门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL；`error`、`LabelFor`、`SmallSp` 均为 0。
+
+---
+
 ## 九、剩余待办（按建议顺序）
 
-> 原「第一批（功能正确性）」「第二批（规范一致性）」已完成；触控目标已完成高价值部分（剩余 22 处见上）；无障碍与字号已完成。
+> 「第一批」到「第五批」均已完成。触控目标（含 48dp 触控区方案）、无障碍描述、字号下限、下拉框标签全部收口。
 
 **下一批**
-1. 剩余 22 处触控目标（优先 6 个 `ImageButton`，它们没有自动扩展机制）
-2. 159 处装饰性图片补 `importantForAccessibility="no"`（建议脚本化 + 逐文件校验，勿用 `replace_all`）
-3. 4 处补 `labelFor` / `hint`：`fragment_article_editor.xml:90`、`fragment_create_share.xml:114`、`fragment_create_snippet.xml:114,129`
-4. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
-5. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
+1. 159 处装饰性图片补 `importantForAccessibility="no"`（建议脚本化 + 逐文件校验，勿用 `replace_all`）
+2. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
+3. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
