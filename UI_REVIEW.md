@@ -320,13 +320,25 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
+### 第二批（已执行）
+
+| 项 | 结果 |
+|---|---|
+| 新增 `res/values/styles.xml` | 定义 `Widget.SkNote.IconTile`（42dp + 圆角 12dp + `cardElevation=0dp`，尺寸取自规范模板）、`IconTile.Small`、`Card`、`TabLayout`，作为新代码基准。已解包 material 1.11.0 确认 `Widget.Material3.CardView.Elevated` / `Widget.Material3.TabLayout` 等 parent 真实存在 |
+| 触控目标 ≥ 48dp | 管理列表 7 个 `item_*.xml`：`ImageButton` 36dp → 48dp（15 个）；`item_share_manage.xml` / `item_release_manage.xml` 的 `TextButton` `minHeight` 36dp → 48dp（4 个），不再覆盖 M3 默认值 |
+| 门禁 | `:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL，error 保持 0 |
+
+**关于内联图标底批量化：没有做。** 统计出 4 套并存规格（42dp/9dp ×20 次、40dp/8dp ×11、38dp/11dp ×8、36dp/18dp ×3）。把 30 处内联 `MaterialCardView` 改成 `style=` 属于零功能变化的机械重构，却要一次性引入 30 处回归面，而配色又各不相同（无法用 replace_all 安全批量处理）。因此只建立样式基准并在此登记迁移清单，留待需要改动对应布局时顺带收敛。
+
+---
+
 ## 九、剩余待办（按建议顺序）
 
-> 原「第一批（功能正确性）」与「第二批（规范一致性）」的主要项已在第八节完成。
+> 原「第一批（功能正确性）」「第二批（规范一致性）」的主要项均已完成，见第八节。
 
-**下一批（一致性收敛，收益覆盖全批界面）**
-1. 建 `res/values/styles.xml`，抽 `IconTile` / `Card` / `TabLayout` 三个 style —— 一次性收掉卡片圆角 11/12/18/20/21/24dp、图标底 38/40/42dp、tab 两种声明方式的分散值（对应第三节 P1-2 与第六节第 3 条）
-2. 触控目标 < 48dp：各 `item_*_manage.xml` 的 36dp `ImageButton` → 48dp 容器 + 12dp padding
+**下一批**
+1. 触控目标续清（10 个 40dp、1 个 36dp）：`fragment_search.xml`、`fragment_reference_search.xml`、`fragment_share_list.xml`、`fragment_snippet_list.xml`、`dialog_block_compare.xml`
+2. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
 3. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
