@@ -61,10 +61,7 @@
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
+                            style="@style/Widget.SkNote.IconTile"
                             app:cardBackgroundColor="@color/icon_bg_purple"
                             android:layout_marginEnd="16dp">
 
@@ -141,10 +138,7 @@
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
+                            style="@style/Widget.SkNote.IconTile"
                             app:cardBackgroundColor="@color/icon_bg_teal"
                             android:layout_marginEnd="16dp">
 
@@ -226,10 +220,7 @@
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
+                            style="@style/Widget.SkNote.IconTile"
                             app:cardBackgroundColor="@color/icon_bg_orange"
                             android:layout_marginEnd="16dp">
 
@@ -311,10 +302,7 @@
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
+                            style="@style/Widget.SkNote.IconTile"
                             app:cardBackgroundColor="@color/icon_bg_green"
                             android:layout_marginEnd="16dp">
 
@@ -377,10 +365,7 @@
                         android:focusable="true">
 
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="42dp"
-                            android:layout_height="42dp"
-                            app:cardCornerRadius="12dp"
-                            app:cardElevation="0dp"
+                            style="@style/Widget.SkNote.IconTile"
                             app:cardBackgroundColor="@color/icon_bg_blue"
                             android:layout_marginEnd="16dp">
 
