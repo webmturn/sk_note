@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  需要登录才能发布时的占位块，供 fragment_create_snippet / fragment_create_share 共用。
+  结构（图标 + 主标题 + 说明 + 去登录按钮）完全一致，仅两处文案不同，
+  故文案不写在本文件，由各 Fragment 通过 binding 设置（与 toolbar 标题的处理方式一致）。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layoutAuthRequired"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:visibility="gone">
+
+    <ImageView
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:src="@drawable/ic_account_circle"
+        android:alpha="0.7" />
+
+    <TextView
+        android:id="@+id/tvAuthTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface" />
+
+    <TextView
+        android:id="@+id/tvAuthMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnGoLogin"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginTop="20dp"
+        android:text="去登录"
+        app:icon="@drawable/ic_arrow_forward"
+        app:iconGravity="textEnd"
+        app:iconSize="18dp"
+        app:cornerRadius="24dp" />
+</LinearLayout>

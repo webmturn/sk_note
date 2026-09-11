@@ -104,7 +104,10 @@ class CreateSnippetFragment : Fragment() {
         val navOptions = slideNavOptions()
         binding.toolbar.setNavigationOnClickListener { confirmExit() }
         binding.toolbar.title = if (snippetId == null) "分享代码片段" else "编辑代码片段"
-        binding.btnGoLogin.setOnClickListener {
+        // 未登录占位块由 layout_auth_required 提供结构，两处文案随页面不同，在此设置
+        binding.layoutAuthRequired.tvAuthTitle.text = "登录后即可发布代码片段"
+        binding.layoutAuthRequired.tvAuthMessage.text = "登录后你可以发布、编辑并管理自己的代码片段"
+        binding.layoutAuthRequired.btnGoLogin.setOnClickListener {
             findNavController().navigate(R.id.loginFragment, null, navOptions)
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,
@@ -179,7 +182,8 @@ class CreateSnippetFragment : Fragment() {
     }
 
     private fun renderAuthState() {
-        binding.layoutAuthRequired.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
+        // 占位块来自 include，其根视图与子视图都通过该 include 的绑定访问
+        binding.layoutAuthRequired.root.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
         binding.scrollContent.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
         binding.layoutSubmitBar.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
     }

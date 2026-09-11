@@ -99,7 +99,10 @@ class CreateShareFragment : Fragment() {
         val navOptions = slideNavOptions()
         binding.toolbar.setNavigationOnClickListener { confirmExit() }
         binding.toolbar.title = if (shareId == null) "发布分享" else "编辑分享"
-        binding.btnGoLogin.setOnClickListener {
+        // 未登录占位块由 layout_auth_required 提供结构，两处文案随页面不同，在此设置
+        binding.layoutAuthRequired.tvAuthTitle.text = "登录后即可发布文件分享"
+        binding.layoutAuthRequired.tvAuthMessage.text = "登录后你可以发布、编辑并管理自己的分享资源"
+        binding.layoutAuthRequired.btnGoLogin.setOnClickListener {
             findNavController().navigate(R.id.loginFragment, null, navOptions)
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,
@@ -163,7 +166,8 @@ class CreateShareFragment : Fragment() {
     }
 
     private fun renderAuthState() {
-        binding.layoutAuthRequired.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
+        // 占位块来自 include，其根视图与子视图都通过该 include 的绑定访问
+        binding.layoutAuthRequired.root.visibility = if (isLoggedIn) View.GONE else View.VISIBLE
         binding.scrollContent.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
         binding.layoutSubmitBar.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
     }
