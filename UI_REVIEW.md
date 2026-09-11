@@ -433,13 +433,32 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
-## 九、剩余待办（按建议顺序）
+### 第七批（装饰性图片标记，已执行）
 
-> 「第一批」到「第六批」均已完成。
+剩余 158 处 `ContentDescription` 全部确认为**装饰性图片**（箭头、占位头像、图标底板、空态插画、与文字并列的品牌 logo），按 Material 指引补 `android:importantForAccessibility="no"` 显式排除，避免读屏把无信息量的图标念成资源名。
 
-**下一批**
-1. 159 处装饰性图片补 `importantForAccessibility="no"`（建议脚本化 + 逐文件校验，勿用 `replace_all`）
-2. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
+**动手前的复核**（这一步排除了"启发式误判"的风险）：
+
+| 疑点 | 核实结果 |
+|---|---|
+| `@drawable/splash_logo` ×2 | `activity_splash.xml` 的那处 `alpha="0"` **完全不可见**；`fragment_login.xml` 的那处紧邻标题文字 `Sketchware Pro 手册`，标记后可避免与文字重复播报。两处都无需真实描述 |
+| 空态插画（`ic_empty*`） | 相邻均有空态文案（`tvEmptyTitle` 等）承担语义 |
+| 5 处无固定 `src` 的图片 | `ivIconDetail` / `event_icon` / `ivPreview` / `ivIcon` / `ivEmptyIcon`，均为"图标旁必有文字"或"图片本身即内容但容器已带交互语义"的场景 |
+
+**执行方式**：脚本按 Lint 报告给出的**精确文件与行号**插入，不做全仓正则替换；执行前整目录备份（107 个文件）。
+
+**改后全量校验**：107 个 layout XML 格式正确；158 处属性**逐条回溯确认落在 `ImageView`/`ImageButton` 元素内**（不是只看文件数量）；diff 抽查确认每处只增加了该属性、无其他变化。
+
+**门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL；**`ContentDescription` 158 → 0**，warning 2517 → **2359**，error 保持 0。
+
+---
+
+## 九、剩余待办
+
+> 「第一批」到「第七批」均已完成。触控目标、无障碍描述、字号下限、下拉框标签、创建页去重、装饰性图片标记全部收口。
+
+**剩余**
+1. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，按文件逐个改）
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
