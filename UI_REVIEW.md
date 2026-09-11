@@ -332,23 +332,44 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 ---
 
+### 第三批（触控目标续清，已执行）
+
+穷尽扫描全部 layout 后，把**所有**可交互控件的触控目标提升到 ≥ 48dp：
+
+| 位置 | 原尺寸 | 修复 |
+|---|---|---|
+| `fragment_search.xml` / `fragment_reference_search.xml` 返回、清除、搜索 | 40dp ×6 | 48dp（行高变 64dp，即标准 Material 顶栏高度） |
+| `fragment_share_list.xml` / `fragment_snippet_list.xml` 卡片内清除、搜索 | 40dp ×4 | 48dp，且卡片 `paddingVertical` 10dp→6dp，整卡高度维持在约 60dp 不无谓变高 |
+| `dialog_block_compare.xml` 关闭按钮 | 36dp | 48dp，标题栏 padding 16dp→16/12dp（总高约 72dp） |
+| `fragment_reference.xml` 排序按钮 | **24dp** | 48dp |
+| `item_comment.xml` 点赞按钮 | **28dp** | 48dp |
+| `fragment_discussion_detail.xml` 取消回复 | **28dp** | 48dp |
+| `fragment_public_profile.xml` / `fragment_user_profile.xml` 关注与粉丝统计项 | 无最小高度 | 补 `android:minHeight="48dp"` |
+
+**过程中发现报告原先的一处不准**：24dp 排序按钮与 28dp 点赞/取消回复这三处是 `ImageView` + `android:clickable="true"`（不是 `ImageButton`），我先前的扫描只覆盖了 `ImageButton` 标签，所以漏掉了——它们是全 App 最小的可点击目标（比报告里写的 36dp 更严重）。已改用**同时匹配 `clickable="true"` 与按钮标签**的扫描并复查到零遗漏。
+
+不计入修改的项（已确认达标，属扫描器误报）：`fragment_article_detail.xml` 底栏的 `0dp + weight` 子项，其父容器固定 `48dp`。
+
+**门禁**：`:app:compileDebugKotlin` 与 `:app:lintDebug` 均 BUILD SUCCESSFUL，error 保持 0。
+
+---
+
 ## 九、剩余待办（按建议顺序）
 
-> 原「第一批（功能正确性）」「第二批（规范一致性）」的主要项均已完成，见第八节。
+> 原「第一批（功能正确性）」「第二批（规范一致性）」及触控目标清理均已完成。
 
 **下一批**
-1. 触控目标续清（10 个 40dp、1 个 36dp）：`fragment_search.xml`、`fragment_reference_search.xml`、`fragment_share_list.xml`、`fragment_snippet_list.xml`、`dialog_block_compare.xml`
-2. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
-3. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
+1. 165 处 `ContentDescription`（先做 `fragment_about.xml` 与各 `item_*.xml`）——无障碍硬缺口，纯增量、可放心批量
+2. 22 处 `SmallSp`（10sp → 11sp）、4 处补 `labelFor` / `hint`
+3. 内联图标底迁移到 `Widget.SkNote.IconTile`（30 处，建议按文件逐个改，勿批量）
+4. `fragment_create_snippet.xml` / `fragment_create_share.xml` 抽公共骨架 + `<include>`
 
 **再下一批（体验打磨）**
-4. 165 处 `ContentDescription`（先做 `fragment_about.xml` 与各 `item_*.xml`）
-5. 22 处 `SmallSp`（10sp → 11sp）、4 处补 `labelFor` / `hint`
-6. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
-7. `ProjectAnalyzerFragment` 的 `containerColors` 6 个固定饱和色改 M3 surface 角色
-8. 启动页 `splash_background` 夜间值、`surface_card` 夜间值与 M3 `colorSurface` 对齐
-9. 死资源清理（`chip_background_selector.xml`、`ic_abc.xml`、约 297 个零引用 drawable）
+1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
+2. `ProjectAnalyzerFragment` 的 `containerColors` 6 个固定饱和色改 M3 surface 角色
+3. 启动页 `splash_background` 夜间值、`surface_card` 夜间值与 M3 `colorSurface` 对齐
+4. 死资源清理（`chip_background_selector.xml`、`ic_abc.xml`、约 297 个零引用 drawable）
 
 **需要产品决策**
-10. `SyntaxHighlightUtil` 与 `JavaSyntaxHighlighter` 两套配色的浅色值归一（需确认以哪套为准）
-11. `AuthActionHelper.requireRolesOrExit` 的 9 个调用点是否传入 `anchorView` 以彻底去掉 Toast
+1. `SyntaxHighlightUtil` 与 `JavaSyntaxHighlighter` 两套配色的浅色值归一（需确认以哪套为准）
+2. `AuthActionHelper.requireRolesOrExit` 的 9 个调用点是否传入 `anchorView` 以彻底去掉 Toast
