@@ -233,8 +233,8 @@
 
             <ImageView
                 android:id="@+id/btnSort"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:src="@drawable/ic_sort"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"

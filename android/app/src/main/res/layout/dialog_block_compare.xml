@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
 
         <TextView
             android:layout_width="0dp"
@@ -24,8 +25,8 @@
 
         <ImageButton
             android:id="@+id/btnCloseCompare"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:src="@drawable/ic_close"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="关闭" />

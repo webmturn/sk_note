@@ -45,7 +45,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingHorizontal="14dp"
-                    android:paddingVertical="10dp">
+                    android:paddingVertical="6dp">
 
                     <ImageView
                         android:layout_width="18dp"
@@ -68,8 +68,8 @@
 
                     <ImageButton
                         android:id="@+id/btnClear"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:src="@drawable/ic_close"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="清除"
@@ -77,8 +77,8 @@
 
                     <ImageButton
                         android:id="@+id/btnSearch"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:src="@drawable/ic_search"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="搜索"
