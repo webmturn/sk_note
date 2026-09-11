@@ -15,7 +15,8 @@
         android:layout_height="64dp"
         android:src="@drawable/ic_error_outline"
         android:alpha="0.4"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="12dp"
+        android:importantForAccessibility="no" />
 
     <TextView
         android:id="@+id/tvError"

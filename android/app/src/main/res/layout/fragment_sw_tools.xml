@@ -63,7 +63,8 @@
                             android:src="@drawable/ic_analyze"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnPrimaryContainer" />
+                            app:tint="?attr/colorOnPrimaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -89,7 +90,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -123,7 +125,8 @@
                             android:src="@drawable/ic_blocks"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnSecondaryContainer" />
+                            app:tint="?attr/colorOnSecondaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -149,7 +152,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -183,7 +187,8 @@
                             android:src="@drawable/ic_folder_media"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnTertiaryContainer" />
+                            app:tint="?attr/colorOnTertiaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -209,7 +214,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -243,7 +249,8 @@
                             android:src="@drawable/ic_backup"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnTertiaryContainer" />
+                            app:tint="?attr/colorOnTertiaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -269,7 +276,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -314,7 +322,8 @@
                             android:src="@drawable/ic_blocks"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnSecondaryContainer" />
+                            app:tint="?attr/colorOnSecondaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -340,7 +349,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -374,7 +384,8 @@
                             android:src="@drawable/ic_comp_default"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnTertiaryContainer" />
+                            app:tint="?attr/colorOnTertiaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -400,7 +411,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -434,7 +446,8 @@
                             android:src="@drawable/ic_event_default"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnPrimaryContainer" />
+                            app:tint="?attr/colorOnPrimaryContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -460,7 +473,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -494,7 +508,8 @@
                             android:src="@drawable/ic_analyze"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnErrorContainer" />
+                            app:tint="?attr/colorOnErrorContainer"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -520,7 +535,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -565,7 +581,8 @@
                             android:src="@drawable/ic_launch"
                             android:scaleType="centerInside"
                             android:padding="8dp"
-                            app:tint="?attr/colorOnSurfaceVariant" />
+                            app:tint="?attr/colorOnSurfaceVariant"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <LinearLayout
@@ -591,7 +608,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.4" />
+                        android:alpha="0.4"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

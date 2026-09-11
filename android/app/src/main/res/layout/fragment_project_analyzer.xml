@@ -29,7 +29,8 @@
             android:layout_height="64dp"
             android:src="@drawable/ic_file"
             android:alpha="0.5"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:importantForAccessibility="no" />
 
         <TextView
             android:layout_width="wrap_content"

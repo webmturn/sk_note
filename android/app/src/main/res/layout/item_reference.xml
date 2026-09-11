@@ -60,7 +60,8 @@
                     android:id="@+id/ivIcon"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:layout_gravity="center" />
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no" />
             </com.google.android.material.card.MaterialCardView>
         </FrameLayout>
 
@@ -131,14 +132,16 @@
                 android:layout_height="16dp"
                 android:layout_gravity="top|end"
                 android:src="@drawable/ic_bookmark_filled"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:importantForAccessibility="no" />
 
             <ImageView
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:layout_marginTop="12dp"
                 android:src="@drawable/ic_arrow_forward"
-                android:alpha="0.4" />
+                android:alpha="0.4"
+                android:importantForAccessibility="no" />
         </FrameLayout>
         </LinearLayout>
     </LinearLayout>

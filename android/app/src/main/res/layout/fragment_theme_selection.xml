@@ -74,7 +74,8 @@
                                 android:layout_height="28dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_settings"
-                                app:tint="?attr/colorOnSurfaceVariant" />
+                                app:tint="?attr/colorOnSurfaceVariant"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -93,7 +94,8 @@
                             android:layout_marginTop="8dp"
                             android:src="@drawable/ic_checked_24"
                             app:tint="?attr/colorPrimary"
-                            android:visibility="gone" />
+                            android:visibility="gone"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -131,7 +133,8 @@
                                 android:layout_height="28dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_dark_mode"
-                                app:tint="@color/theme_preview_light_icon" />
+                                app:tint="@color/theme_preview_light_icon"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -150,7 +153,8 @@
                             android:layout_marginTop="8dp"
                             android:src="@drawable/ic_checked_24"
                             app:tint="?attr/colorPrimary"
-                            android:visibility="gone" />
+                            android:visibility="gone"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -188,7 +192,8 @@
                                 android:layout_height="28dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_dark_mode"
-                                app:tint="@color/theme_preview_dark_icon" />
+                                app:tint="@color/theme_preview_dark_icon"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -207,7 +212,8 @@
                             android:layout_marginTop="8dp"
                             android:src="@drawable/ic_checked_24"
                             app:tint="?attr/colorPrimary"
-                            android:visibility="gone" />
+                            android:visibility="gone"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -234,7 +240,8 @@
                         android:layout_height="24dp"
                         android:src="@drawable/ic_info"
                         app:tint="?attr/colorOnSecondaryContainer"
-                        android:layout_marginEnd="12dp" />
+                        android:layout_marginEnd="12dp"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:id="@+id/tvCurrentTheme"
@@ -293,7 +300,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_sort"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
@@ -370,7 +378,8 @@
                                 android:layout_height="20dp"
                                 android:layout_gravity="center"
                                 android:src="@drawable/ic_account_circle"
-                                app:tint="?attr/colorPrimary" />
+                                app:tint="?attr/colorPrimary"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout

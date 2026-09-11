@@ -184,7 +184,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_marginEnd="10dp"
-                        android:src="@drawable/ic_feedback" />
+                        android:src="@drawable/ic_feedback"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -332,7 +333,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_code"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
@@ -360,7 +362,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_arrow_forward"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -389,7 +392,8 @@
                                 android:src="@drawable/ic_feedback"
                                 android:scaleType="centerInside"
                                 android:padding="9dp"
-                                app:tint="@color/on_primary" />
+                                app:tint="@color/on_primary"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
@@ -417,7 +421,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_arrow_forward"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

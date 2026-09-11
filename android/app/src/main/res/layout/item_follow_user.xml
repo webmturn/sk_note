@@ -25,7 +25,8 @@
             android:layout_height="match_parent"
             android:src="@drawable/ic_account_circle"
             android:scaleType="centerCrop"
-            android:padding="4dp" />
+            android:padding="4dp"
+            android:importantForAccessibility="no" />
     </com.google.android.material.card.MaterialCardView>
 
     <LinearLayout
@@ -55,5 +56,6 @@
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:src="@drawable/ic_chevron_right"
-        android:alpha="0.3" />
+        android:alpha="0.3"
+        android:importantForAccessibility="no" />
 </LinearLayout>

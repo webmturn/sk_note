@@ -73,7 +73,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_article"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -88,7 +89,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -116,7 +118,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_category"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -131,7 +134,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -159,7 +163,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_discussion"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -174,7 +179,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -202,7 +208,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_code"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -217,7 +224,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -245,7 +253,8 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_share"
                                 android:scaleType="centerInside"
-                                android:padding="9dp" />
+                                android:padding="9dp"
+                                android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
                         <TextView
@@ -260,7 +269,8 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:src="@drawable/ic_chevron_right"
-                            android:alpha="0.3" />
+                            android:alpha="0.3"
+                            android:importantForAccessibility="no" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -308,7 +318,8 @@
                             android:layout_height="match_parent"
                             android:src="@drawable/ic_android"
                             android:scaleType="centerInside"
-                            android:padding="9dp" />
+                            android:padding="9dp"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView
@@ -323,7 +334,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.3" />
+                        android:alpha="0.3"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -370,7 +382,8 @@
                             android:layout_height="match_parent"
                             android:src="@drawable/ic_person"
                             android:scaleType="centerInside"
-                            android:padding="9dp" />
+                            android:padding="9dp"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView
@@ -385,7 +398,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_chevron_right"
-                        android:alpha="0.3" />
+                        android:alpha="0.3"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -123,7 +123,8 @@
                                             android:id="@+id/ivIconDetail"
                                             android:layout_width="32dp"
                                             android:layout_height="32dp"
-                                            android:layout_gravity="center" />
+                                            android:layout_gravity="center"
+                                            android:importantForAccessibility="no" />
                                     </com.google.android.material.card.MaterialCardView>
                                 </FrameLayout>
                             </HorizontalScrollView>
@@ -215,7 +216,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -253,7 +255,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -290,7 +293,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView
@@ -345,7 +349,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -393,7 +398,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <TextView
@@ -431,7 +437,8 @@
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:src="@drawable/ic_expand_less"
-                        android:alpha="0.5" />
+                        android:alpha="0.5"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView

@@ -42,7 +42,8 @@
                     android:layout_height="64dp"
                     android:src="@drawable/ic_bookmark_outline"
                     android:alpha="0.3"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:layout_width="wrap_content"

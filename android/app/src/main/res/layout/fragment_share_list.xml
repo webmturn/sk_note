@@ -52,7 +52,8 @@
                         android:layout_height="18dp"
                         android:src="@drawable/ic_search"
                         android:alpha="0.5"
-                        android:layout_marginEnd="10dp" />
+                        android:layout_marginEnd="10dp"
+                        android:importantForAccessibility="no" />
 
                     <EditText
                         android:id="@+id/etSearch"
@@ -160,7 +161,8 @@
                     android:layout_height="72dp"
                     android:src="@drawable/ic_download"
                     android:alpha="0.3"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvEmpty"

@@ -66,7 +66,8 @@
                             android:layout_height="22dp"
                             android:src="@drawable/ic_search"
                             android:layout_marginEnd="14dp"
-                            app:tint="?attr/colorOnSurfaceVariant" />
+                            app:tint="?attr/colorOnSurfaceVariant"
+                            android:importantForAccessibility="no" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -122,7 +123,8 @@
                                     android:layout_height="24dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_shuffle"
-                                    app:tint="?attr/colorTertiaryContainer" />
+                                    app:tint="?attr/colorTertiaryContainer"
+                                    android:importantForAccessibility="no" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -177,7 +179,8 @@
                                     android:layout_height="24dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_analyze"
-                                    app:tint="?attr/colorSecondaryContainer" />
+                                    app:tint="?attr/colorSecondaryContainer"
+                                    android:importantForAccessibility="no" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -231,7 +234,8 @@
                                     android:layout_height="24dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_download"
-                                    app:tint="?attr/colorPrimaryContainer" />
+                                    app:tint="?attr/colorPrimaryContainer"
+                                    android:importantForAccessibility="no" />
                             </com.google.android.material.card.MaterialCardView>
 
                             <TextView
@@ -384,7 +388,8 @@
                         android:layout_height="64dp"
                         android:src="@drawable/ic_empty"
                         android:alpha="0.5"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="12dp"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:id="@+id/tvError"

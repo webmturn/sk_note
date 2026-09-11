@@ -39,7 +39,8 @@
                     android:layout_height="match_parent"
                     android:src="@drawable/ic_notification"
                     android:scaleType="centerInside"
-                    android:padding="8dp" />
+                    android:padding="8dp"
+                    android:importantForAccessibility="no" />
             </com.google.android.material.card.MaterialCardView>
 
             <View

@@ -19,7 +19,8 @@
         android:layout_width="72dp"
         android:layout_height="72dp"
         android:src="@drawable/ic_account_circle"
-        android:alpha="0.7" />
+        android:alpha="0.7"
+        android:importantForAccessibility="no" />
 
     <TextView
         android:id="@+id/tvAuthTitle"

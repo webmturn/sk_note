@@ -58,7 +58,8 @@
                 android:src="@drawable/ic_person"
                 android:scaleType="centerCrop"
                 android:padding="6dp"
-                app:tint="?attr/colorOnSecondaryContainer" />
+                app:tint="?attr/colorOnSecondaryContainer"
+                android:importantForAccessibility="no" />
         </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
@@ -86,7 +87,8 @@
                     android:layout_width="12dp"
                     android:layout_height="12dp"
                     android:src="@drawable/ic_schedule"
-                    android:layout_marginEnd="3dp" />
+                    android:layout_marginEnd="3dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvTime"
@@ -105,7 +107,8 @@
                     android:layout_width="12dp"
                     android:layout_height="12dp"
                     android:src="@drawable/ic_visibility"
-                    android:layout_marginEnd="3dp" />
+                    android:layout_marginEnd="3dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tvViewCount"
@@ -169,7 +172,8 @@
                 android:layout_height="18dp"
                 android:src="@drawable/ic_comment"
                 app:tint="?attr/colorPrimary"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="8dp"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/tvCommentsHeader"
@@ -196,7 +200,8 @@
                 android:layout_height="48dp"
                 android:src="@drawable/ic_empty_comment"
                 android:alpha="0.35"
-                android:layout_marginBottom="10dp" />
+                android:layout_marginBottom="10dp"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/tvNoComments"

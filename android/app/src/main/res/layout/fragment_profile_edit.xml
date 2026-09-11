@@ -52,7 +52,8 @@
                             android:layout_height="match_parent"
                             android:src="@drawable/ic_account_circle"
                             android:scaleType="centerCrop"
-                            android:padding="8dp" />
+                            android:padding="8dp"
+                            android:importantForAccessibility="no" />
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView

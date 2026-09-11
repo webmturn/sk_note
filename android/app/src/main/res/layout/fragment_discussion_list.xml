@@ -50,7 +50,8 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_discussion"
-                    android:alpha="0.3" />
+                    android:alpha="0.3"
+                    android:importantForAccessibility="no" />
             </LinearLayout>
 
             <HorizontalScrollView
@@ -100,7 +101,8 @@
                     android:layout_width="72dp"
                     android:layout_height="72dp"
                     android:src="@drawable/ic_empty_comment"
-                    android:layout_marginBottom="12dp" />
+                    android:layout_marginBottom="12dp"
+                    android:importantForAccessibility="no" />
 
                 <TextView
                     android:id="@+id/tv_empty"
