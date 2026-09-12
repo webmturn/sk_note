@@ -626,20 +626,88 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **自审的过程问题**：这次复核脚本自身先出了两个 bug——判断 `IconTile` 条数的正则要求结尾带引号（把 25 报成 0），以及 `AndroidManifest.xml` 路径写成在 `res/` 下。都已修正后重跑。
 
+### 第十三批（补齐缺失的 tertiary 调色板，已修复）
+
+用户反馈「一些界面布局感觉很乱」后定位到的主因之一。
+
+项目在 `values/` 与 `values-night/` 中都**只定义了 primary 与 secondary**，主题里也只设了对应的 8 个 `color*` 属性；但全项目有 **20 处**引用 `?attr/colorTertiary*`（分布在 10 个布局）。这些引用全部落回 M3 基线的酒红。
+
+实测手册页「随机学一个」卡片底色 **#633B48**，与 AAR 中 `m3_sys_color_dark_tertiary_container` → `m3_ref_palette_tertiary30` = `#ff633b48` 逐位相符。
+
+**这是 P0-5 修复暴露出来的**：修复前 primary/secondary 同样走 M3 基线色，与 tertiary 同源故看不出问题；修复后主色系切换为项目的 Material Blue，唯独 tertiary 仍是 M3 酒红，冲突才显现。根因是项目**从未定义 tertiary**，我的修复把它暴露了。
+
+补法沿用项目调色板既有规律（角色取 600/700 调、容器取 100 调；夜间角色取 200 调、容器取 900 调、`on_*_container` 与浅色容器同值），第三色取 **Material Teal**——项目的 `icon_bg_teal` 本就用 Teal 100 / Teal 700，与该色系一致。
+
+真机实测三张快捷卡片底色：
+
+| 卡片 | 修复前 | 修复后 |
+|---|---|---|
+| 随机学一个（`colorTertiaryContainer`） | #633B48（M3 酒红） | **#004D40**（Teal 900） |
+| 工具箱（`colorSecondaryContainer`） | #324957 | #324957 |
+| 文件分享（`colorPrimaryContainer`） | #004A77 | #004A77 |
+
+### 第十四批（手册页间距收敛，已修复）
+
+真机实测该页可见区 **687dp**，而第一篇文章出现在 **y≈503dp** 处——七成空间被「顶部留白 + 标题 + 搜索框 + 快捷卡片 + 分类」吃掉。
+
+逐项核算后收紧（**仅 16 行、全部为间距值**，未动字号、颜色与结构）：
+
+| 项 | 变化 |
+|---|---|
+| 顶部留白 `paddingTop` | 24 → 16dp |
+| 搜索框上边距 / 高度 | 16→12dp / 48→44dp |
+| 快捷区上边距 | 16 → 12dp |
+| 快捷卡片 `marginVertical` | 6 → 4dp |
+| 快捷卡片内边距 | 16 → 14dp |
+| **图标 → 标题间隔** | **16 → 8dp** |
+| 分区容器 `paddingTop` | 20 → 16dp |
+| 「最新文章」行上边距 | 24 → 16dp |
+| **合计** | **−48dp** |
+
+最大的一处浪费是「图标到它自己的标题之间留 16dp」——126.6dp 的卡片里光这道缝就占 16dp。分区间隔原先 20/24/12dp 三种混用，现统一为 16dp。
+
+> **未复测**：操作途中设备前台被切到其他应用（用户正在使用手机），我随即停止了对设备的自动操作。故本批只经 `:app:assembleDebug` 与 `:app:lintDebug` 验证（error 0、warning 2351），−48dp 为逐项差值算得，**非真机实测**。
+
+### 第十五批（间距/字号体系盘点，未执行）
+
+为把「乱」量化，扫描全部 107 个布局的取值分布：
+
+| 维度 | 取值种数 | 主要离群值 |
+|---|---|---|
+| `padding` | 25 种 | 14dp×63、9dp×25，以及 18/7/5/1dp 等非 4dp 倍数值 |
+| `layout_margin` | 21 种 | 18dp×6、7dp×4、3dp×18 |
+| `textSize` | 15 种 | 13sp×106、15sp×62、11sp×61、17/19/21sp 均不在常规字阶上 |
+| `cardCornerRadius` | 15 种 | **16dp×38 与 20dp×34 两套约定并存** |
+| 固定 dp 高度 | 31 种 | 11/13/18/22dp 等离散值 |
+
+圆角的 16dp / 20dp 并非干净分工：20dp 主要用于页面级卡片（12 个文件），16dp 主要用于列表项卡片，但 `fragment_cache_manage.xml`（20dp×2 + 16dp×2）与 `fragment_theme_selection.xml`（20dp×5 + 16dp×1）**同一文件内两种混用**。
+
+图标底板另有 **42dp×25 / 40dp×12 / 38dp×8** 三种尺寸并存。
+
+**未执行**：统一到哪个尺寸会改变 20–37 处底板的实际大小，属可见视觉变更，待产品决策；间距/字号体系化触及 100+ 布局，需分批并逐批真机验证。
+
 ---
 
 ## 九、剩余待办
 
-> 「第一批」到「第九批」均已完成。触控目标、无障碍描述、字号下限、下拉框标签、创建页去重、装饰性图片标记、图标底板与筛选 Tab 的样式复用全部收口。
+> 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
+
+**待产品决策（会改变外观，需先定方向）**
+
+1. **图标底板统一尺寸**：现有 42dp×25 / 40dp×12 / 38dp×8 三组。
+   - 统一到 **42dp**：改动最少（20 处），但 20 处底板变大，与「占空间大」的诉求相反
+   - 统一到 **38dp**：改动最多（37 处），每行省 4dp，同时缓解占空间问题
+2. **间距 / 字号体系化**：把 25 种 padding、21 种 margin、15 种字号收敛到 4dp 基准的 spacing scale 与 type scale。触及 100+ 布局，需分批 + 逐批真机验证
+3. 卡片圆角 16dp / 20dp 两套约定的取舍；并先清掉 `fragment_cache_manage.xml`、`fragment_theme_selection.xml` 两个文件内的混用
 
 **结构一致性（已评估，明确不做）**
 
 1. 40dp 图标底板 12 处（圆角 10dp 的 9 处、12dp 的 3 处）：迁移必须先把尺寸统一到 42dp，属视觉变更，需产品决策
 2. 其余 21 处 24dp–80dp 的 `MaterialCardView`+单 `ImageView`：角色各异（头像、圆形统计块、品牌 logo），非同一设计元素
 
-**本轮新发现**
+**已发现待处理**
 
-1. `Widget.SkNote.BottomNavigation` 与 `Widget.SkNote.BottomNavigation_ActiveIndicator` 被 Lint 报为未使用（**项目原有**，非本轮引入），待确认后清理
+1. **状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板
 2. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
 
 **再下一批（体验打磨）**
@@ -648,6 +716,7 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 3. 启动页 `splash_background` 夜间值、`surface_card` 夜间值与 M3 `colorSurface` 对齐
 4. 死资源清理（`chip_background_selector.xml`、`ic_abc.xml`、约 297 个零引用 drawable）
 
-**需要产品决策**
+**需要产品决策（其他）**
 1. `SyntaxHighlightUtil` 与 `JavaSyntaxHighlighter` 两套配色的浅色值归一（需确认以哪套为准）
 2. `AuthActionHelper.requireRolesOrExit` 的 9 个调用点是否传入 `anchorView` 以彻底去掉 Toast
+3. 导航栏 `labelVisibilityMode` 是否由 `selected` 改为 `labeled`（四项图标对齐，但标签常显）
