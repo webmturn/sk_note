@@ -91,11 +91,21 @@ class SplashActivity : AppCompatActivity() {
     }
 
     companion object {
-        /** 启动页最短展示时间：保证品牌动画能被看清 */
+        /** 启动页最短展示时间：保证品牌动画（780ms）能播完并留一点静置 */
         private const val MIN_SHOW_MS = 900L
 
-        /** 等待预热的上限：超过就先进主界面，预热继续在后台跑 */
-        private const val MAX_WAIT_MS = 1600L
+        /**
+         * 等待预热的上限。取值依据来自真机实测（见 UI_REVIEW 第十七批）：
+         * `api/home` 冷启动约 2.7s、热态约 0.47s，故预热耗时会落在「约 0.5s」或
+         * 「约 3s」两档。等 3s 不可接受，所以上限只取 1400ms：
+         *   - 后端已热：预热很快结束，受 MIN_SHOW_MS 支配，启动页约 900ms，
+         *     且首页能直接命中预热缓存、不闪骨架屏
+         *   - 后端冷：到点就走，首页自己再请求一次（此时后端已被预热捂热，
+         *     约 0.5s 返回），代价是一次短骨架屏
+         * 原先固定 1800ms 反而两头不讨好：既没等到预热（实测 2.8–3.9s），
+         * 又白等了 1.8s。
+         */
+        private const val MAX_WAIT_MS = 1100L
 
         private const val LOGO_MS = 300L
         private const val NAME_MS = 260L
