@@ -81,19 +81,29 @@ class MainActivity : AppCompatActivity() {
             R.id.adminFragment
         )
 
-        // 当前是否应隐藏底部导航栏。供动画结束回调判断——若动画期间用户已切回顶层页面，
-        // 结束回调不能把 wrapper 又置为 GONE。
-        var shouldHideNav = false
+        // 底部导航栏当前是否处于隐藏状态。
+        // 用途一：只有「隐藏 → 显示」这一次跨状态才做滑入动画——顶层 Tab 之间互切时
+        //         导航栏本就可见，若无条件滑入会让它每次先跳下去再弹回来。
+        // 用途二：供隐藏动画的结束回调判断，避免动画期间用户已切回顶层页面时仍被置为 GONE。
+        var navHidden = false
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val wrapper = binding.bottomNavWrapper
-            wrapper.animate().cancel()
             if (destination.id in topLevelDestinations) {
-                shouldHideNav = false
-                wrapper.visibility = View.VISIBLE
                 wrapper.isEnabled = true
                 binding.bottomNav.isEnabled = true
-                // 自下方滑入。首帧尚未测量时 height 为 0，退化为纯淡入。
+                if (!navHidden) {
+                    // 导航栏已经在显示：只保证状态归位，不做任何动画
+                    wrapper.animate().cancel()
+                    wrapper.visibility = View.VISIBLE
+                    wrapper.alpha = 1f
+                    wrapper.translationY = 0f
+                    return@addOnDestinationChangedListener
+                }
+                navHidden = false
+                wrapper.animate().cancel()
+                wrapper.visibility = View.VISIBLE
+                // 自下方滑入。尚未测量时 height 为 0，退化为纯淡入。
                 wrapper.translationY = wrapper.height.toFloat()
                 wrapper.animate()
                     .translationY(0f)
@@ -101,9 +111,12 @@ class MainActivity : AppCompatActivity() {
                     .setDuration(300)
                     .start()
             } else {
-                shouldHideNav = true
                 wrapper.isEnabled = false
                 binding.bottomNav.isEnabled = false
+                // 已经是隐藏状态（例如详情页跳详情页），不重复播放收起动画
+                if (navHidden) return@addOnDestinationChangedListener
+                navHidden = true
+                wrapper.animate().cancel()
                 wrapper.animate()
                     .translationY(wrapper.height.toFloat())
                     .alpha(0f)
@@ -111,7 +124,7 @@ class MainActivity : AppCompatActivity() {
                     .withEndAction {
                         // 必须置为 GONE：alpha=0 的 View 仍参与命中测试，
                         // 否则底部这条区域会一直吞掉点击。
-                        if (shouldHideNav) {
+                        if (navHidden) {
                             wrapper.visibility = View.GONE
                             wrapper.translationY = 0f
                         }
