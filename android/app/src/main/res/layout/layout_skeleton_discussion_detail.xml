@@ -150,12 +150,15 @@
                 android:background="@drawable/skeleton_block" />
         </LinearLayout>
 
-        <!-- Comment cards. -->
+        <!-- Comment cards. 水平内缩必须与真实评论卡一致：真实侧是
+             item_comment 的 layout_marginHorizontal=@dimen/comment_card_inset，
+             而 rvMain 本身没有水平内边距。此前这里写死 16dp，交叉淡出时
+             评论卡会横向位移。 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="@dimen/comment_card_inset"
             android:paddingBottom="16dp">
 
             <include layout="@layout/layout_skeleton_comment_row" />
