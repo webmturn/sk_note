@@ -261,11 +261,15 @@
                 </LinearLayout>
             </HorizontalScrollView>
 
-            <include
-                android:id="@+id/skeletonHome"
-                layout="@layout/layout_skeleton_home"
+            <!--
+              骨架与内容必须叠在同一空间（FrameLayout），与其余 8 个页面一致。
+              若把骨架作为垂直 LinearLayout 的兄弟节点，交叉淡出的 180ms 内两者
+              各占一份高度，骨架置 GONE 时下方内容会整体上跳。
+              骨架放在最后，保证绘制在内容之上。
+            -->
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content">
 
             <LinearLayout
                 android:id="@+id/layoutSections"
@@ -416,6 +420,13 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+            <include
+                android:id="@+id/skeletonHome"
+                layout="@layout/layout_skeleton_home"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            </FrameLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
