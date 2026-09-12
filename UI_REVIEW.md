@@ -561,6 +561,31 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **顺带订正**：我在「前提修正」里写的「资源按名合并」是错的，正确表述是「该 style 在任何配置目录下都没有竞争者，故默认变体在所有配置下生效」。这个错误理解正是本缺陷的成因。
 
+### 第十一批（底部导航栏，已修复）
+
+用户提出「优化底部导航栏」后，在真机上量到三处问题：
+
+**1. 几何挤压**。`activity_main.xml` 写死 `layout_height="64dp"` 与 `itemPaddingTop/Bottom="2dp"`，装不下「32dp 指示条 + 标签」。实测指示条距栏顶 **2dp**、标签底距屏幕底 **2.3dp**，两头贴边。M3 的 `itemPaddingTop/Bottom` 默认是 12dp/16dp，`m3_comp_navigation_bar_container_height` 是 80dp —— `12+32+标签+16 ≈ 80dp`，这正是那些取值的来由。改回 M3 规范后实测：指示条 **32dp 高 × 64dp 宽、距栏顶 12dp**，标签底距 **15dp**，图标 24dp。
+
+**2. 配色样式是死代码**。`Widget.SkNote.BottomNavigation` 与它的两个依赖样式从未被任何布局引用，配套的 `res/color/bottom_nav_icon_color.xml` 也成了孤儿。导航栏跑的一直是 M3 默认色：
+
+| 项 | 修复前（M3 默认） | 修复后（项目原意） |
+|---|---|---|
+| 指示条 | `colorSecondaryContainer` #324957 | `colorPrimaryContainer` #004A77 |
+| 选中图标 | `colorOnSecondaryContainer` #CFE5ED | `colorPrimary` #90CAF9 |
+| 底栏背景 | M3 `surfaceContainer` #211F26 | `@color/surface_card` #1E1E2E（与状态栏一致） |
+| 阴影 | 3dp | 0dp |
+
+同时删掉样式里为旧的 64dp 紧凑栏配的 `itemPaddingTop/Bottom=8dp`，否则会与 M3 的 12/16 打架。
+
+**3. 隐藏后仍吞点击**。`MainActivity` 隐藏导航栏时只做 `alpha→0` + `translationY`，**从未置 `GONE`**。`alpha=0` 的可点击 View 仍参与命中测试（`View.onTouchEvent` 在 DISABLED 分支依然 `return clickable`），底部这条区域会一直吃掉点击。现改为动画结束后置 `GONE`，并用状态标志让结束回调与 `Animator.cancel()` 的语义解耦（`cancel()` 会同步触发 `onAnimationEnd`）。实测非顶层页导航栏已不在视图树中，返回后正常滑入。
+
+**顺带的单一来源化**：新增 `res/values/dimens.xml`。原先 5 个布局共 8 处硬编码 `88dp`（= 旧 64dp + 24dp 余量）散落各处，加高时必须逐个手改且容易漏。现统一为 `bottom_nav_content_inset = bottom_nav_height + 24dp = 104dp`。`SnippetListFragment` 是「参考」页的子 Fragment（导航栏可见），它的两处 88dp 也在其中。
+
+**已知残留（未改，属设计选择）**：选中项图标中心距栏顶 **27.7dp**，未选中三项 **39.8dp**，相差 **12.1dp**。这是 `labelVisibilityMode="selected"` 的固有行为——未选中项因标签隐藏而重新居中。若要四项图标对齐，需改为 `labeled`（四项标签常显），那是另一项设计决定，未擅自改动。
+
+**门禁**：`:app:assembleDebug`、`:app:lintDebug` 通过；error 0，warning 2355 → **2351**（减少的 4 条正是原先「未使用样式」的告警）。
+
 ---
 
 ## 九、剩余待办
