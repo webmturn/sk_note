@@ -135,7 +135,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_code"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -180,7 +180,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_storage"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -225,7 +225,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_palette"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -300,7 +300,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_code"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -355,7 +355,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_feedback"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -437,7 +437,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_open_source"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 

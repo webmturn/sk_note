@@ -2,27 +2,28 @@
 <resources>
     <!--
       图标底板：MaterialCardView 内嵌一个 ImageView 的「图标 + 底色」组合。
-      尺寸取自规范模板 42dp + padding 9dp，圆角 12dp 与全项目多数用法一致。
-      Small 变体用于列表行内更紧凑的场合。
+      用于列表行的行首图标。
+
+      尺寸 40dp + 子 ImageView padding 8dp = 24dp 图标字形。
+      全项目原有三种同类底板并存（42dp/12dp/pad9、40dp/10dp/pad8、
+      38dp/11dp/pad8），现统一到这一种：
+        - 原 42dp 那批字形本来就是 24dp，改成 40dp + pad8 后字形不变，
+          仅底板小 2dp；
+        - 原 38dp 那批字形会由 22dp 变为 24dp。
+      另有约 20 处 MaterialCardView+单 ImageView 属于别的角色（头像、
+      圆形统计块、品牌 logo、卡片内装饰图标等），不并入本样式。
       用法：
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.SkNote.IconTile"
             app:cardBackgroundColor="@color/icon_bg_green"
             android:layout_marginEnd="16dp">
-            <ImageView ... android:padding="9dp" />
+            <ImageView ... android:padding="8dp" />
         </com.google.android.material.card.MaterialCardView>
     -->
     <style name="Widget.SkNote.IconTile" parent="Widget.Material3.CardView.Elevated">
-        <item name="android:layout_width">42dp</item>
-        <item name="android:layout_height">42dp</item>
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
         <item name="cardCornerRadius">12dp</item>
-        <item name="cardElevation">0dp</item>
-    </style>
-
-    <style name="Widget.SkNote.IconTile.Small">
-        <item name="android:layout_width">38dp</item>
-        <item name="android:layout_height">38dp</item>
-        <item name="cardCornerRadius">11dp</item>
         <item name="cardElevation">0dp</item>
     </style>
 

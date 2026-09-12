@@ -51,10 +51,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorPrimaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -113,10 +110,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorSecondaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -175,10 +169,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorTertiaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -237,10 +228,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorTertiaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -310,10 +298,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorSecondaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -372,10 +357,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorTertiaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -434,10 +416,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorPrimaryContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -496,10 +475,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorErrorContainer"
                         android:layout_marginEnd="14dp">
                         <ImageView
@@ -569,10 +545,7 @@
                     android:padding="14dp">
 
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
+                        style="@style/Widget.SkNote.IconTile"
                         app:cardBackgroundColor="?attr/colorSurfaceVariant"
                         android:layout_marginEnd="14dp">
                         <ImageView

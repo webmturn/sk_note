@@ -330,7 +330,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_code"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
@@ -385,7 +385,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_feedback"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 app:tint="@color/on_primary"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>

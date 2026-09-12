@@ -297,7 +297,7 @@
                                 android:layout_height="match_parent"
                                 android:src="@drawable/ic_sort"
                                 android:scaleType="centerInside"
-                                android:padding="9dp"
+                                android:padding="8dp"
                                 android:importantForAccessibility="no" />
                         </com.google.android.material.card.MaterialCardView>
 
