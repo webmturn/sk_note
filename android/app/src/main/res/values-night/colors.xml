@@ -26,6 +26,14 @@
     <color name="text_danger">#FFEF5350</color>
     <color name="banner_text">#FFFFFFFF</color>
     <color name="banner_text_secondary">#B3FFFFFF</color>
+    <!-- 夜间启动页底色与浅色保持一致（品牌蓝）。
+         曾试过改成项目自己的 surface_card(#FF1E1E2E) 以在深色下减少亮蓝，
+         但真机实测发现：系统「启动窗口」（应用进程起来前由系统绘制的那一屏）
+         只读【浅色】的 @color/splash_background，无视夜间配置——把浅色值临时
+         改成洋红后启动窗口随之变洋红，而夜间值改成 #1E1E2E 后启动窗口仍是蓝色。
+         因此单独改夜间值只会造成「蓝色启动窗口 → 深色启动页」的闪变。
+         除非把浅色值也改深（会失去浅色模式的品牌色），否则无法消除该闪变，
+         故维持两套一致。 -->
     <color name="splash_background">#FF1976D2</color>
 
     <color name="surface_card">#FF1E1E2E</color>
