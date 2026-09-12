@@ -152,7 +152,62 @@ viewModel.submitResult.observe(viewLifecycleOwner) { result ->
 ## 四之二、深色模式专项（本轮新增，含一条真实失效）
 
 ### 前提修正
-「`colors.xml` 夜间漏配颜色」这个常见头号根因**在本项目不成立**：day 29 名 = night 29 名，零缺失、零多余。`values-night` 未重复声明 3 个 `Widget.SkNote.*` style **不是缺陷**——资源按名合并，夜间同样生效（它们引用主题属性，会自动翻转）。`colorSurface`/`colorOnSurfaceVariant`/`colorOutline` 两侧都未声明是**正确的**，由 `Theme.Material3.DayNight` 提供。
+「`colors.xml` 夜间漏配颜色」这个常见头号根因**在本项目不成立**：day 29 名 = night 29 名，零缺失、零多余。`values-night` 未重复声明 3 个 `Widget.SkNote.*` style **不是缺陷**，夜间同样生效 —— 但理由不是「资源按名合并」（此说法有误，见 P0-5），而是：这 3 个 style 在**任何**配置目录下都没有竞争者，唯一的默认变体在所有配置下都会被选中。`colorSurface`/`colorOnSurfaceVariant`/`colorOutline` 两侧都未声明是**正确的**，由 `Theme.Material3.DayNight` 提供。
+
+### P0-5　主题在全部 API 27+ 设备上失效，项目配色从未生效（真机发现，已修复）
+
+**现象**：用户反馈「顶部状态栏颜色很突兀」。深色模式下状态栏是浅紫色 `#D0BCFF`，与深色内容区割裂。
+
+**根因**：`Theme.SkNote` 同时定义在 `values/themes.xml` 与 `values-v27/themes.xml`。同名 style 在不同配置目录下是互相**替代**的资源变体，Android 按配置整体选取其中一个，**不会把两个目录的条目合并**。而 `values-v27` 那份只写了 `android:windowLightNavigationBar` 一项。
+
+`aapt2 dump resources` 的编译产物是铁证：
+
+```
+resource 0x7f120279 style/Theme.SkNote
+  ()          (style) size=11 ...
+  (night)     (style) size=11 ...
+  (v27)       (style) size=1    0x0101056c=true
+  (night-v27) (style) size=1    0x0101056c=false
+```
+
+API 31 的深色设备命中 `(night-v27)`，`size=1` —— 整个主题只剩一项。丢失的条目：
+
+| 丢失项 | 后果 |
+|---|---|
+| `android:statusBarColor` | 状态栏被 M3 基线 `colorPrimary` 接管 |
+| `android:windowLightStatusBar` | 状态栏图标明暗不受控 |
+| `android:navigationBarColor` | 导航栏同前 |
+| 8 × `colorPrimary*` / `colorSecondary*` | **整套配色退回 M3 基线** |
+
+`Theme.SkNote.Launch` 同一病症（`(v27)`/`(night-v27)` 均 `size=1`），丢失 `windowBackground=@color/splash_background`，启动页底色也不对。
+
+**这不是"状态栏一个颜色"的问题** —— 项目自定义配色在**所有 API 27+ 设备上从未生效过**（即绝大多数在用设备）。
+
+**真机量化证据**（同机同页面前后对比，采样步长 2px）：
+
+| 颜色 | 修复前 | 修复后 |
+|---|---|---|
+| `@color/surface_card` 夜间 `#1E1E2E` | 0 px | 27 550 px |
+| `@color/primary` 夜间 `#90CAF9` | 0 px | 354 px |
+| `@color/primary_container` 夜间 `#004A77` | 0 px | 16 608 px |
+| M3 基线 `colorPrimary` 深色 `#D0BCFF` | 27 528 px | 0 px |
+
+`#D0BCFF` 与 AAR 中 `m3_sys_color_dark_primary` → `m3_ref_palette_primary80` = `#ffd0bcff` 逐位相符，坐实了"配色被 M3 基线接管"这一判断。
+
+**修复方式**：主题拆成「Base + 薄包装」两层，与 API 级别无关的条目全部下沉到 `Theme.SkNote.Base` / `Theme.SkNote.Launch.Base`（只在 `values/` 与 `values-night/` 之间切换），`Theme.SkNote` / `Theme.SkNote.Launch` 自身只负责叠加 API 相关项，且**所有变体的 parent 都指向同一个 Base**：
+
+```
+Theme.SkNote        () size=0  (v27) size=1  (night-v27) size=1   parent 均为 Theme.SkNote.Base
+Theme.SkNote.Base   () size=11 (night) size=11
+```
+
+这样任何一个变体都不会再丢掉条目。
+
+**同类反模式全项目排查**：写脚本解析 `aapt2 dump resources`，对全部 11 个项目 style 检查「变体条目数不一致且父样式不同」的组合 —— 除已修复的这两个外**无其他残留**。
+
+**回归门禁**：`:app:assembleDebug` + `:app:lintDebug` 通过，lint error 0、warning 2355、`NewApi` 0 条。
+
+> 教训：这条缺陷在任何静态审查里都看不出来——`values/themes.xml` 和 `values-night/themes.xml` 内容完全正确，错的是"同一 style 出现在第三个配置目录"这件事本身。只有把编译产物 dump 出来看配置变体、并在真机上量像素，才能发现。
 
 ### P0-4　分析器预览：浅色背景 + 近白文字 → 深色模式下完全不可读
 `app/src/main/kotlin/com/sknote/app/ui/analyzer/ProjectAnalyzerFragment.kt:1249-1250`（配合 `:979-989`）
@@ -495,6 +550,16 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 以 `Card` 之名归并这四类角色是误导，强行套用会换来 12 处回归面却只省 24 行，故**删除而非套用**。至此 `styles.xml` 中 3 个样式全部被引用。
 
 **门禁**：`:app:processDebugResources` 实际执行并成功（证明改后的 layout 与 `styles.xml` 真被编译链接，不是缓存命中）；`:app:compileDebugKotlin`、`:app:lintDebug` 通过；error 保持 0，本批 warning 2357 → **2355**（第八批为 2359 → 2357）。
+
+### 第十批（主题配置变体替代整个 style，已修复）
+
+用户反馈「顶部状态栏颜色很突兀」后定位到的 **P0-5**：`Theme.SkNote` / `Theme.SkNote.Launch` 在 `values-v27/` 里只写了 `windowLightNavigationBar` 一项，而同名 style 跨配置目录是**互相替代**而非合并，导致 API 27+ 设备上整个主题只剩一项，项目自定义配色从未生效。详见「四之二、P0-5」。
+
+改动 4 个文件：`values/themes.xml`（新增 `.Base` 与薄包装）、`values-night/themes.xml`（只保留 `.Base`）、`values-v27/themes.xml` 与 `values-night-v27/themes.xml`（`parent` 改为对应 `.Base`）。
+
+**真机验证**：修复前后同机同页面采样，`#D0BCFF`（M3 基线紫）27 528 px → **0 px**，`@color/surface_card` 夜间 `#1E1E2E` 0 px → **27 550 px**。
+
+**顺带订正**：我在「前提修正」里写的「资源按名合并」是错的，正确表述是「该 style 在任何配置目录下都没有竞争者，故默认变体在所有配置下生效」。这个错误理解正是本缺陷的成因。
 
 ---
 
