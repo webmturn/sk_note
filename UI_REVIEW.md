@@ -578,7 +578,7 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 同时删掉样式里为旧的 64dp 紧凑栏配的 `itemPaddingTop/Bottom=8dp`，否则会与 M3 的 12/16 打架。
 
-**3. 隐藏后仍吞点击**。`MainActivity` 隐藏导航栏时只做 `alpha→0` + `translationY`，**从未置 `GONE`**。`alpha=0` 的可点击 View 仍参与命中测试（`View.onTouchEvent` 在 DISABLED 分支依然 `return clickable`），底部这条区域会一直吃掉点击。现改为动画结束后置 `GONE`，并用状态标志让结束回调与 `Animator.cancel()` 的语义解耦（`cancel()` 会同步触发 `onAnimationEnd`）。实测非顶层页导航栏已不在视图树中，返回后正常滑入。
+**3. 隐藏后仍吞点击**。`MainActivity` 隐藏导航栏时只做 `alpha→0` + `translationY`，**从未置 `GONE`**。`alpha=0` 的可点击 View 仍参与命中测试（`View.onTouchEvent` 在 DISABLED 分支依然 `return clickable`），底部这条区域会一直吃掉点击。现改为动画结束后置 `GONE`。实测非顶层页导航栏已不在视图树中，返回后正常滑入。
 
 **顺带的单一来源化**：新增 `res/values/dimens.xml`。原先 5 个布局共 8 处硬编码 `88dp`（= 旧 64dp + 24dp 余量）散落各处，加高时必须逐个手改且容易漏。现统一为 `bottom_nav_content_inset = bottom_nav_height + 24dp = 104dp`。`SnippetListFragment` 是「参考」页的子 Fragment（导航栏可见），它的两处 88dp 也在其中。
 
@@ -586,7 +586,9 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **本批引入并已修复的回归**：上面第 3 条修复时顺手加的「滑入」写法，在顶层目标分支里**无条件**执行 `wrapper.translationY = wrapper.height`，而该分支在每次顶层目标变化时都会触发（含顶层 Tab 互切），于是每切一次导航栏先瞬间跳下去（无动画赋值 → 视觉上的硬切）再用 300ms 滑回来。用户反馈的「切换跟之前不一样，还是硬切，还会先隐藏导航栏再显示出来」即此现象。
 
-改为状态感知：用 `navHidden` 标志控制，只有真正「隐藏 → 显示」跨状态时才滑入；已隐藏时（详情页跳详情页）不重复播放收起动画。**顺序要点**——显示分支必须先置 `navHidden = false` 再调 `cancel()`，因为 `Animator.cancel()` 会同步触发 `onAnimationEnd`，顺序颠倒会让结束回调把正在显示的导航栏又置为 `GONE`。
+改为状态感知：用 `navHidden` 标志控制，只有真正「隐藏 → 显示」跨状态时才滑入；已隐藏时（详情页跳详情页）不重复播放收起动画。
+
+> **订正（第十七批时发现）**：此处原写「显示分支必须先置 `navHidden = false` 再调 `cancel()`，因为 `Animator.cancel()` 会同步触发 `onAnimationEnd`，顺序颠倒会让结束回调把导航栏置为 GONE」——**这个机制是错的**。`ViewPropertyAnimator.withEndAction` 的 javadoc 明确写着「动画被取消时该 Runnable 不会执行」，AOSP 实现里 `onAnimationCancel` 会直接把回调从 `mAnimatorOnEndMap` 移除（`ViewPropertyAnimator.java:1092-1093`）。因此 `cancel()` 根本不触发结束回调，不存在该竞态；标志位仍保留（对「详情→详情」不重播动画是必要的），但顺序只是可读性，不是防护。
 
 **用户提到的「硬切」经查不是内容过渡的问题**。为验证内容过渡本身，临时把 `nav_fade_in/out` 从 220/160ms 改为 2400ms 后连拍，抓到了**同时显示新旧两页**的中间帧（旧页「早上好, 管理员」与新页「学习资源 / 共 510 项参考」叠加），证明 `tabNavOptions` 里的自定义淡入淡出确实生效；随后已还原动画文件，`git diff` 为空。
 
@@ -719,6 +721,52 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 **验证**
 - 静态：独立脚本沿 style 链解析全部 42 处，有效几何均 `40dp×40dp / 圆角 12dp / 零阴影`，子节点 padding 均 8dp、字形均 **24dp**；0 处不符、0 处仍被内联几何覆盖
 - 真机（480dpi，40dp = 120px）：**我的页 8 个、设置页 5 个、工具箱页 8 个**可见底板全部实测 **120×120px**；「我的」页行间距 198→204px（+2dp/行）、设置页分区间距 407→401px（−2dp/处），与预期一致
+
+### 第十七批（预加载界面与动画，已执行）
+
+**订正一处我先前的错误论断**（本批最有价值的部分）
+
+我在「导航栏切 Tab 抖动」那批里写过一个机制理由：*「显示分支必须先置 `navHidden = false` 再调 `cancel()`，因为 `Animator.cancel()` 会同步触发 `onAnimationEnd`，顺序颠倒会让结束回调把正在显示的导航栏又置为 `GONE`」*。
+
+查 AOSP 本机源码后确认**这是错的**：
+
+- `ViewPropertyAnimator.withEndAction` 的 javadoc：「*The action is only run if the animation ends normally; if the ViewPropertyAnimator is canceled during that animation, the runnable will not run.*」
+- 实现上 `onAnimationCancel` 直接把回调从 `mAnimatorOnEndMap` 移除（`ViewPropertyAnimator.java:1092-1093`），随后触发的 `onAnimationEnd` 找不到回调，自然不执行。
+
+所以 `cancel()` **不触发** `withEndAction`，那个竞态根本不存在。标志位仍保留（对「详情 → 详情」不重播动画是必要的），但顺序只是可读性。代码注释与本文档相应位置均已订正。
+
+这个错误论断还差点让我去修一个**不存在的 bug**：我原以为 `hideSkeletonAndShow` 在重入时，`cancel()` 会触发上一次的结束回调把骨架置为 `GONE`，导致重新展示时骨架不可见。既然取消不触发回调，该问题不存在，未做改动。
+
+#### 启动页
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| 停留时长 | `postDelayed(1800)` 固定 1.8s | 最短 **900ms**；预热完成即进入，上限 **1600ms** |
+| 入场动画总时长 | 600+500+400 = **1500ms** | 300+260+220 = **780ms** |
+| 标志缩放起点 | 0.5 | 0.88 |
+| 标题位移起点 | 30dp | 16dp |
+| 插值器 | `set.interpolator = Overshoot(1.2)` 套到**所有**子动画 | 弹性只给缩放；淡入/位移改用减速曲线 |
+
+第二行是关键：启动页总共只展示 1800ms，而入场动画自己就占 1500ms，几乎没有静置时间。改成自适应时长后更必须压缩。
+
+插值器那项的根因：`AnimatorSet.setInterpolator` 会把同一个插值器设到**每个子动画**上（AOSP `AnimatorSet.java:716-719` 逐个 `node.mAnimation.setInterpolator(mInterpolator)`），文档也写明 "Sets the TimeInterpolator for all current child animations"。弹性曲线用在 alpha 上没有意义——透明度会提前顶到 1 再被钳制，观感是「闪一下」。
+
+为此给 `StartupWarmupManager` 增加了 `suspend fun awaitWarmup(timeoutMs)`：原先两个预热都是 `scope.launch` 立即返回、**没有任何可等待的入口**，启动页只能死等。实现上先在 `synchronized` 块内取出 Job 再在块外 `join`，不在持锁状态下挂起。
+
+#### 骨架屏动画
+
+`SkeletonAnimator` 原为 `ofFloat(1f, 0.55f, 1f)` + `LinearInterpolator`：**三角波，谷底是尖角**，且 45% 振幅偏大，观感是「闪」而不是「呼吸」。改为：
+
+```kotlin
+ValueAnimator.ofFloat(1f, 0.7f)   // 振幅 30%
+    .setDuration(800)              // 单程 800ms（原整周期 1100ms）
+    .setRepeatMode(REVERSE)        // 往复而非三关键帧，谷底不再有折角
+    .setInterpolator(AccelerateDecelerateInterpolator())  // 两端都有缓动
+```
+
+**未做**：启动页底色 `splash_background` 在浅色与夜间**同为 `#FF1976D2`**，深色模式下是一整屏高亮蓝，与本项目的深色表面（`#141218`）反差很大。这属设计取舍（品牌页是否要跟主题走），未擅自改动。
+
+**验证**：`:app:assembleDebug` 与 `:app:lintDebug` 通过，error 0、warning 2351（无新增）。**未经真机验证**——改动期间设备反复断连（`adb devices` 为空），且启动时序与动画观感必须在真机上判断，无法用静态检查替代。
 
 ---
 
