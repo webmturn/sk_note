@@ -1,6 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SkNote" parent="Theme.Material3.DayNight.NoActionBar">
+    <!--
+      主题分「Base + 薄包装」两层，是为了让 windowLightNavigationBar（API 27 起）能
+      放进 values-v27/ 而不丢掉其余条目。
+
+      原因：同名 style 放在不同配置目录时是互相【替代】的资源变体，Android 按配置整体
+      选取其中一个，不会把 values/ 与 values-v27/ 的条目合并。此前把 Theme.SkNote 同时
+      定义在 values/ 与 values-v27/，导致 API 27+ 设备上整个主题只剩 windowLightNavigationBar
+      一项，statusBarColor、windowLightStatusBar、navigationBarColor 与 8 个
+      colorPrimary*/colorSecondary* 全部失效——实测状态栏被 M3 基线 colorPrimary
+      (#D0BCFF) 接管，项目配色在所有 API 27+ 设备上均未生效。
+
+      所以：与 API 级别无关的条目一律放进 .Base（仅在 values/ 与 values-night/ 之间
+      按昼夜切换），Theme.SkNote 本身只负责叠加 API 相关项。
+    -->
+    <style name="Theme.SkNote.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
@@ -14,12 +28,16 @@
         <item name="android:navigationBarColor">@color/surface_card</item>
     </style>
 
-    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SkNote" parent="Theme.SkNote.Base" />
+
+    <style name="Theme.SkNote.Launch.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
+
+    <style name="Theme.SkNote.Launch" parent="Theme.SkNote.Launch.Base" />
 
     <style name="Theme.SkNote.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SkNote" parent="Theme.Material3.DayNight.NoActionBar">
+    <!-- 夜间只覆盖 .Base：Theme.SkNote / Theme.SkNote.Launch 这两层薄包装不随昼夜变化，
+         由 values/themes.xml 提供即可，parent 会自动解析到这里的夜间 .Base。 -->
+    <style name="Theme.SkNote.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="colorPrimaryContainer">@color/primary_container</item>
@@ -14,7 +16,7 @@
         <item name="android:navigationBarColor">@color/surface_card</item>
     </style>
 
-    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SkNote.Launch.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

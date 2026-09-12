@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- android:windowLightNavigationBar 需要 API 27，基座主题里不能直接声明，否则 minSdk 24 会报 NewApi。
-         parent 必须显式写出：点号命名在本文件只提供两项时会推断出不存在的父样式 Theme -->
-    <style name="Theme.SkNote" parent="Theme.Material3.DayNight.NoActionBar">
+
+         这里只能声明 API 相关的那一项：同名 style 在不同配置目录下是互相【替代】的
+         资源变体，Android 不会把 values/ 的条目合并进来。所以 parent 必须指向
+         .Base（它承载全部配置无关条目），否则 API 27+ 设备上整个主题会被替换成只剩
+         一项，statusBarColor / windowLightStatusBar / colorPrimary* 等全部失效。
+
+         parent 也必须显式写出：点号命名在本文件只提供一项时会推断出不存在的父样式 Theme。 -->
+    <style name="Theme.SkNote" parent="Theme.SkNote.Base">
         <item name="android:windowLightNavigationBar">true</item>
     </style>
 
-    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SkNote.Launch" parent="Theme.SkNote.Launch.Base">
         <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

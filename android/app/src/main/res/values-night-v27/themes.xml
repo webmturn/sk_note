@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 夜间覆盖：必须与 values-v27 成对声明，否则夜间会拿到浅色的 true -->
-    <style name="Theme.SkNote" parent="Theme.Material3.DayNight.NoActionBar">
+    <!-- 夜间覆盖：必须与 values-v27 成对声明，否则夜间会拿到浅色的 true。
+         parent 同样指向 .Base，理由见 values-v27/themes.xml。 -->
+    <style name="Theme.SkNote" parent="Theme.SkNote.Base">
         <item name="android:windowLightNavigationBar">false</item>
     </style>
 
-    <style name="Theme.SkNote.Launch" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.SkNote.Launch" parent="Theme.SkNote.Launch.Base">
         <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>
