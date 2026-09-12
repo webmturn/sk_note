@@ -45,14 +45,18 @@
         <item name="postSplashScreenTheme">@style/Theme.SkNote.Launch</item>
     </style>
 
+    <!--
+      底部导航栏。高度与上下内边距一律交给 M3 父样式（80dp / 12dp / 16dp）：
+      此前这里写的 itemPaddingTop/Bottom=8dp 是为旧的 64dp 紧凑栏配的，
+      在 80dp 标准高度下会与 M3 的 12/16 打架。
+      配色走项目自己的定义：底栏与状态栏同色（surface_card），选中图标用 colorPrimary。
+    -->
     <style name="Widget.SkNote.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">@color/surface_card</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.SkNote.BottomNavigation.ActiveIndicator</item>
         <item name="itemIconTint">@color/bottom_nav_icon_color</item>
         <item name="itemTextColor">@color/bottom_nav_icon_color</item>
         <item name="labelVisibilityMode">selected</item>
-        <item name="itemPaddingTop">8dp</item>
-        <item name="itemPaddingBottom">8dp</item>
         <item name="elevation">0dp</item>
     </style>
 

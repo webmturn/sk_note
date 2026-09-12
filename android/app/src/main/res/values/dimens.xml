@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      底部导航栏高度。M3 规范值为 80dp（m3_comp_navigation_bar_container_height），
+      此处显式声明，是为了让它与下方的内容让位量有一处共同的来源。
+    -->
+    <dimen name="bottom_nav_height">80dp</dimen>
+
+    <!--
+      顶层页面为底部导航栏让出的底部空间 = bottom_nav_height + 24dp 呼吸余量。
+      用法：滚动容器设 clipToPadding="false" 并加此内边距，最后一项才能滚到导航栏之上；
+      非滚动页面直接用它作 layout_marginBottom。
+      改动 bottom_nav_height 时必须同步此处。
+    -->
+    <dimen name="bottom_nav_content_inset">104dp</dimen>
+</resources>

@@ -423,7 +423,7 @@
                     android:layout_height="match_parent"
                     android:paddingHorizontal="12dp"
                     android:paddingTop="12dp"
-                    android:paddingBottom="88dp"
+                    android:paddingBottom="@dimen/bottom_nav_content_inset"
                     android:clipToPadding="false" />
 
                 <TextView
@@ -471,7 +471,7 @@
             android:layout_marginStart="16dp"
             android:layout_marginTop="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="88dp"
+            android:layout_marginBottom="@dimen/bottom_nav_content_inset"
             android:src="@drawable/ic_arrow_up"
             android:visibility="gone"
             android:contentDescription="回到顶部"

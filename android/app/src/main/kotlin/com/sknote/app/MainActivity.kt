@@ -81,26 +81,41 @@ class MainActivity : AppCompatActivity() {
             R.id.adminFragment
         )
 
+        // 当前是否应隐藏底部导航栏。供动画结束回调判断——若动画期间用户已切回顶层页面，
+        // 结束回调不能把 wrapper 又置为 GONE。
+        var shouldHideNav = false
+
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val wrapper = binding.bottomNavWrapper
+            wrapper.animate().cancel()
             if (destination.id in topLevelDestinations) {
-                wrapper.animate().cancel()
+                shouldHideNav = false
                 wrapper.visibility = View.VISIBLE
                 wrapper.isEnabled = true
                 binding.bottomNav.isEnabled = true
+                // 自下方滑入。首帧尚未测量时 height 为 0，退化为纯淡入。
+                wrapper.translationY = wrapper.height.toFloat()
                 wrapper.animate()
                     .translationY(0f)
                     .alpha(1f)
                     .setDuration(300)
                     .start()
             } else {
-                wrapper.animate().cancel()
+                shouldHideNav = true
                 wrapper.isEnabled = false
                 binding.bottomNav.isEnabled = false
                 wrapper.animate()
                     .translationY(wrapper.height.toFloat())
                     .alpha(0f)
                     .setDuration(300)
+                    .withEndAction {
+                        // 必须置为 GONE：alpha=0 的 View 仍参与命中测试，
+                        // 否则底部这条区域会一直吞掉点击。
+                        if (shouldHideNav) {
+                            wrapper.visibility = View.GONE
+                            wrapper.translationY = 0f
+                        }
+                    }
                     .start()
             }
         }
