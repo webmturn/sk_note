@@ -13,4 +13,14 @@
       改动 bottom_nav_height 时必须同步此处。
     -->
     <dimen name="bottom_nav_content_inset">104dp</dimen>
+
+    <!--
+      评论卡的水平内缩量。必须在 XML 与 CommentAdapter 之间共用：
+      适配器为实现「回复缩进」会在每次绑定时改写 item 的 marginStart，
+      若两处各写各的，适配器那次赋值会把 XML 的值覆盖掉（曾导致评论卡通栏）。
+    -->
+    <dimen name="comment_card_inset">8dp</dimen>
+
+    <!-- 回复相对顶级评论额外缩进的量，与 comment_card_inset 相加 -->
+    <dimen name="comment_reply_indent">28dp</dimen>
 </resources>

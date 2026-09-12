@@ -76,11 +76,22 @@ class CommentAdapter(
         } else {
             holder.binding.tvReplyTo.visibility = android.view.View.GONE
         }
-        // 回复评论左侧缩进
+        // 回复评论左侧缩进。注意必须在 comment_card_inset 的基础上【叠加】，
+        // 而不是直接覆盖 marginStart——后者会把 item_comment.xml 里的水平边距
+        // 一起清掉，导致评论卡通栏贴住屏幕两侧。
         val lp = holder.binding.root.layoutParams as? android.view.ViewGroup.MarginLayoutParams
         if (lp != null) {
-            val density = holder.binding.root.context.resources.displayMetrics.density
-            lp.marginStart = if (comment.parentId != null) (28 * density).toInt() else 0
+            val res = holder.binding.root.resources
+            val baseInset = res.getDimensionPixelSize(R.dimen.comment_card_inset)
+            val replyIndent = if (comment.parentId != null) {
+                res.getDimensionPixelSize(R.dimen.comment_reply_indent)
+            } else {
+                0
+            }
+            // marginStart/marginEnd 必须同时设置：只设其中一个会让另一个的相对边距
+            // 解析失效（实测只设 marginStart 时右边距会变成 0，卡片右缘仍贴屏幕）。
+            lp.marginStart = baseInset + replyIndent
+            lp.marginEnd = baseInset
             holder.binding.root.layoutParams = lp
         }
         holder.binding.ivAvatar.setOnClickListener { onAvatarClick(comment) }
