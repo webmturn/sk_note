@@ -2,7 +2,7 @@ package com.sknote.app.util
 
 import android.animation.ValueAnimator
 import android.view.View
-import android.view.animation.LinearInterpolator
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -11,10 +11,15 @@ class SkeletonAnimator private constructor(
     private val target: View,
     private val owner: LifecycleOwner
 ) {
-    private val animator: ValueAnimator = ValueAnimator.ofFloat(1f, 0.55f, 1f).apply {
-        duration = 1100L
+    // 原实现是 ofFloat(1f, 0.55f, 1f) + LinearInterpolator：三角波，谷底是个尖角，
+    // 且 45% 的振幅偏大，观感是「闪」而不是「呼吸」。
+    // 改为 1f→0.7f 配合 REVERSE 往复 + AccelerateDecelerateInterpolator：
+    // 两端都有缓动，来回都平滑，且不再有折角。
+    private val animator: ValueAnimator = ValueAnimator.ofFloat(1f, 0.7f).apply {
+        duration = 800L
         repeatCount = ValueAnimator.INFINITE
-        interpolator = LinearInterpolator()
+        repeatMode = ValueAnimator.REVERSE
+        interpolator = AccelerateDecelerateInterpolator()
         addUpdateListener { a ->
             val value = a.animatedValue as? Float ?: return@addUpdateListener
             target.alpha = value

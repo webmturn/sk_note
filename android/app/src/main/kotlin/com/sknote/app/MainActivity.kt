@@ -82,9 +82,15 @@ class MainActivity : AppCompatActivity() {
         )
 
         // 底部导航栏当前是否处于隐藏状态。
-        // 用途一：只有「隐藏 → 显示」这一次跨状态才做滑入动画——顶层 Tab 之间互切时
-        //         导航栏本就可见，若无条件滑入会让它每次先跳下去再弹回来。
-        // 用途二：供隐藏动画的结束回调判断，避免动画期间用户已切回顶层页面时仍被置为 GONE。
+        // 用途一（主要）：只有「隐藏 → 显示」这一次跨状态才做滑入动画——顶层 Tab 之间
+        //         互切时导航栏本就可见，若无条件滑入会让它每次先跳下去再弹回来。
+        // 用途二（防御性）：结束回调里再确认一次状态。
+        //
+        // 订正：此前这里注释称「先置 false 再 cancel() 是必需的，否则结束回调会把正在
+        // 显示的导航栏又置为 GONE」。该说法是错的——ViewPropertyAnimator.withEndAction
+        // 的文档明确写着动画被取消时该 Runnable 不会执行，AOSP 实现里 onAnimationCancel
+        // 会直接把回调从 mAnimatorOnEndMap 移除（ViewPropertyAnimator.java:1092-1093）。
+        // 所以 cancel() 根本不触发结束回调，不存在这个竞态；顺序仅为可读性。
         var navHidden = false
 
         navController.addOnDestinationChangedListener { _, destination, _ ->

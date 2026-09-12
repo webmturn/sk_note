@@ -91,6 +91,21 @@ object StartupWarmupManager {
         }
     }
 
+    /**
+     * 等待两个预热任务结束，最多等 [timeoutMs]。
+     *
+     * 供启动页使用：原先启动页只能死等一个固定时长（1800ms），无论预热是 100ms
+     * 完成还是没完成。有了这个入口，预热一结束就能进主界面。
+     *
+     * 两个任务内部已各带 4s 超时；这里再加一道总时长上限，避免网络慢时把启动页拖住——
+     * 超时后照常进入主界面，未完成的预热继续在后台跑，首页到时由骨架屏兜底。
+     */
+    suspend fun awaitWarmup(timeoutMs: Long) {
+        val jobs = synchronized(this) { listOfNotNull(currentUserWarmupJob, homeWarmupJob) }
+        if (jobs.isEmpty()) return
+        withTimeoutOrNull(timeoutMs) { jobs.forEach { it.join() } }
+    }
+
     fun getWarmHomeData(maxAgeMs: Long = HOME_CACHE_DURATION_MS): WarmHomeData? {
         val cached = warmHomeData ?: return null
         return if (System.currentTimeMillis() - cached.fetchedAt <= maxAgeMs) cached else null
