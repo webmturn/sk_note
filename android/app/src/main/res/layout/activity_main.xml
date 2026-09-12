@@ -33,8 +33,9 @@
             android:alpha="0.5" />
 
         <!--
-          高度与内边距均取 M3 规范值（80dp / 上 12dp / 下 16dp），由
-          Widget.SkNote.BottomNavigation 及其父样式 Widget.Material3.BottomNavigationView 提供。
+          高度由 @dimen/bottom_nav_height（80dp）显式指定；上下内边距（12dp / 16dp）
+          与图标尺寸（24dp）取 M3 规范值，来自 Widget.SkNote.BottomNavigation
+          及其父样式 Widget.Material3.BottomNavigationView。
           此前在这里写死 64dp + 2dp 内边距，装不下「32dp 指示条 + 标签」，
           导致指示条贴顶、标签贴底。
         -->

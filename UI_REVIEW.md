@@ -592,7 +592,39 @@ private fun adaptUserBgColor(rawColor: Int): Int {
 
 **真机验证**：切 Tab 连拍 8 帧，导航栏上边界恒为 2160px 全程不动；顶层页导航项数 4 → 详情页 0 → 返回后 4。
 
-**门禁**：`:app:assembleDebug`、`:app:lintDebug` 通过；error 0，warning 2355 → **2351**（减少的 4 条正是原先「未使用样式」的告警）。
+**门禁**：`:app:assembleDebug`、`:app:lintDebug` 通过；error 0，warning 2355 → **2351**。
+
+> 订正：我原先在此处写「减少的 4 条正是原先『未使用样式』的告警」，但按样式逐个清点只对得上 3 个（`Widget.SkNote.BottomNavigation`、其 `.ActiveIndicator`、`ShapeAppearance.SkNote.BottomNav.Indicator`）。第 4 条我没有核实过，最可能的解释是 `res/color/bottom_nav_icon_color.xml`——lint 似乎不把「来自未使用资源的引用」算作使用，故当引用它的样式本身未被使用时，该 selector 也会被报为未使用；样式启用后一并消失。**这是推断，未经验证**，已从结论降级为猜测。可确认的是：当前 lint 报告中本项目样式**0 条**未使用告警。
+
+### 第十二批（自审：复核最近三轮改动）
+
+对 `fb71bc6`、`a00f949`、`567d8e0`、`c386165`、`1d0d231` 做逐项复核，重新扫描当前文件而非复用当时的脚本。
+
+**复检通过（独立重扫，非复用旧结论）**
+
+| 项 | 结果 |
+|---|---|
+| IconTile 引用 | 33 处（25 + 8），**0** 处缺 `cardBackgroundColor`，**0** 处唯一子节点不是 `ImageView`，**0** 处残留内联几何属性 |
+| 底色分布 | green 4 / orange 7 / purple 6 / teal 4 / blue 7 / red 4 / indigo 1 = 33 ✓ |
+| TabLayout | 8 个中 6 个引用样式、2 个（`fragment_project_resource`、`fragment_share_manage`）未引用；**0** 处同时保留内联配色 |
+| 导航栏让位内边距 | 残留 `88dp` **0** 处；`bottom_nav_content_inset` 引用 **8** 处 |
+| dimens | `bottom_nav_height` 1 处、`bottom_nav_content_inset` 8 处，均已引用 |
+| 项目样式未使用告警 | **0** 条 |
+| `Theme.SkNote` 配置变体 | `()` size=0、`(v27)` size=1、`(night-v27)` size=1，**三者 parent 均为 `Theme.SkNote.Base`** —— 结构未因后续改动退化 |
+| `labelVisibilityMode=0` | 核对 Material 枚举（`auto=-1, selected=0, labeled=1, unlabeled=2`），0 即 `selected`，与真机观察一致 |
+| 子页覆盖 | 顶层页嵌套的子 Fragment 只有 `ReferenceFragment` 与 `SnippetListFragment`（ViewPager2 两页），均已带让位内边距；`childFragmentManager` 的两处是 Dialog，不受导航栏影响 |
+
+**发现的问题**
+
+1. **我写的注释是错的**：`activity_main.xml` 里写「高度由样式提供」，但高度是同文件显式指定的 `@dimen/bottom_nav_height`。已改正。
+2. **「减少 4 条」是未经验证的推断**（见上）。已降级表述。
+3. **状态栏与内容之间残留接缝**：实测顶部 `y 0..98`（33dp）为 `#1E1E2E`（`surface_card`），`y 99+` 立即变为 `#141218`（M3 基线 `colorSurface`）。根因是项目的 `@color/surface_card` 与内容所用的 M3 `colorSurface` 来自**两套不同调色板**——这是项目原有取值，P0-5 修复只是让它按原意生效，并非新引入。若要消除，需把 `statusBarColor` 改为 `?attr/colorSurface`（与内容同色），或反过来把内容底色也纳入项目调色板。**属设计选择，未擅自改动。**
+4. **导航栏高度固定为 80dp 的边界**：字号缩放 1.5 时 `12+32+标签(~17)+16 ≈ 77dp` 仍放得下，2.0 时约 83dp 会略超。本机字号缩放为 1.0。这是 M3 默认用 `minHeight` 而此处改用固定高度的代价；原实现固定为 64dp，问题更早出现。
+5. **中断动画时的小跳变**：隐藏动画播放中（300ms 内）按返回，显示分支会把 `translationY` 重新设为完整高度再滑回，视觉上会多跳一下。触发窗口很短，属罕见的外观问题，未改动。
+6. `wrapper.isEnabled`（`MainActivity`）：`setEnabled(false)` 对 `LinearLayout` 的子 View 无约束作用，该行实际无效——**原有代码**，非本轮引入。
+7. `Theme.SkNote.Starting` 在 `values/` 与 `values-night/` 中**内容完全相同**，其引用的 `@color/splash_background` 本就按配置解析，夜间那份是冗余复制。**原有代码**，无害，未改动。
+
+**自审的过程问题**：这次复核脚本自身先出了两个 bug——判断 `IconTile` 条数的正则要求结尾带引号（把 25 报成 0），以及 `AndroidManifest.xml` 路径写成在 `res/` 下。都已修正后重跑。
 
 ---
 
