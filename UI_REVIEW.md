@@ -846,6 +846,42 @@ ValueAnimator.ofFloat(1f, 0.7f)   // 振幅 30%
 
 **门禁**：`:app:assembleDebug`、`:app:installDebug` 与 `:app:lintDebug` 通过，error 0、warning 2351（无新增）。
 
+### 第十八批（自审：复核第十七批）
+
+**方法**：不靠肉眼看图，而是对比「重构前后同一行的颜色跳变位置」。骨架卡在呼吸，**颜色会随 alpha 变化、但边界位置不会**，所以位置是稳定可比的量。
+
+**发现一处真实回归**：
+
+| | y=1160 的颜色跳变位置 |
+|---|---|
+| 抽出 `layout_skeleton_card_category` 之前（正确） | 60, 102, 198, **450, 480**, 522, …, **870, 900**, 942, … |
+| 抽出之后 | 60, 102, 198, **492**, 588, …, **882**, 978, … |
+
+`492` 恰好等于 `450 + 42`，即第二张卡图标本该在的起点 —— 说明三张卡**贴在了一起**，`layout_marginEnd` 丢失。
+
+**根因**（AOSP `LayoutInflater.java:1136-1145`，`parseInclude`）：
+
+```java
+params = group.generateLayoutParams(context, attrs);        // 先用 <include> 标签自身的属性
+if (params == null)
+    params = group.generateLayoutParams(context, childAttrs); // 仅在失败时才回退到被包含的根节点
+```
+
+只要 `<include>` 标签上写了 `layout_width`/`layout_height`，`generateLayoutParams` 就会**成功**，被包含根节点上的 `layout_margin*` 全部不参与。项目既有写法是不带任何布局属性，正是为了走 `childAttrs` 那条路。
+
+**影响面**：分类卡丢 `marginEnd` 10dp；文章卡丢 `marginBottom` 12dp 与 `marginHorizontal` 4dp —— 后者**自首页骨架第一版起就存在**，不止本次重构引入的那一处。全项目扫描同类问题共 6 处，**全部在新增的 `layout_skeleton_home.xml` 中**，项目其余文件写法正确。
+
+**修复后验证**（480dpi，深色）：分类卡跳变位置恢复为 `450, 480, 870, 900`（卡宽 130dp、间距 10dp）；文章卡首行左边缘 `x=72px = 24dp`，即容器 padding 20dp + 卡 `marginHorizontal` 4dp；全项目复扫 0 处残留。
+
+**顺带按项目约定重构**：三张重复的分类占位卡抽成 `layout_skeleton_card_category.xml`（对应既有的 `layout_skeleton_card_article/_discussion/_share/_snippet` 做法），不再内联复制三遍。
+
+**两处经核实不成立的怀疑**（记录以免重复怀疑）：
+
+1. **`isLoading` 初始值导致多余淡入** —— 不成立。`_isLoading = MutableLiveData<Boolean>()` **没有初始值**，无值的 LiveData 在注册观察者时不会回调，所以 `else` 分支不会在页面创建时误触发。另外确认了 `fetchHomeData(showLoading=false)`（命中预热缓存那条路径）**从不设置 `isLoading`**，因此也不会误播骨架。
+2. **`AnimatorSet.setInterpolator` 扭曲整条时间线** —— 不成立。AOSP 文档与实现（`AnimatorSet.java:716-719`）都是**逐个子动画**调用 `setInterpolator`，不改变时间线。但它确实会把弹性曲线套到 alpha 上，这一点成立并已修（见第十七批）。
+
+**过程问题**：本轮我误敲了一条 `git -c config.txt`，并在未改动 `UI_REVIEW.md` 的情况下 `git add` 后用了 `--allow-empty`，造出一个**内容为空、说明却写着「记录自审发现」的提交**。已补写本节内容并修正该提交 —— 空提交配不实说明属于假记录，不能留。
+
 ---
 
 ## 九、剩余待办
