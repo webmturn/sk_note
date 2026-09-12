@@ -9,6 +9,13 @@
     <color name="secondary_container">#FF324957</color>
     <color name="on_secondary_container">#FFCFE5ED</color>
 
+    <!-- 夜间 tertiary：沿用同一规律（角色取 200 调、容器取 900 调、
+         on_*_container 与浅色容器同值） -->
+    <color name="tertiary">#FF80CBC4</color>
+    <color name="on_tertiary">#FF003731</color>
+    <color name="tertiary_container">#FF004D40</color>
+    <color name="on_tertiary_container">#FFB2DFDB</color>
+
     <color name="icon_bg_orange">#66795548</color>
     <color name="icon_bg_green">#66388E3C</color>
     <color name="icon_bg_purple">#667B1FA2</color>

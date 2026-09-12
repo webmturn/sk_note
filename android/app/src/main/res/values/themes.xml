@@ -23,6 +23,10 @@
         <item name="colorOnSecondary">@color/on_secondary</item>
         <item name="colorSecondaryContainer">@color/secondary_container</item>
         <item name="colorOnSecondaryContainer">@color/on_secondary_container</item>
+        <item name="colorTertiary">@color/tertiary</item>
+        <item name="colorOnTertiary">@color/on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/surface_card</item>

@@ -9,6 +9,14 @@
     <color name="secondary_container">#FFCFE5ED</color>
     <color name="on_secondary_container">#FF0B1D29</color>
 
+    <!-- tertiary 取 Material Teal，与主色 Material Blue / Blue Grey 同族。
+         项目此前只定义 primary 与 secondary，导致 20 处 ?attr/colorTertiary*
+         引用落回 M3 基线的酒红（#633B48），与蓝色系冲突。 -->
+    <color name="tertiary">#FF00796B</color>
+    <color name="on_tertiary">#FFFFFFFF</color>
+    <color name="tertiary_container">#FFB2DFDB</color>
+    <color name="on_tertiary_container">#FF00201A</color>
+
     <color name="icon_bg_orange">#FFE0B2</color>
     <color name="icon_bg_green">#C8E6C9</color>
     <color name="icon_bg_purple">#E1BEE7</color>
