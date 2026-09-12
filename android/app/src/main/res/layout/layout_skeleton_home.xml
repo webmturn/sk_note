@@ -6,15 +6,14 @@
      「分类」「最新文章」两个标题与「查看全部 →」不随数据变化，若也做成灰块，
      加载期间会先出现灰块、加载完成再跳成文字，反而多一次视觉变化。
 
-  2) 分类占位卡按 item_category.xml 复刻：横向 130dp、圆角 16dp、1dp 描边、
-     colorSurfaceVariant 底色、内边距 14dp、32dp 图标在上、下方两行文字。
-     分类列表是 HORIZONTAL 的 LinearLayoutManager（HomeFragment），故这里用
-     横向一行、超出部分由父容器裁切，与真实横向滚动一致。
+  2) 分类占位卡抽成 layout_skeleton_card_category.xml（按 item_category.xml 复刻），
+     这里 include 三份——与 layout_skeleton_list_*.xml 对重复占位卡的既有约定一致。
+     分类列表是 HORIZONTAL 的 LinearLayoutManager（HomeFragment），故用横向一行、
+     超出部分由父容器裁切，与真实横向滚动一致。
 
-  3) 文章占位卡直接复用 layout_skeleton_card_article（它已按 item_article.xml 复刻）。
+  3) 文章占位卡复用 layout_skeleton_card_article.xml（按 item_article.xml 复刻）。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -38,110 +37,11 @@
         android:layout_marginTop="12dp"
         android:orientation="horizontal">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="130dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorOutlineVariant"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant">
+        <include layout="@layout/layout_skeleton_card_category" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
+        <include layout="@layout/layout_skeleton_card_category" />
 
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginBottom="6dp"
-                    android:background="@drawable/skeleton_block_lg" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="14dp"
-                    android:background="@drawable/skeleton_block" />
-
-                <View
-                    android:layout_width="80dp"
-                    android:layout_height="11dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/skeleton_block" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="130dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorOutlineVariant"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginBottom="6dp"
-                    android:background="@drawable/skeleton_block_lg" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="14dp"
-                    android:background="@drawable/skeleton_block" />
-
-                <View
-                    android:layout_width="80dp"
-                    android:layout_height="11dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/skeleton_block" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="130dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="?attr/colorOutlineVariant"
-            app:cardBackgroundColor="?attr/colorSurfaceVariant">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginBottom="6dp"
-                    android:background="@drawable/skeleton_block_lg" />
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="14dp"
-                    android:background="@drawable/skeleton_block" />
-
-                <View
-                    android:layout_width="80dp"
-                    android:layout_height="11dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/skeleton_block" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        <include layout="@layout/layout_skeleton_card_category" />
     </LinearLayout>
 
     <!-- 最新文章：标题行静态显示 -->
@@ -176,19 +76,10 @@
         android:layout_marginTop="12dp"
         android:orientation="vertical">
 
-        <include
-            layout="@layout/layout_skeleton_card_article"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        <include layout="@layout/layout_skeleton_card_article" />
 
-        <include
-            layout="@layout/layout_skeleton_card_article"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        <include layout="@layout/layout_skeleton_card_article" />
 
-        <include
-            layout="@layout/layout_skeleton_card_article"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        <include layout="@layout/layout_skeleton_card_article" />
     </LinearLayout>
 </LinearLayout>
