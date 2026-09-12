@@ -13,6 +13,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentHomeBinding
+import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -30,6 +33,14 @@ class HomeFragment : Fragment() {
     private lateinit var categoryAdapter: CategoryAdapter
     private lateinit var articleAdapter: ArticleAdapter
     private lateinit var latestShareAdapter: LatestShareAdapter
+
+    private var skeletonAnimator: SkeletonAnimator? = null
+
+    /**
+     * 首屏是否已经出过内容。用于区分「首次加载」（走骨架屏）与「下拉刷新」
+     * （保留已有内容，只用转圈提示）。其余 8 个列表/详情页也是这个约定。
+     */
+    private var contentShown = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
@@ -140,11 +151,13 @@ class HomeFragment : Fragment() {
         viewModel.categories.observe(viewLifecycleOwner) { categories ->
             categoryAdapter.submitList(categories)
             binding.layoutCategorySection.visibility = if (categories.isEmpty()) View.GONE else View.VISIBLE
+            if (categories.isNotEmpty()) contentShown = true
         }
 
         viewModel.articles.observe(viewLifecycleOwner) { articles ->
             articleAdapter.submitList(articles)
             binding.tvEmpty.visibility = if (articles.isEmpty()) View.VISIBLE else View.GONE
+            if (articles.isNotEmpty()) contentShown = true
         }
 
         viewModel.latestShares.observe(viewLifecycleOwner) { shares ->
@@ -152,8 +165,23 @@ class HomeFragment : Fragment() {
             binding.layoutShareSection.visibility = if (shares.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
 
+        // 原实现只有 swipeRefresh.isRefreshing 一个加载提示：首页没有骨架屏，
+        // 首屏加载时用户看到的是「分类」「最新文章」两个标题下面一片空白。
+        // 现首次加载走骨架屏（与其余 8 个页面同一套 SkeletonAnimator + 同一套骨架卡片），
+        // 下拉刷新仍保留已有内容、只用转圈提示。
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.swipeRefresh.isRefreshing = isLoading
+            binding.swipeRefresh.isRefreshing = isLoading && contentShown
+            if (isLoading) {
+                if (!contentShown) {
+                    showSkeleton(binding.skeletonHome.root, binding.layoutSections)
+                    skeletonAnimator?.stop()
+                    skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonHome.root)
+                }
+            } else {
+                skeletonAnimator?.stop()
+                skeletonAnimator = null
+                hideSkeletonAndShow(binding.skeletonHome.root, binding.layoutSections)
+            }
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
@@ -198,6 +226,8 @@ class HomeFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        skeletonAnimator?.stop()
+        skeletonAnimator = null
         super.onDestroyView()
         _binding = null
     }
