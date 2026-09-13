@@ -1582,6 +1582,68 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
 **部署脚本**：`migrate_discussion_tags.sql` 与 `migrate_discussion_reads.sql` 已登记进
 `deploy_now.py` 的上传清单与 migrate 段落。该脚本被 `.gitignore` 忽略，**这些改动只存在于本机**。
 
+### 第三十一批（对第三十批交付的三项功能做一次独立复验）
+
+**性质**：用户要求「验证」。本轮**不写新代码**，只做观测 + 一次可逆的测试数据往返，目的是把
+第三十批的结论重新独立证一遍，而不是复述。
+
+**门禁复跑**：`:app:assembleDebug` 通过；`:app:lintDebug --rerun-tasks`（2m30s）**0 errors /
+2353 warnings**，与第三十批基线逐位相同 —— 说明此后没有引入新告警。重建后的 APK 重新安装到
+真机（`install -r` 保留数据），因此这一轮验的就是已提交的那份代码。
+
+**生产 API（只读）：四态逐项复核，与第三十批记录一致**
+
+```
+/api/discussions                → 11, 8, 7
+/api/discussions?sort=hot       → 7, 11, 8（阅读 50/45/36）
+/api/discussions?sort=replies   → 11, 8, 7（回复 16/1/1）
+/api/discussions?sort=bogus     → 回退 latest
+```
+
+**真机复验**
+
+- **排序切换与持久化**：「最新 ▾」→ 菜单三项（截图存档）→ 选「最热」，列表首条变成 50 阅读
+  那条，顺序 7/11/8；**进详情再返回，按钮仍是「最热」、顺序仍是 7/11/8** —— 第三十批修掉的
+  「返回后排序被打回默认」复验通过。
+- **未读三态**：读过一帖后无点 → 回一条测试评论 → 列表出现 **`iv_unread_dot` +「2 回复
+  1 条新回复」**（标题 x 由 588 被挤到 609）→ 再进详情返回，**点消失、回复数保留 2**。
+- **标签端到端（意外收获）**：打开发布页时弹出「恢复未发布草稿？」，选择载入后
+  `etTags` **原样恢复** `test,TEST,#tags,extra1,extra2,extra3,extra4` —— 这直接实证了草稿把标签
+  一并持久化（第三十批只验到发布链路，没验草稿这条）。发布后生产存
+  `test,tags,extra1,extra2,extra3`（大小写去重 / 去 `#` / 上限 5），详情页 chips 实拍为
+  `#test #tags #extra1 #extra2 #extra3`。
+
+**⚠️ 复验抓到的一个此前未记录的 bug：发布成功后草稿没有被清掉**
+
+- **复现**：发布成功 → 立刻再进「发起讨论」→ **又弹「恢复未发布草稿？」**，内容正是刚发布出去
+  的那一篇。
+- **证据**：`run-as` 读 `shared_prefs/discussion_draft.xml`，发布后仍有
+  `draft_general_title` / `_content` / `_category` / `_tags` 四个键。
+- **根因**（`CreateDiscussionFragment.kt`）：success 分支先 `clearDraft()`，紧接着 `navigateUp()`
+  触发 `onDestroyView()`；而 `onDestroyView()` 里有一句「Flush any pending draft write」→
+  `persistDraftNow()`。此时输入框里的文字还在，于是**刚清掉的草稿被立刻原样写回**。
+  `persistDraftNow()` 只在三个字段全空时才走删除键的分支，所以这次写入必然发生。
+- **归属**：`persistDraftNow` 与 `clearDraft` 同出于 `6984cfc`（2026-05-04，
+  "improve discussion editor attachments"），**早于本次改造**，不是第三十批引入的；那一批只是给
+  这两个函数各加了一行 `tags`。
+- **影响**：每次发布后都留一份「已发布的草稿」，用户若载入再发一次就会产生重复帖。
+- **建议改法**：给 `clearDraft()` 加一个「已丢弃」标志位并让 `onDestroyView()` 的 flush 跳过，
+  或在 success 分支里先把三个输入框清空再 `navigateUp()`（让 flush 退化成「写入空 → 删键」）。
+  **未擅自改**，等指示。
+
+**残留（本轮复验自己造成的一处，如实记录）**
+
+- 测试评论的发布/删除让讨论 **#7 的 `updated_at` 从 `2026-03-06 05:54:09` 变成
+  `2026-09-13 16:30:41`**。后端 `POST /:id/comments` 写的是 `updated_at = datetime('now')`
+  （`discussions.ts:408`），而**删除评论不回退该字段**（删除路径没有对应 UPDATE），所以删掉测试
+  评论也恢复不了。后果是 #7 在「最新」下排到第一位（原先 #11 第一）。
+- 计数类数据**全部复原**：讨论仍 3 条，reply 16/1/1，view 45/36/50，tags 全空，
+  `?search=TagCheck` 命中 0，`shared_prefs` 中草稿键已清空（`<map />`）。
+- 要还原 `updated_at` 只能直接写库（SSH + SQL），超出本机 `deploy_now.py` 的能力范围，未做。
+
+**顺带确认无回归**：发布页格式工具条第一枚仍是「添加图片」（第三十批的重排仍在）；列表卡片、
+分类 chips、底部导航均与第三十批一致。
+
 ---
 
 ## 九、剩余待办
@@ -1612,6 +1674,9 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
 7. **编辑资料页头与个人资料页头是同款但两处各写各的**（20dp/8dp/16dp、72dp 头像、22sp/14sp/12sp）——改一处必须同步另一处，否则「所见即所得」又断了。要做的话应抽成共享 dimen/style，需同时动两个已被真机验证过的布局
 
 **再下一批（体验打磨）**
+0. **发布成功后草稿未被清理**（第三十一批复验发现，`6984cfc` 起就存在）：success 分支
+   `clearDraft()` → `navigateUp()` → `onDestroyView()` 的 flush `persistDraftNow()` 把刚删掉的键
+   原样写回，用户下次进来会被问「恢复未发布草稿？」，载入再发一次就是重复帖。修法见第三十一批
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
 2. `ProjectAnalyzerFragment` 的 `containerColors` 6 个固定饱和色改 M3 surface 角色
 3. 启动页 `splash_background` 夜间值与 M3 `colorSurface` 对齐（~~`surface_card` 夜间值~~ 部分**已完成**，见第二十七批；splash 部分仍受夜间文件注释里那条限制：系统启动窗口只读浅色值，单独改夜间值会造成「蓝启动窗口 → 深色启动页」闪变）
