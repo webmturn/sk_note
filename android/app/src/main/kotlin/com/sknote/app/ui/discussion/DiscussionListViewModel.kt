@@ -28,6 +28,16 @@ class DiscussionListViewModel : ViewModel() {
     fun invalidateCache() = Unit
 
     fun loadCategories() {
+        // 先用本地兜底分类把 chip 行填上，再去请求网络。
+        // 这不是性能优化，而是修一个真实的布局跳变：chip 行位于列表上方、高度由内容决定，
+        // 而本页的 ChipGroup 在 XML 里是空的（「全部」也是网络回来后才动态添加的），
+        // 因此在分类到达前这一行只剩 HorizontalScrollView 的 12dp padding，分类到达后
+        // 长到 60dp，把下面整个列表（含骨架）向下推 48dp —— 真机实测值。
+        // 分享与片段两页的 ChipGroup 在 XML 里已静态放了一个「全部」chip，高度恒定，没有这个问题。
+        // 本地兜底表与本页原有的失败分支用的是同一份数据，因此先填后填内容一致。
+        if (_categories.value == null) {
+            _categories.value = DiscussionCategoryDefaults.categories
+        }
         viewModelScope.launch {
             try {
                 val response = ApiClient.getService().getDiscussionCategories()
