@@ -19,9 +19,11 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Share
 import com.sknote.app.databinding.FragmentShareDetailBinding
 import com.sknote.app.util.LanzouParser
+import com.sknote.app.util.NavPrefill
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.TimeUtil
 import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.prefill
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
@@ -132,8 +134,20 @@ class ShareDetailFragment : Fragment() {
             }
         }
 
-        showSkeleton(binding.skeletonContainer.root, binding.scrollView)
-        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        // 有预填数据时首帧就是真实内容，不使用整页骨架。这一页的全部字段都来自
+        // Share 对象自身（列表接口 `shares.ts` 用 `SELECT *`，字段完整），因此可以
+        // 整页预填，不存在「某段高度未知」的问题。没有预填数据（通知入口只带
+        // share_id）时才退回骨架路径。
+        val prefill = arguments?.prefill<Share>(NavPrefill.KEY_SHARE)
+        if (prefill != null) {
+            binding.skeletonContainer.root.visibility = View.GONE
+            binding.scrollView.visibility = View.VISIBLE
+            contentShown = true
+            renderShare(prefill)
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.scrollView)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
@@ -190,45 +204,8 @@ class ShareDetailFragment : Fragment() {
                 if (!isFragmentUsable()) return@launch
                 if (response.isSuccessful) {
                     val share = response.body()?.share ?: return@launch
-                    if (!contentShown) {
-                        contentShown = true
-                        skeletonAnimator?.stop()
-                        hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
-                    }
-                    currentShare = share
-                    val downloadUrl = normalizedDownloadUrl(share)
-                    val browsableUri = buildBrowsableUri(downloadUrl)
-
-                    binding.tvTitle.text = share.title
-                    binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
-                    binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
-                    binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
-                    binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
-                    binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
-                    binding.tvViews.text = "${share.viewCount} 浏览"
-                    binding.tvDownloadUrl.text = downloadUrl.ifEmpty { "暂无链接" }
-                    binding.tvDownloadCount.text = "${share.downloadCount}"
-                    binding.btnLike.text = "点赞 (${share.likeCount})"
-                    binding.btnCopyUrl.isEnabled = downloadUrl.isNotEmpty()
-                    binding.btnCopyUrl.alpha = if (downloadUrl.isNotEmpty()) 1f else 0.5f
-                    binding.btnDownload.isEnabled = browsableUri != null
-                    binding.btnDownload.alpha = if (browsableUri != null) 1f else 0.5f
-
-                    if (!share.downloadPwd.isNullOrEmpty()) {
-                        binding.layoutPassword.visibility = View.VISIBLE
-                        binding.tvPassword.text = share.downloadPwd.orEmpty()
-                    } else {
-                        binding.layoutPassword.visibility = View.GONE
-                    }
-
-                    binding.toolbar.title = share.title
-
-                    val canEdit = share.authorId == currentUserId || currentUserRole == "admin"
-                    val canDelete = canEdit
-                    binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
-                    binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
-                    binding.toolbar.menu.findItem(R.id.action_copy_link)?.isVisible = downloadUrl.isNotEmpty()
-                    binding.toolbar.menu.findItem(R.id.action_open_browser)?.isVisible = browsableUri != null
+                    revealContent()
+                    renderShare(share)
                 } else {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
@@ -241,6 +218,64 @@ class ShareDetailFragment : Fragment() {
         }
     }
 
+
+    /**
+     * 把一个 [Share] 渲染到页面上。预填路径与详情接口路径共用这一份，
+     * 避免出现「预填一套 / 接口一套」两段渲染代码。
+     */
+    private fun renderShare(share: Share) {
+        currentShare = share
+        val downloadUrl = normalizedDownloadUrl(share)
+        val browsableUri = buildBrowsableUri(downloadUrl)
+
+        binding.tvTitle.text = share.title
+        binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
+        binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
+        binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
+        binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }
+        binding.tvTime.text = TimeUtil.formatRelative(share.createdAt)
+        binding.tvViews.text = "${share.viewCount} 浏览"
+        binding.tvDownloadUrl.text = downloadUrl.ifEmpty { "暂无链接" }
+        binding.tvDownloadCount.text = "${share.downloadCount}"
+        binding.btnLike.text = "点赞 (${share.likeCount})"
+        binding.btnCopyUrl.isEnabled = downloadUrl.isNotEmpty()
+        binding.btnCopyUrl.alpha = if (downloadUrl.isNotEmpty()) 1f else 0.5f
+        binding.btnDownload.isEnabled = browsableUri != null
+        binding.btnDownload.alpha = if (browsableUri != null) 1f else 0.5f
+
+        if (!share.downloadPwd.isNullOrEmpty()) {
+            binding.layoutPassword.visibility = View.VISIBLE
+            binding.tvPassword.text = share.downloadPwd.orEmpty()
+        } else {
+            binding.layoutPassword.visibility = View.GONE
+        }
+
+        binding.toolbar.title = share.title
+
+        val canEdit = share.authorId == currentUserId || currentUserRole == "admin"
+        val canDelete = canEdit
+        binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
+        binding.toolbar.menu.findItem(R.id.action_delete)?.isVisible = canDelete
+        binding.toolbar.menu.findItem(R.id.action_copy_link)?.isVisible = downloadUrl.isNotEmpty()
+        binding.toolbar.menu.findItem(R.id.action_open_browser)?.isVisible = browsableUri != null
+    }
+
+    /**
+     * 首次显示真实内容。两条路径的进入方式不同，因此收敛到这里：
+     * 有预填数据时首帧就是正确的，直接显示；没有预填数据时整页骨架正在呼吸，交叉淡出。
+     */
+    private fun revealContent() {
+        if (contentShown) return
+        contentShown = true
+        val animator = skeletonAnimator
+        if (animator == null) {
+            binding.scrollView.visibility = View.VISIBLE
+        } else {
+            animator.stop()
+            skeletonAnimator = null
+            hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
+        }
+    }
 
     private fun startDownload(share: Share) {
         val downloadUrl = normalizedDownloadUrl(share)

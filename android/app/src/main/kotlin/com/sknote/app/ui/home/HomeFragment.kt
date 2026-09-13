@@ -11,6 +11,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentHomeBinding
 import com.sknote.app.util.SkeletonAnimator
@@ -129,7 +131,11 @@ class HomeFragment : Fragment() {
         }
 
         articleAdapter = ArticleAdapter { article ->
-            val bundle = Bundle().apply { putLong("article_id", article.id) }
+            val bundle = Bundle().apply {
+                putLong("article_id", article.id)
+                // 首页接口（`aggregated.ts`）已带上 `a.content`，可整条预填。
+                putPrefill(NavPrefill.KEY_ARTICLE, article)
+            }
             findNavController().navigate(R.id.action_home_to_articleDetail, bundle)
         }
         binding.rvArticles.apply {
@@ -138,7 +144,11 @@ class HomeFragment : Fragment() {
         }
 
         latestShareAdapter = LatestShareAdapter { share ->
-            val bundle = Bundle().apply { putLong("share_id", share.id) }
+            val bundle = Bundle().apply {
+                putLong("share_id", share.id)
+                // 首页接口的分享用 `SELECT *`（`aggregated.ts`），字段完整，可整页预填。
+                putPrefill(NavPrefill.KEY_SHARE, share)
+            }
             findNavController().navigate(R.id.action_home_to_shareDetail, bundle)
         }
         binding.rvLatestShares.apply {

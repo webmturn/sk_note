@@ -13,9 +13,12 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.HistoryItem
+import com.sknote.app.data.model.toPrefillArticle
 import com.sknote.app.databinding.FragmentReadingHistoryBinding
 import com.sknote.app.databinding.ItemArticleSimpleBinding
 import com.sknote.app.util.ErrorUtil
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.util.fadeIn
 import com.sknote.app.util.fadeOut
@@ -53,7 +56,11 @@ class ReadingHistoryFragment : Fragment() {
         }
 
         adapter = HistoryAdapter { item ->
-            val bundle = Bundle().apply { putLong("article_id", item.articleId) }
+            val bundle = Bundle().apply {
+                putLong("article_id", item.articleId)
+                // 阅读历史接口已带上 `a.content`，还原成 Article 后整条预填。
+                putPrefill(NavPrefill.KEY_ARTICLE, item.toPrefillArticle())
+            }
             findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
         }
         binding.rvHistory.layoutManager = LinearLayoutManager(context)

@@ -10,6 +10,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.databinding.FragmentArticleListBinding
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.fadeIn
@@ -45,7 +47,16 @@ class ArticleListFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         adapter = ArticleAdapter { article ->
-            val bundle = Bundle().apply { putLong("article_id", article.id) }
+            val bundle = Bundle().apply {
+                putLong("article_id", article.id)
+                // 注意：文章列表接口（`articles.ts:22`）是明确列列名的查询，**不含
+                // `a.content`**（`SELECT a.*` 出现在同文件的详情查询 `:75`）。所以这里
+                // 带过去的 Article 是「没有正文的」，会被详情页的 content 守卫拒绝并
+                // 退回骨架路径 —— 这是刻意的：正文缺失时预填会让「相关讨论」卡片与
+                // 操作栏先出现再被顶下去，比骨架更糟。
+                // 若后端在列表查询里补上 `a.content`，这条路径无需改动即可自动生效。
+                putPrefill(NavPrefill.KEY_ARTICLE, article)
+            }
             findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
         }
         binding.rvArticles.layoutManager = LinearLayoutManager(context)

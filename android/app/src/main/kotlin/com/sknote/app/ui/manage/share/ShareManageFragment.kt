@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Share
 import com.sknote.app.databinding.FragmentShareManageBinding
@@ -48,7 +50,11 @@ class ShareManageFragment : Fragment() {
     private fun setupManageUi() {
         adapter = ShareManageAdapter(
             onView = { share ->
-                val bundle = Bundle().apply { putLong("share_id", share.id) }
+                val bundle = Bundle().apply {
+                    putLong("share_id", share.id)
+                    // 管理列表同样用 `SELECT *`，字段完整，可整页预填。
+                    putPrefill(NavPrefill.KEY_SHARE, share)
+                }
                 findNavController().navigate(R.id.shareDetailFragment, bundle, slideNavOptions())
             },
             onApprove = { share -> showApproveConfirm(share) },

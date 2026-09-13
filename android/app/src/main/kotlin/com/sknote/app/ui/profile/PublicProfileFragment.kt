@@ -16,6 +16,8 @@ import com.google.android.material.tabs.TabLayout
 import com.sknote.app.R
 import com.sknote.app.ui.discussion.KEY_DISCUSSION_ID
 import com.sknote.app.ui.discussion.putPrefillDiscussion
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.data.model.Share
@@ -407,7 +409,11 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Share>(list, ProfileContentAdapter.TYPE_SHARE) { item ->
-                    val bundle = Bundle().apply { putLong("share_id", item.id) }
+                    val bundle = Bundle().apply {
+                        putLong("share_id", item.id)
+                        // 该接口用 `SELECT *`（`follows.ts`），字段完整，可整页预填。
+                        putPrefill(NavPrefill.KEY_SHARE, item)
+                    }
                     findNavController().navigate(R.id.shareDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter

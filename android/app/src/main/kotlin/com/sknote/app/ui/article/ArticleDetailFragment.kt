@@ -15,9 +15,12 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.api.ApiClient
+import com.sknote.app.data.model.Article
 import com.sknote.app.databinding.FragmentArticleDetailBinding
+import com.sknote.app.util.NavPrefill
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.prefill
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.showSkeleton
 import kotlinx.coroutines.flow.first
@@ -84,8 +87,26 @@ class ArticleDetailFragment : Fragment() {
 
         setupScrollProgress()
 
-        showSkeleton(binding.skeletonContainer.root, binding.scrollView, binding.layoutError)
-        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        // 只有拿到**含正文**的完整 Article 才走预填，否则退回骨架路径。
+        //
+        // 正文缺失时必须退回骨架：这一页的「相关讨论」卡片与点赞/收藏操作栏都在正文
+        // 下方、且同在滚动容器内，正文留空会让它们先出现在屏幕上、再被正文顶下去，
+        // 比骨架更糟。
+        //
+        // 现状：**文章没有任何一条列表接口返回 `a.content`** —— `articles.ts:22` 的列表
+        // 查询（文章列表与搜索都用它）是明确列列名的，`aggregated.ts:16` 的首页查询、
+        // `bookmarks.ts:16`/`:82` 的收藏与历史查询同样没有取这一列；带 `SELECT a.*` 的
+        // `articles.ts:75` 是**详情**查询，正是这里想避开的那次请求。因此这条预填路径
+        // 目前对所有入口都会被守卫拒绝，页面走骨架 —— 与改造前一致，不会更糟。
+        // 后端只要在列表查询里补上 `a.content`，这里无需改动即可自动生效。
+        val prefill = arguments?.prefill<Article>(NavPrefill.KEY_ARTICLE)
+            ?.takeIf { !it.content.isNullOrEmpty() }
+        if (prefill != null) {
+            binding.skeletonContainer.root.visibility = View.GONE
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.scrollView, binding.layoutError)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
 
         viewModel.loadArticle(articleId)
 
@@ -120,11 +141,7 @@ class ArticleDetailFragment : Fragment() {
 
         viewModel.article.observe(viewLifecycleOwner) { article ->
             article ?: return@observe
-            if (!contentShown) {
-                contentShown = true
-                skeletonAnimator?.stop()
-                hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
-            }
+            revealContent()
             currentArticleTitle = article.title
             currentArticleSummary = article.summary.orEmpty()
             currentArticleContent = article.content.orEmpty()
@@ -147,6 +164,11 @@ class ArticleDetailFragment : Fragment() {
 
             markwon.setMarkdown(binding.tvContent, article.content.orEmpty())
         }
+
+        // 观察者注册之后再套用预填，保证 setPrefilledArticle 一定会被渲染。
+        // 这一页没有需要等待 ViewHolder 的列表，渲染是同步的，因此内容与可见性
+        // 都在首次布局之前就绪，不会出现空白帧。
+        prefill?.let { viewModel.setPrefilledArticle(it) }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
             if (error != null) {
@@ -252,6 +274,23 @@ class ArticleDetailFragment : Fragment() {
                     ApiClient.getService().recordHistory(articleId)
                 } catch (_: Exception) { }
             }
+        }
+    }
+
+    /**
+     * 首次显示真实内容。两条路径的进入方式不同，因此收敛到这里：
+     * 有预填数据时首帧就是正确的，直接显示；没有预填数据时整页骨架正在呼吸，交叉淡出。
+     */
+    private fun revealContent() {
+        if (contentShown) return
+        contentShown = true
+        val animator = skeletonAnimator
+        if (animator == null) {
+            binding.scrollView.visibility = View.VISIBLE
+        } else {
+            animator.stop()
+            skeletonAnimator = null
+            hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
         }
     }
 

@@ -19,6 +19,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentShareListBinding
 import com.sknote.app.util.SkeletonAnimator
@@ -67,7 +69,11 @@ class ShareListFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { navController.navigateUp() }
 
         adapter = ShareAdapter { share ->
-            val bundle = Bundle().apply { putLong("share_id", share.id) }
+            val bundle = Bundle().apply {
+                putLong("share_id", share.id)
+                // 列表接口用 `SELECT *`（`shares.ts`），字段完整，可整页预填。
+                putPrefill(NavPrefill.KEY_SHARE, share)
+            }
             navController.navigate(R.id.action_shares_to_detail, bundle)
         }
 

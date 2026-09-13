@@ -16,6 +16,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.databinding.FragmentSearchBinding
 import com.sknote.app.ui.home.ArticleAdapter
 import com.sknote.app.util.slideNavOptions
@@ -50,7 +52,13 @@ class SearchFragment : Fragment() {
         val navOptions = slideNavOptions()
 
         articleAdapter = ArticleAdapter { article ->
-            val bundle = Bundle().apply { putLong("article_id", article.id) }
+            val bundle = Bundle().apply {
+                putLong("article_id", article.id)
+                // 搜索结果与文章列表是同一个接口（`articles.ts:22`，带 search 参数），
+                // 同样**不含 `a.content`**，因此会被详情页的 content 守卫拒绝、退回骨架。
+                // 后端在列表查询里补上 `a.content` 后即自动生效。
+                putPrefill(NavPrefill.KEY_ARTICLE, article)
+            }
             findNavController().navigate(R.id.articleDetailFragment, bundle, navOptions)
         }
         binding.rvResults.apply {

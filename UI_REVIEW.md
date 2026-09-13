@@ -947,6 +947,124 @@ if (params == null)
 2. **评论行高只对「两行评论」精确 —— 已量化为一个行盒**：实测首条真实评论是 1 行（卡高 350px），占位按两行构造（卡高 414px），于是第二张卡 **1974 → 1910，差 64px = 21.3dp**，恰为一个行盒。滚动可见真实评论有 1/2/3/4 行多种，**评论行数本就参差，这个差无法预知**。首条评论的顶边不受影响（1536，见上）。
 3. **用户主页两个入口不带 `author_avatar`/`category_name`**：分类走 slug 兜底（已实测正确）；头像在详情接口回来前显示默认图标，之后补齐（36dp 固定，无位移）。
 
+### 第二十批（文章 / 分享详情页预填，未提交）
+
+**范围**：用户选定「文章 + 分享详情页预填」。
+
+**调研 —— 先纠正我自己的一个漏检**
+
+按字面量 `articleDetailFragment` grep，只找到 5 个入口，**漏掉了首页那两个用 action id 导航的入口**（`HomeFragment` 走 `R.id.action_home_to_articleDetail` / `action_home_to_shareDetail`），而首页是最高频入口。改为重扫 `nav_graph.xml` 中所有以这三个详情页为目的地的 `action`，才补全清单。
+
+｜页面｜入口｜点击时手上的数据｜后端出处｜能否预填｜
+|---|---|---|---|
+| 文章 | 文章列表 | `Article`，但**无 `content`** | `articles.ts:22-23` 列表查询是明确列列名的 | ❌ |
+| 文章 | 搜索 | 同上（同一接口 + `search` 参数） | 同上 | ❌ |
+| 文章 | 首页最新文章 | 仅标题/摘要，**无 `content`** | `aggregated.ts:16-17` 明确列列名 | ❌ |
+| 文章 | 收藏 | `BookmarkItem`，**无 `content`** | `bookmarks.ts:16-18` | ❌ |
+| 文章 | 阅读历史 | `HistoryItem`，**无 `content`** | `bookmarks.ts:82-84` | ❌ |
+| 文章 | 通知 | 仅 `article_id` | — | ❌ 冷路径 |
+| 分享 | 分享列表 / 分享管理 / 公开主页 / 我的主页 / 首页最新分享 | 完整 `Share` | `shares.ts:21`、`:259`、`follows.ts:249`、`aggregated.ts:25` 全部 `SELECT *` | ✅ 整页 ×5 |
+| 分享 | 通知 | 仅 `share_id` | — | ❌ 冷路径 |
+
+**关键结论：文章页不能做「部分预填」，而文章目前也没有任何入口可预填**
+
+`fragment_article_detail.xml` 里「相关讨论」卡片与点赞/收藏操作栏**都在正文下方、且同在 `scrollView` 内**。若只预填页头、正文留空，这些元素会先出现在屏幕上、再被正文顶下去 —— **比现状更糟**。因此加了 `content` 守卫：**只有 `content` 非空才走预填**，否则退回骨架路径。
+
+**⚠️ 我在这里犯过一个错，并已订正**：我最初按 grep 结果把 `articles.ts:75` 的 `SELECT a.*` 当成了**列表**查询，据此断言「文章列表与搜索接口含正文」。实际读文件后确认 —— **`:22-23` 才是列表查询（明确列列名，不含 `a.content`），`:75` 是 `GET /:id` 详情查询**。生产接口返回也印证了这一点（只有 id/title/summary/category_id/author_id/view_count/like_count/sort_order/created_at/updated_at/author_name/author_avatar/category_name，**没有 content**）。
+
+所以修正后的结论是：**文章侧没有任何列表接口返回正文**（列表 `articles.ts:22`、首页 `aggregated.ts:16`、收藏 `bookmarks.ts:16`、历史 `bookmarks.ts:82` 全都没有取这一列），**预填对文章全部入口都会被守卫拒绝、走骨架** —— 与改造前一致，不会更糟，但也**没有带来任何改善**。
+
+分享侧经逐行核实成立：`shares.ts:14`（公开列表）、`follows.ts:249`（用户主页列表）、`shares.ts:259`（管理列表）、`aggregated.ts:25`（首页最新分享）**都是列表查询且都用 `SELECT *`**，`Share` 模型自带详情页所需全部字段，可整页预填。
+
+**改动**（12 个文件，+约 200/−90）
+
+1. 新增 `util/NavPrefill.kt`：把承载机制从「讨论页专用」提升为通用（Gson 序列化进 Bundle 的理由同第十九批）。`DiscussionNavArgs` 改为两行委派 —— **键名与序列化方式都没变，讨论页行为等价**。
+2. `ArticleDetailFragment`：抽出 `revealContent()`，热/冷两条路径收敛；预填经 `setPrefilledArticle` 走**同一条**观察者渲染路径。这一页没有需要等待 ViewHolder 的列表，渲染是同步的，因此内容与可见性都在首次布局之前就绪，不会出现空白帧。
+3. `ShareDetailFragment`：把原本内联在 `loadShare` 里的渲染抽成 `renderShare(share)`，预填与详情接口**共用同一份**，避免「预填一套 / 接口一套」。
+4. 6 个入口改传完整对象：文章列表、搜索、分享列表、分享管理、公开主页、我的主页、首页最新分享。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors**、2356 warnings（无新增）。
+
+**承载层实证（不需要真机，用真实编译产物 + 真实 `gson-2.10.1.jar` 跑往返）**
+
+| 项 | 结果 |
+|---|---|
+| `Article` 经新的通用承载器往返 | `ARTICLE_EQUAL=true`；80 段中文正文 JSON **5780 字节**（Binder 上限 524288） |
+| `Share` 往返 | `SHARE_EQUAL=true`；JSON 299 字节 |
+| 键不存在（未预填的入口） | `MISSING_KEY_DECODES_TO_NULL=true` → 退回骨架路径，不崩 |
+| 载荷损坏 | `GARBAGE_DECODES_TO_NULL=true` → 退回骨架路径，不崩 |
+
+后两项是这次新加的兜底：预填是「有则更好、没有就退回原行为」，任何异常都不得影响可用性。
+
+**真机验证（本轮已做，结论与预期不同）**
+
+工具换成 `uiautomator dump` 读视图树：既能确定当前在哪一页，也能拿到控件精确 bounds —— 解决了上一轮「帧无法归因」与「坐标靠猜」两个问题。底部导航容器实际是 `[0,2157][1176,2301]`（中心 y=2229），此前按截图估的 2262 偏下，那正是上一轮点击时灵时不灵的原因。
+
+| 项 | 方法 | 结果 |
+|---|---|---|
+| 讨论页回归（承载重构后） | 连拍 12 帧比对颜色跳变位置 | 与重构前**逐位相同**：k2(536ms) == k12(5372ms)，`300/179 480/12 495/83 … 1155/25 1185/351`；首条评论卡顶边 1536/1536；骨架块仅在评论行内部 |
+| `content` 守卫的回退 | 后端尚未返回正文时，加 8 秒延迟连拍 | **显示骨架** → 守卫拒绝预填并走骨架，没有出现「页头真实、操作栏被顶下去」的坏情况 |
+| **文章热路径**（后端补列并部署后） | 加 8 秒延迟，从首页文章卡进入 | `ah3@854ms` 已是**完整真实文章**（公告/标题/管理员/30 阅读/正文/相关讨论/操作栏）。8 秒延迟意味着网络响应不可能已返回，内容只能来自预填 ✓ |
+| **分享热路径** | 加 8 秒延迟，从分享列表进入 | `art3@914ms` 已是**完整真实分享**（描述、作者、8分钟前、0 浏览、下载信息卡、密码、点赞/下载按钮）✓ |
+| 文章列表 / 搜索两个入口 | — | **未单独跑通**：设备的合成点击两次把「查看全部」落到了分享入口。二者与已验证的首页入口走**完全相同**的预填与守卫代码，且两个接口现在都返回 `content`（已从外部 API 确认），但没有它们的独立实测帧 |
+
+**一次差点写错的结论**：12 帧连拍下，文章列表入口的 `w2@561ms` 已是完整文章且无骨架，我一度以为热路径生效。随后用首页入口做对照 —— 它没有任何预填、必然是冷路径，却在 `569ms` 也已完整渲染。**这个网络下 ~460ms 就能整页渲染完，冷路径同样抓不到骨架窗口**，所以那条「证据」根本不成立。改成临时加 8 秒延迟后才得到真实结论：文章预填没有生效，因为接口没有正文。
+
+验证用的 8 秒延迟已移除并重新构建；它不是交付内容的一部分。
+
+**后端改动（让文章预填真正有数据可填）**
+
+按 grep 结果直接读文件核实后，在四条**列表**查询里补上 `a.content`：
+
+| 文件 | 位置 | 影响入口 |
+|---|---|---|
+| `articles.ts` | 列表查询（`edgeCache(120)`） | 文章列表、搜索 |
+| `aggregated.ts` | 首页文章查询（`edgeCache(300)`） | 首页最新文章 |
+| `bookmarks.ts` | 收藏列表 | 收藏 |
+| `bookmarks.ts` | 阅读历史列表 | 阅读历史 |
+
+四处都加了注释说明「这一列是给客户端预填用的，删掉不会崩但会丢掉优化」，避免以后被当成冗余列清理掉。
+
+Android 侧配套：`HomeFragment`、`BookmarkListFragment`、`ReadingHistoryFragment` 三个入口改传整条对象；`BookmarkItem`/`HistoryItem` 补 `content` 字段，并各加一个 `toPrefillArticle()`（这两条查询不返回 `author_id`/`category_id`/`author_avatar`，用 0/null 占位 —— 守卫只要求正文非空，其余字段由详情接口在同一行内补齐，不引起位移）。
+
+**SQL 已用真实 schema 实证**（`node:sqlite` + 仓库里的 `schema.sql`，建表后插入一行真实数据再跑改过的查询）：
+
+```
+OK   articles list   (articles.ts)      rows=1  content="BODY-TEXT"
+OK   home articles   (aggregated.ts)    rows=1  content="BODY-TEXT"
+OK   bookmarks       (bookmarks.ts)     rows=1  content="BODY-TEXT"
+OK   reading history (bookmarks.ts)     rows=1  content="BODY-TEXT"
+ALL_SQL_VALID
+```
+
+**部署过程中的一次生产事故（我造成的，已修复）**
+
+`deploy_now.py` 上传的是**整棵后端源码树**（25 个文件），不只是本次改动。执行后生产立刻 502，`pm2` 状态 `errored`、连续重启 23 次。日志：
+
+```
+Error: Cannot find module '../clientIp'
+  at /opt/sk-note-backend/src/middleware/rateLimit.ts:3:29
+```
+
+**根因**：脚本的上传清单里有 `src/middleware/rateLimit.ts`，却**没有它新引入的依赖 `src/clientIp.ts`**。新版 `rateLimit.ts` 覆盖了线上旧版，而那个依赖文件从未被上传过 → 模块解析失败、进程起不来。核对后：本机 `src/` 下共 **22 个 `.ts`**，清单漏了 **2 个** —— `src/clientIp.ts`、`src/sqlUtils.ts`。
+
+**这正是我事先提示过的「整树上传」风险，只是以我没预料到的方式炸了**：我一行都没碰 `rateLimit.ts`，但整树上传把它一起带上去了。
+
+**修复过程**：上传缺失的两个文件 → `pm2 restart sk-note-api` → 服务恢复（`online`，内存 104MB，四个接口全部 HTTP 200，`/api/articles` 与 `/api/home` 均已带 `content`）。
+
+**顺带修掉脚本本身的三处缺陷，避免复发**：
+
+1. **加预检**（最重要）：部署前比对 `src/**/*.ts` 与实际清单，缺任何一个就**在建立连接之前**中止。这类「漏传依赖导致线上起不来」的事故以后不可能再发生 —— 宁可拒绝部署，也不要在上传到一半之后才发现。
+2. `local_base` 改为由脚本自身位置推导（`os.path.dirname(os.path.abspath(__file__))`），不再写死 `C:\Users\Administrator\Desktop\laster\sk_note\backend` —— 原值在其它机器/用户下根本不存在。
+3. `sys.stdout.reconfigure(encoding='utf-8', errors='replace')`：原脚本在打印 pm2 输出时会因控制台 GBK 编不出 `✓` 而抛 `UnicodeEncodeError`，导致**部署成功了却仍以异常退出**（本次就遇到了，一度让我无法从脚本输出判断 pm2 是否重启成功）。
+
+**残留**
+
+1. **文章列表 / 搜索两个入口未单独实测**：二者与已验证的首页入口走完全相同的预填与守卫路径，接口也已确认返回 `content`，但没有独立实测帧。
+2. 通知入口（文章 / 分享的冷路径）保持骨架不变。
+3. 部署脚本的上传清单仍需人工维护 —— 预检只能拦住「本地有、清单没有」，拦不住反向（清单里有而线上多余，无害）。
+4. 按既定流程未提交。
+
 ---
 
 ## 九、剩余待办
@@ -968,6 +1086,7 @@ if (params == null)
 1. **状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板
 2. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
 3. **讨论详情的通知入口仍走整页骨架**（其余 5 个入口已改为预填真实页头）：该入口只带 `discussion_id`，没有可预填的数据。若要完全统一，需给 `DiscussionHeaderAdapter` 增加「占位页头」viewType，与评论占位同样作为 item 渲染
+4. ~~文章预填对所有入口都不生效（列表查询没取 `a.content`）~~ —— **已修复**：四条列表查询补上该列并部署，文章预填已生效（见第二十批）
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
