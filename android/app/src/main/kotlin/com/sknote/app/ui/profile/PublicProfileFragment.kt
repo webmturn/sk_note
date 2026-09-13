@@ -14,6 +14,8 @@ import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.sknote.app.R
+import com.sknote.app.ui.discussion.KEY_DISCUSSION_ID
+import com.sknote.app.ui.discussion.putPrefillDiscussion
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Discussion
 import com.sknote.app.data.model.Share
@@ -346,11 +348,11 @@ class PublicProfileFragment : Fragment() {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Discussion>(list, ProfileContentAdapter.TYPE_DISCUSSION) { item ->
                     val bundle = Bundle().apply {
-                        putLong("discussion_id", item.id)
-                        putString("prefill_title", item.title)
-                        putString("prefill_author_name", item.authorName)
-                        putString("prefill_category_name", item.categoryName)
-                        putString("prefill_created_at", item.createdAt)
+                        putLong(KEY_DISCUSSION_ID, item.id)
+                        // 该接口用 SELECT d.* 取数，正文与各项计数都完整；
+                        // 注意它不带 author_avatar，头像会先显示默认图标再由详情接口补齐
+                        // （36dp 固定尺寸，不会引起位移）。
+                        putPrefillDiscussion(item)
                     }
                     findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                 }

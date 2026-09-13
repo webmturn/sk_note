@@ -22,6 +22,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Comment
+import com.sknote.app.data.model.Discussion
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.sknote.app.databinding.FragmentDiscussionDetailBinding
@@ -44,6 +45,7 @@ class DiscussionDetailFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: DiscussionDetailViewModel by viewModels()
     private lateinit var commentAdapter: CommentAdapter
+    private lateinit var commentPlaceholderAdapter: CommentPlaceholderAdapter
     private lateinit var headerAdapter: DiscussionHeaderAdapter
     private lateinit var markwon: Markwon
     private var discussionId: Long = 0
@@ -55,6 +57,23 @@ class DiscussionDetailFragment : Fragment() {
     private var replyTargetName: String = ""
     private var skeletonAnimator: SkeletonAnimator? = null
     private var contentShown: Boolean = false
+
+    /** 导航参数带来的预填数据，等页头 ViewHolder 就绪后套用，套用后置空。 */
+    private var pendingPrefill: Discussion? = null
+
+    /** 真实评论是否已经渲染过。用于避免预填的占位行与真实评论同时存在。 */
+    private var commentsLoaded: Boolean = false
+
+    private companion object {
+        /**
+         * 占位评论行上限。占位行只需铺满页头以下的首屏，多出来的本来就在屏幕之外，
+         * 因此不必按真实评论数铺满——真实评论数可能是几百条。
+         */
+        const val MAX_COMMENT_PLACEHOLDERS = 6
+
+        /** 等页头 ViewHolder 就绪的帧数上限，防止极端情况下无限重试。 */
+        const val MAX_PREFILL_WAIT_FRAMES = 10
+    }
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
         get() = headerAdapter.headerBinding
@@ -90,23 +109,74 @@ class DiscussionDetailFragment : Fragment() {
         return binding.root
     }
 
-    private fun prefillHeader() {
-        val args = arguments ?: return
-        val h = hb ?: return
-        val title = args.getString("prefill_title")
-        val author = args.getString("prefill_author_name")
-        val category = args.getString("prefill_category_name")
-        val time = args.getString("prefill_created_at")
-        if (!title.isNullOrEmpty()) h.tvTitle.text = title
-        if (!author.isNullOrEmpty()) h.tvAuthor.text = author
-        if (!category.isNullOrEmpty()) h.chipCategory.text = category
-        if (!time.isNullOrEmpty()) h.tvTime.text = TimeUtil.formatRelative(time)
+    /**
+     * 用导航参数带来的讨论数据渲染页头。
+     *
+     * 数据来源见 [DiscussionNavArgs]：列表接口本就返回完整正文与各项计数，
+     * 所以页头第一帧就能是真实内容，不需要任何占位块。
+     * 必须等 rvMain 完成首次布局后调用——headerBinding 在 header ViewHolder 建好前为 null。
+     */
+    private fun applyPrefill(prefill: Discussion) {
+        // 真实评论已经在手上时绝不能再插占位行。配置变更后 ViewModel 存活，
+        // 观察者会带着已加载的 comments 先触发；这里若无条件插入，占位行就会
+        // 被追加到真实评论下方。
+        if (!commentsLoaded) {
+            commentPlaceholderAdapter.show(prefill.replyCount.coerceIn(0, MAX_COMMENT_PLACEHOLDERS))
+            hb?.tvCommentsHeader?.text = "评论 (${prefill.replyCount})"
+        }
+        // 交给观察者按常规路径渲染，避免页头出现「预填一套 / 接口一套」两段逻辑。
+        viewModel.setPrefilledDiscussion(prefill)
+    }
+
+    /**
+     * 等页头 ViewHolder 建好后再套用预填数据。
+     *
+     * 不能只 post 一次：View.post 在视图尚未 attach 时会排进 HandlerActionQueue，
+     * 由 dispatchAttachedToWindow 执行，那一刻**早于首次 layout**，此时
+     * headerBinding 还是 null，预填会被静默丢掉（旧实现就是 `hb ?: return`，
+     * 预填是否生效取决于 attach 与 layout 的先后，并不可靠）。
+     * 这里逐帧重试到就绪为止，并在极端情况下放弃——放弃只是退回「等接口」，
+     * 不会卡住页面。
+     */
+    private fun renderPendingPrefill(attempt: Int = 0) {
+        val prefill = pendingPrefill ?: return
+        if (hb == null || !binding.rvMain.isLaidOut) {
+            if (attempt >= MAX_PREFILL_WAIT_FRAMES) {
+                pendingPrefill = null
+                return
+            }
+            binding.rvMain.post {
+                if (_binding != null) {
+                    renderPendingPrefill(attempt + 1)
+                }
+            }
+            return
+        }
+        pendingPrefill = null
+        applyPrefill(prefill)
+    }
+
+    /**
+     * 首次显示真实内容。两条路径的进入方式不同，因此收敛到这里：
+     * 有预填数据时首帧就是正确的，直接显示；没有预填数据时整页骨架正在呼吸，交叉淡出。
+     */
+    private fun revealContent() {
+        if (contentShown) return
+        contentShown = true
+        val animator = skeletonAnimator
+        if (animator == null) {
+            binding.rvMain.visibility = View.VISIBLE
+        } else {
+            animator.stop()
+            skeletonAnimator = null
+            hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvMain)
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        discussionId = arguments?.getLong("discussion_id", 0L) ?: 0L
+        discussionId = arguments?.getLong(KEY_DISCUSSION_ID, 0L) ?: 0L
         if (discussionId <= 0L) {
             Toast.makeText(requireContext(), "无效的讨论ID", Toast.LENGTH_SHORT).show()
             findNavController().navigateUp()
@@ -137,6 +207,7 @@ class DiscussionDetailFragment : Fragment() {
             }
 
         headerAdapter = DiscussionHeaderAdapter()
+        commentPlaceholderAdapter = CommentPlaceholderAdapter()
         commentAdapter = CommentAdapter(
             onReplyClick = { comment ->
                 viewLifecycleOwner.lifecycleScope.launch {
@@ -181,12 +252,23 @@ class DiscussionDetailFragment : Fragment() {
         )
         binding.rvMain.apply {
             layoutManager = LinearLayoutManager(context)
-            adapter = ConcatAdapter(headerAdapter, commentAdapter)
+            // 顺序即版面顺序：页头 → 占位评论行 → 真实评论行。
+            // 占位行与真实行共用同一套行高（见 layout_skeleton_comment_row.xml），
+            // 数据回来后占位整体清空，首条评论的顶边位置不变。
+            adapter = ConcatAdapter(headerAdapter, commentPlaceholderAdapter, commentAdapter)
         }
-        binding.rvMain.post { prefillHeader() }
 
-        showSkeleton(binding.skeletonContainer.root, binding.layoutError)
-        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        val prefill = arguments?.prefillDiscussion()
+        if (prefill != null) {
+            // 预填路径：页头所需数据在点击时就已具备，首帧直接是真实内容，不使用整页骨架。
+            binding.skeletonContainer.root.visibility = View.GONE
+            pendingPrefill = prefill
+        } else {
+            // 冷启动路径（通知入口只带 discussion_id）：没有可预填的数据，
+            // 正文高度在数据到达前本质上不可知，只能沿用整页骨架。
+            showSkeleton(binding.skeletonContainer.root, binding.layoutError)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
 
         binding.btnLoginReply.setOnClickListener {
             findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
@@ -212,6 +294,8 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         observeData()
+        // 观察者注册之后再套用预填，保证 setPrefilledDiscussion 一定会被渲染。
+        renderPendingPrefill()
         refreshUserContext(loadDiscussion = true)
     }
 
@@ -219,11 +303,7 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.discussion.observe(viewLifecycleOwner) { discussion ->
             discussion ?: return@observe
             val h = hb ?: return@observe
-            if (!contentShown) {
-                contentShown = true
-                skeletonAnimator?.stop()
-                hideSkeletonAndShow(binding.skeletonContainer.root, binding.rvMain)
-            }
+            revealContent()
             currentDiscussionAuthorId = discussion.authorId
             h.tvTitle.text = discussion.title
             h.tvAuthor.text = discussion.authorName ?: "匿名"
@@ -381,6 +461,10 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         viewModel.comments.observe(viewLifecycleOwner) { comments ->
+            commentsLoaded = true
+            // 真实评论到达，撤掉占位行。两者共用同一套行高，且首条评论的顶边
+            // 与首条占位行的顶边都紧贴页头底部，因此这一步不产生位移。
+            commentPlaceholderAdapter.clear()
             commentAdapter.submitList(comments)
             hb?.tvCommentsHeader?.text = "评论 (${comments.size})"
             hb?.layoutNoComments?.visibility = if (comments.isEmpty()) View.VISIBLE else View.GONE
@@ -567,6 +651,8 @@ class DiscussionDetailFragment : Fragment() {
         skeletonAnimator?.stop()
         skeletonAnimator = null
         contentShown = false
+        pendingPrefill = null
+        commentsLoaded = false
         _binding = null
     }
 }

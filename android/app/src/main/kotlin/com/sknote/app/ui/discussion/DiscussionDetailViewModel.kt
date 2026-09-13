@@ -41,6 +41,20 @@ class DiscussionDetailViewModel : ViewModel() {
     fun onCommentSentHandled() { _commentSent.value = null }
     fun onDeletedHandled() { _deleted.value = null }
 
+    /**
+     * 用导航参数里带过来的讨论数据先把页头渲染出来。
+     *
+     * 这一步不产生任何网络请求，也不改变加载流程：它只是把 [discussion] 作为
+     * `_discussion` 的当前值，让页面按常规观察者路径渲染一次真实内容，
+     * 详情接口回来后用同样的路径再渲染一次（数值可能更新，例如浏览数、评论数）。
+     *
+     * 已有真实数据时不覆盖，避免迟到的预填把接口结果顶掉。
+     */
+    fun setPrefilledDiscussion(discussion: Discussion) {
+        if (_discussion.value != null) return
+        _discussion.value = discussion
+    }
+
     fun loadDiscussion(id: Long) {
         viewModelScope.launch {
             _isLoading.value = true

@@ -14,7 +14,10 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.BuildConfig
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
+import com.sknote.app.data.model.Discussion
 import com.sknote.app.databinding.FragmentFeedbackBinding
+import com.sknote.app.ui.discussion.KEY_DISCUSSION_ID
+import com.sknote.app.ui.discussion.putPrefillDiscussion
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -172,7 +175,25 @@ class FeedbackFragment : Fragment() {
                 if (response.isSuccessful) {
                     val createdId = response.body()?.id
                     if (createdId != null && createdId > 0) {
-                        val bundle = Bundle().apply { putLong("discussion_id", createdId) }
+                        // 刚提交的标题与正文就在手上，直接带进详情页，不必再等一次请求
+                        // 才显示内容。作者名取本地 Token 缓存（反馈必须登录后提交），
+                        // 取不到就留空，由详情接口补齐。
+                        val tokenManager = ApiClient.getTokenManager()
+                        val displayName = tokenManager.getNickname().first()?.takeIf { it.isNotBlank() }
+                            ?: tokenManager.getUsername().first()
+                        val bundle = Bundle().apply {
+                            putLong(KEY_DISCUSSION_ID, createdId)
+                            putPrefillDiscussion(
+                                Discussion(
+                                    id = createdId,
+                                    title = request.title,
+                                    content = request.content,
+                                    authorId = tokenManager.getUserId().first() ?: 0L,
+                                    authorName = displayName,
+                                    category = request.category
+                                )
+                            )
+                        }
                         findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                     } else {
                         Snackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()

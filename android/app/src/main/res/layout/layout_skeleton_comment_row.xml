@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Mirrors item_comment.xml: surfaceVariant card with 32dp circle avatar,
-     author + time top row, multi-line content, and like/reply/copy button row. -->
+<!--
+  评论行的占位，必须与 item_comment.xml 逐项等高。
+  两个用途共用同一份布局：
+    1. 冷启动整页骨架（layout_skeleton_discussion_detail.xml）里的若干行；
+    2. 有预填数据时，作为 rvMain 里的「占位即真实 item」若干行。
+  因此水平内缩必须由本布局自己声明（与 item_comment.xml 一致），不能依赖父容器 padding，
+  否则两条路径的内缩会不一致。
+
+  ── 等高是怎么保证的 ──
+  下面每个色块都不是固定高度的 View，而是「与真实控件同字号同字距的 TextView + 空文本 +
+  minLines + skeleton_block 背景」。高度由此处的字体度量算出，与真实 TextView 走的是同一套
+  计算，因此不需要手算 dp，也不会因为 includeFontPadding / 字体缩放 / 用户改字号而失配。
+
+  旧实现用的是固定高度色块，实际差得很远：按钮行只有 11dp，而真实 btnLike 是 48dp 的
+  触控区；作者行 11dp vs 真实 13sp 行盒；正文两行 35dp vs 真实 14sp×1.3 的两行盒。
+  逐行累计下来每行比真实矮约 57dp —— 这正是「呼吸骨架 → 加载完成」跳变的一大来源。
+-->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
+    android:layout_marginHorizontal="@dimen/comment_card_inset"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp"
@@ -17,6 +33,7 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <!-- 头像：与 item_comment 的 32dp 卡片 + marginEnd/marginTop 完全一致 -->
         <View
             android:layout_width="32dp"
             android:layout_height="32dp"
@@ -30,69 +47,89 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
+            <!-- 作者行：与真实行同为 13sp 单行盒 -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <View
+                <TextView
                     android:layout_width="70dp"
-                    android:layout_height="11dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
 
                 <View
                     android:layout_width="0dp"
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <View
+                <TextView
                     android:layout_width="50dp"
-                    android:layout_height="9dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="11sp"
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
             </LinearLayout>
 
-            <View
+            <!-- 正文：按「两行评论」占位，与真实 14sp×1.3 的两行盒等高 -->
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="11dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/skeleton_block" />
+                android:layout_height="wrap_content"
+                android:minLines="2"
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.3"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/skeleton_block"
+                android:importantForAccessibility="no" />
 
-            <View
-                android:layout_width="200dp"
-                android:layout_height="11dp"
-                android:layout_marginTop="5dp"
-                android:background="@drawable/skeleton_block" />
-
+            <!-- 操作行：真实行高度由 48dp 的 btnLike 决定，这里直接对齐 48dp -->
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="48dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="4dp">
 
-                <View
+                <TextView
                     android:layout_width="20dp"
-                    android:layout_height="11dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="12sp"
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
 
-                <View
+                <TextView
                     android:layout_width="14dp"
-                    android:layout_height="9dp"
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="12sp"
                     android:layout_marginStart="6dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
 
-                <View
+                <TextView
                     android:layout_width="24dp"
-                    android:layout_height="11dp"
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="12sp"
                     android:layout_marginStart="14dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
 
-                <View
+                <TextView
                     android:layout_width="24dp"
-                    android:layout_height="11dp"
+                    android:layout_height="wrap_content"
+                    android:minLines="1"
+                    android:textSize="12sp"
                     android:layout_marginStart="12dp"
-                    android:background="@drawable/skeleton_block" />
+                    android:background="@drawable/skeleton_block"
+                    android:importantForAccessibility="no" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

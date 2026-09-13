@@ -13,6 +13,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import androidx.core.os.bundleOf
 import com.sknote.app.R
+import com.sknote.app.ui.discussion.KEY_DISCUSSION_ID
+import com.sknote.app.ui.discussion.putPrefillDiscussion
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Discussion
@@ -59,11 +61,10 @@ class DiscussionManageFragment : Fragment() {
         adapter = DiscussionManageAdapter(
             onView = { discussion ->
                 val bundle = Bundle().apply {
-                    putLong("discussion_id", discussion.id)
-                    putString("prefill_title", discussion.title)
-                    putString("prefill_author_name", discussion.authorName)
-                    putString("prefill_category_name", discussion.categoryName)
-                    putString("prefill_created_at", discussion.createdAt)
+                    putLong(KEY_DISCUSSION_ID, discussion.id)
+                    // 列表接口返回的是完整 Discussion，整条带过去，
+                    // 详情页第一帧就能渲染真实页头。
+                    putPrefillDiscussion(discussion)
                 }
                 findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
             },

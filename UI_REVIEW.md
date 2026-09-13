@@ -882,6 +882,71 @@ if (params == null)
 
 **过程问题**：本轮我误敲了一条 `git -c config.txt`，并在未改动 `UI_REVIEW.md` 的情况下 `git add` 后用了 `--allow-empty`，造出一个**内容为空、说明却写着「记录自审发现」的提交**。已补写本节内容并修正该提交 —— 空提交配不实说明属于假记录，不能留。
 
+### 第十九批（讨论详情页改用「占位即真实 item」，已修复）
+
+**问题**：讨论详情页从整页骨架到加载完成有明显跳变。实测骨架页头到 347dp、真实页头约 423dp，差 **76dp**。
+
+**先调研数据，再定方案**（这一步推翻了我自己上一轮的结论）
+
+| 项 | 结论 | 出处 |
+|---|---|---|
+| 讨论区列表接口 | 返回**完整正文** + `view_count` + `reply_count` + `author_avatar` | `backend/src/routes/discussions.ts` 列表查询 |
+| 用户主页列表接口 | `SELECT d.*` → 正文与计数**同样完整**；但**不带** `author_avatar`，也**没有** `category_name` 别名 | `backend/src/routes/follows.ts:191` |
+| 反馈入口 | 提交时**有**本地 `title/content/category` 与 `createdId` | `FeedbackFragment` |
+| 通知入口 | **只有** `discussion_id` | `NotificationFragment` |
+| `kotlin-parcelize` | **未启用**，且插件 Gradle marker **不在本机缓存**（只有 `kotlin-parcelize-runtime` 1.9.22，Kotlin 版本是 1.9.20） | Gradle 缓存实测 |
+
+**关键更正**：我上一轮判断「正文高度在列表期不可知，所以跳变无法消除」是**错的**。列表接口本来就返回完整正文与各项计数 —— 页头所需数据在点击那一刻已全部在手上，只是没有传过来。因此官方做法（占位即真实 item）在这里能把页头跳变**彻底消除**，而不是只能缓解。
+
+**改造**（9 个文件改动 + 2 个新文件）
+
+1. 新增 `DiscussionNavArgs.kt`：把整条 `Discussion` 经 Gson 放进导航参数。不用 `Parcelable` 的理由是上面那条缓存实测 —— 启用插件要联网拉取，构建风险高于收益；Gson 本就是本工程的序列化方式，`Discussion` 在生产里一直由它反序列化。
+2. 新增 `CommentPlaceholderAdapter.kt`：评论占位作为 `ConcatAdapter` 独立一段，插在页头与真实评论之间。**不改 `CommentAdapter`**。
+3. `layout_skeleton_comment_row.xml` 重写为**精确等高**：色块不再是固定高度的 `View`，而是「与真实控件同字号同字距的 `TextView` + 空文本 + `minLines` + 块背景」。高度由平台按**同一套字体度量**算出，因此不需要手算 dp，也不会因 `includeFontPadding`、字体缩放或用户改字号而失配。旧实现按钮行只有 11dp，而真实 `btnLike` 是 48dp 的触控区。
+4. `DiscussionDetailFragment`：抽出 `revealContent()`，冷/热两条路径收敛到一处；预填数据经 `viewModel.setPrefilledDiscussion()` 走**同一条**渲染路径（观察者），不产生「预填一套 / 接口一套」两段页头代码。
+5. 5 个入口改传整条 `Discussion`：讨论区、讨论管理、公开主页、我的主页、反馈。
+
+**自查中发现并修掉的两个真实缺陷**
+
+1. `View.post` 在视图未 attach 时排进 `HandlerActionQueue`，由 `dispatchAttachedToWindow` 执行，**早于首次 layout**，此刻 `headerBinding` 仍为 null。旧代码 `binding.rvMain.post { prefillHeader() }` 里的 `hb ?: return` 会把预填**静默吞掉**（是否生效取决于 attach 与 layout 的先后）。改为逐帧重试到页头就绪，上限 10 帧。
+2. 配置变更后 `ViewModel` 存活、`comments` 已有数据、观察者先触发；此时预填若无条件插占位行，会把占位行**追加到真实评论下方**。加 `commentsLoaded` 守卫。
+
+**实证**
+
+| 项 | 方法 | 结果 |
+|---|---|---|
+| Gson 承载无损 | 用**真实编译产物**（`kotlin-classes/debug`）+ 真实 `gson-2.10.1.jar` 跑 `toJson`→`fromJson` 比对 | `ROUNDTRIP_EQUAL=true` |
+| 体积安全 | 60 段中文正文（含引号、反斜杠、换行） | JSON **4444 字节**，Binder 事务上限 524288 |
+| 构建 | `:app:assembleDebug` | 通过 |
+| Lint | `:app:lintDebug` | **0 errors**、2356 warnings |
+
+**lint 的一个插曲**：首次 lint 在 `DiscussionDetailFragment.kt:391`（`R.id.action_pin -> {`）报 `SuspiciousIndentation`。那行**一行未改**，同一个 `when` 的其余 4 个分支也都没报；报错称该行「缩进了但没嵌套在 394 行的 `if (_binding == null)` 之下」，时序上不可能，属启发式被新代码带偏。把我新加的那处单行无花括号 `if`（`post { if (_binding != null) renderPendingPrefill(...) }`）改为花括号写法后消失。**未用 `lint.xml` 压制**。
+
+**真机逐帧实测**（HUAWEI LIO-AN00 / 1176×2400 / 480dpi / 夜间；连拍 12 帧，非肉眼判断，比的是**颜色跳变位置**——位置不随呼吸 alpha 变化）
+
+主路径「讨论区 → 详情」（选第一条，16 回复 / 44 阅读）：
+
+| 帧 | 时间 | 评论卡顶边位置 | `#202028` 骨架块 |
+|---|---|---|---|
+| f1 | 115ms | 1476, 1509, 1898（**仍是列表页**） | — |
+| **f2** | **574ms** | **1536**, 1758, 1974, … | **1637, 2075**（仅在评论行内部） |
+| f3 | 981ms | **1536**, 1910, 2056, 2185 | 无 |
+| f12 | 5474ms | **1536**, 1910, 2056, 2185 | 无 |
+
+1. **整页骨架从未出现**。`#202028` 只在 **一帧**（574ms）出现，且只出现在评论行内部的位置（1637/2075）；若整页骨架在显示，会在 chip、标题、头像、正文各行都出现色块——一个都没有。
+2. **页头零位移**。y=300…1536 的跳变序列在 f2 与 f12 之间**逐项相同**（位置与长度全部相等）：`300/179, 480/12, 495/83, 579..627, 627/203, 833/61, 898/11, 914/236, 1155/25, 1185/351`。
+3. **首条评论零位移**。首张卡顶边在占位态与加载态**都是 y=1536**。
+4. **981ms 后页面再无任何移动**：f3 与 f12 的跳变序列完全相同。
+5. 占位行距实测 **438px = 146dp**（卡 138dp + 8dp 边距），卡间缝隙 `len=24` = **8dp**，与 `item_comment` 的 `layout_marginBottom=8dp` 一致。
+
+公开主页入口（`PublicProfileFragment` → 第二条，回复 1）：首帧（563ms）与稳定帧（2850ms）跳变签名**完全相同**，chip 显示 **「提问」**——该接口不带 `category_name`，走的是 `DiscussionCategoryDefaults.label(slug)` 兜底，**兜底生效**。评论区滚动后回复缩进、操作行、头像均正常。
+
+**残留（明确未消除，勿当成已解决）**
+
+1. **通知入口仍是整页骨架**：只带 `discussion_id`，没有可预填数据，正文高度在数据到达前本质不可知。这正是 web.dev《Optimize CLS》所述无法消除位移的场景。本机账号该入口**无通知可点，未在真机覆盖**。
+2. **评论行高只对「两行评论」精确 —— 已量化为一个行盒**：实测首条真实评论是 1 行（卡高 350px），占位按两行构造（卡高 414px），于是第二张卡 **1974 → 1910，差 64px = 21.3dp**，恰为一个行盒。滚动可见真实评论有 1/2/3/4 行多种，**评论行数本就参差，这个差无法预知**。首条评论的顶边不受影响（1536，见上）。
+3. **用户主页两个入口不带 `author_avatar`/`category_name`**：分类走 slug 兜底（已实测正确）；头像在详情接口回来前显示默认图标，之后补齐（36dp 固定，无位移）。
+
 ---
 
 ## 九、剩余待办
@@ -902,6 +967,7 @@ if (params == null)
 
 1. **状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板
 2. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
+3. **讨论详情的通知入口仍走整页骨架**（其余 5 个入口已改为预填真实页头）：该入口只带 `discussion_id`，没有可预填的数据。若要完全统一，需给 `DiscussionHeaderAdapter` 增加「占位页头」viewType，与评论占位同样作为 item 渲染
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）

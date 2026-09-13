@@ -58,11 +58,10 @@ class DiscussionListFragment : Fragment() {
         adapter = DiscussionAdapter(
             onClick = { discussion ->
                 val bundle = Bundle().apply {
-                    putLong("discussion_id", discussion.id)
-                    putString("prefill_title", discussion.title)
-                    putString("prefill_author_name", discussion.authorName)
-                    putString("prefill_category_name", discussion.categoryName)
-                    putString("prefill_created_at", discussion.createdAt)
+                    putLong(KEY_DISCUSSION_ID, discussion.id)
+                    // 列表接口返回的是完整 Discussion（含正文、浏览数、评论数），
+                    // 整条带过去，详情页第一帧就能渲染真实页头，不必等第二次请求。
+                    putPrefillDiscussion(discussion)
                 }
                 findNavController().navigate(R.id.action_discussions_to_detail, bundle)
             },
