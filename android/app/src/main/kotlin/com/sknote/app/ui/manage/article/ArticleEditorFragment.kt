@@ -89,12 +89,12 @@ class ArticleEditorFragment : Fragment() {
 
         // 模式标题只由工具栏承担：引导卡里原先那个 18sp 加粗的 tvScreenTitle
         // 与这里赋的是同一个字符串，已删除（与发起讨论页同一处理）。
+        // 卡片整体也一并删除，且**不再补一句替代文案**：这一页的字段本来就都带标题
+        // （文章标题 / 选择分类 / 摘要（可选）/ 内容（Markdown）），正文下方还有 Markdown
+        // 语法速查，工具栏标题也已说明是「创建」还是「编辑」—— 原卡片那句只是泛泛的建议。
+        // （发起讨论页不同：那一页正文框原本就有占位符槽位，模式提示语与正文强相关，
+        // 因此改为写进占位符。）主流发布器（Discourse 等）页面上不另立说明卡。
         binding.toolbar.title = if (articleId == null) "创建文章" else "编辑文章"
-        binding.tvScreenSubtitle.text = if (articleId == null) {
-            "整理好标题、摘要和 Markdown 正文后再保存，阅读体验会更清晰。"
-        } else {
-            "修改后的内容保存后会立即同步到文章详情页。"
-        }
         binding.toolbar.setNavigationOnClickListener { confirmExit() }
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,

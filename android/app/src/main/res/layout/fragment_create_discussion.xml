@@ -38,35 +38,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="20dp"
-                android:paddingTop="8dp"
+                android:paddingTop="12dp"
                 android:paddingBottom="24dp">
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardDiscussionGuide"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                    app:cardCornerRadius="20dp"
-                    app:strokeColor="?attr/colorOutlineVariant"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingHorizontal="16dp"
-                        android:paddingVertical="14dp">
-
-                        <TextView
-                            android:id="@+id/tvScreenSubtitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="尽量写清背景、现象和期望结果，别人更容易理解并回复。"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                <!-- 原先这里有一张「引导卡」（colorSurfaceContainerLow + 描边 + 20dp 圆角，
+                     里面一句话说明）。按主流发布器的做法删掉了：Discourse 改版时设计者写的
+                     理由就是去掉「一片灰」、减少边框、多留白，并让页面上只有两样东西抢注意力
+                     —— 编辑器本身与操作按钮。模式提示语改由正文框的占位符承担
+                     （见 CreateDiscussionFragment.updateGuideCard），输入前照样看得见。 -->
 
                 <!-- Block/palette share preview (hidden by default) -->
                 <FrameLayout
@@ -187,27 +166,51 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
 
+                        <!-- 预览/编辑做成工具条上的图标按钮（Discourse 的做法）。
+                             原来这里是带「预览」二字的 TextButton，约占 72dp；改成 36dp 图标后
+                             这一行正好放得下「7 个格式图标 + 分隔线 + 图片图标」
+                             （实测：72+252+9+36 = 369dp 会挤出可视区，36+252+9+36 = 333dp 放得下，
+                             可视宽度 392-40 = 352dp）。状态由图标切换表达，文案走无障碍描述。 -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnTogglePreview"
-                            style="@style/Widget.Material3.Button.TextButton"
+                            style="@style/Widget.Material3.Button.IconButton"
                             android:layout_width="wrap_content"
                             android:layout_height="36dp"
                             android:layout_marginEnd="4dp"
-                            android:text="预览"
-                            android:textSize="12sp"
-                            android:minWidth="0dp"
+                            android:contentDescription="预览"
+                            android:tooltipText="预览 / 返回编辑"
+                            android:minWidth="36dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:paddingHorizontal="12dp"
                             app:icon="@drawable/ic_visibility"
-                            app:iconSize="16dp"
-                            app:iconPadding="4dp" />
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
 
                         <com.google.android.material.divider.MaterialDivider
                             android:layout_width="1dp"
                             android:layout_height="20dp"
                             android:layout_marginEnd="4dp"
                             app:dividerColor="?attr/colorOutlineVariant" />
+
+                        <!-- 图片入口收进工具条（原先是正文下方一个 122dp×48dp 的独立胶囊按钮
+                             ＋一行常驻灰字）。Discourse 的发布器就是把上传图片做成工具条上的一个图标。
+                             放在格式组【最前】而不是最后：这一行实测会溢出可视区
+                             （8 个图标 × 46dp = 368dp > 352dp，图标实际宽度受 IconButton 样式内边距影响，
+                             不是 minWidth 的 36dp），放最后就等于看不见。图片是常用动作，
+                             溢出的应该是尾巴上少用的「引用 / 项目列表」—— 它们仍可横向滚动到。 -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAddImage"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:contentDescription="添加图片"
+                            android:tooltipText="添加图片（最多 9 张，自动压缩到 ≤ 1MB）"
+                            android:minWidth="36dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_add_photo"
+                            app:iconSize="18dp"
+                            app:iconTint="?attr/colorOnSurfaceVariant" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFormatBold"
@@ -360,44 +363,32 @@
                         tools:text="预览内容" />
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Image section -->
+                <!-- 已选图片区：只在实际有图片时出现（由 updateImageUI 控制整块可见性）。
+                     这样页面上不再有一条常驻的「最多 9 张…」灰字 —— 该信息移到了工具条
+                     那个图片图标的 tooltip，以及张数用满时已有的提示条。 -->
                 <LinearLayout
+                    android:id="@+id/layoutImages"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="16dp">
+                    android:orientation="vertical"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddImage"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:text="添加图片"
-                        android:textSize="13sp"
-                        app:icon="@drawable/ic_add_photo"
-                        app:iconSize="18dp"
-                        app:cornerRadius="20dp"
-                        style="@style/Widget.Material3.Button.OutlinedButton" />
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvImages"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false" />
 
                     <TextView
                         android:id="@+id/tvImageHint"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="最多 9 张，自动压缩到 ≤ 1MB"
+                        android:layout_marginTop="6dp"
                         android:textSize="11sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginStart="10dp" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvImages"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:clipToPadding="false"
-                    android:nestedScrollingEnabled="false"
-                    android:visibility="gone" />
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

@@ -23,6 +23,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -201,7 +202,13 @@ class CreateDiscussionFragment : Fragment() {
     }
 
     private fun updatePreviewToggleButton() {
-        binding.btnTogglePreview.text = if (isPreviewMode) "编辑" else "预览"
+        // 这个按钮现在只有图标（文字会把它撑到 72dp，整行就放不下图片图标了），
+        // 状态由图标表达，文案走无障碍描述与 tooltip。
+        // tooltip 必须走 ViewCompat：View.setTooltipText 是 API 26 起，minSdk 是 24，
+        // 直接调会触发 lint 的 NewApi **error**（门禁要求 0 errors）。
+        val label = if (isPreviewMode) "返回编辑" else "预览"
+        binding.btnTogglePreview.contentDescription = label
+        ViewCompat.setTooltipText(binding.btnTogglePreview, label)
         binding.btnTogglePreview.setIconResource(
             if (isPreviewMode) R.drawable.ic_edit else R.drawable.ic_visibility
         )
@@ -462,10 +469,14 @@ class CreateDiscussionFragment : Fragment() {
     }
 
     private fun updateImageUI() {
-        binding.rvImages.visibility = if (imageAdapter.size() > 0) View.VISIBLE else View.GONE
         val total = imageAdapter.size()
+        // 整块（缩略图 + 一行状态）只在有图片时出现：原先那条「最多 9 张…」是常驻灰字，
+        // 属于要减掉的「一片灰」；该信息现在在工具条图片图标的 tooltip 里，张数用满时
+        // 还有既有的提示条兜底。
+        binding.layoutImages.visibility = if (total > 0) View.VISIBLE else View.GONE
+        binding.rvImages.visibility = if (total > 0) View.VISIBLE else View.GONE
         binding.tvImageHint.text = when {
-            total == 0 -> "最多可添加 $maxImages 张图片，自动压缩到 ≤ 1MB"
+            total == 0 -> ""
             !imageAdapter.allUploaded() -> "已选择 $total/$maxImages 张，正在上传…"
             else -> "已选择 $total/$maxImages 张图片"
         }
@@ -821,6 +832,11 @@ class CreateDiscussionFragment : Fragment() {
      * 工具栏标题是「当前是哪种模式的发起页」的唯一来源：引导卡里原先还有一个 18sp 加粗
      * 的 `tvScreenTitle`，赋值与工具栏完全相同（同一个字符串写两遍），已删除。
      * 因此这里改为设置工具栏标题，并且把原先只有卡片才显示的「发起文章讨论」也补上。
+     *
+     * 模式提示语（原先在引导卡里的那句）改由**正文框的占位符**承担：主流发布器都是这个
+     * 做法（Discourse 的发布器把提示放在输入框里，页面上不另立说明卡 —— 其改版理由就是
+     * 去掉「一片灰」、减少边框、只让编辑器与操作按钮抢注意力）。输入前照样看得见，
+     * 一落笔就让位给正文。
      */
     private fun updateGuideCard() {
         binding.toolbar.title = when {
@@ -830,7 +846,7 @@ class CreateDiscussionFragment : Fragment() {
             linkedArticleId != null -> "发起文章讨论"
             else -> "发起讨论"
         }
-        binding.tvScreenSubtitle.text = when {
+        binding.layoutContent.hint = when {
             discussionId != null -> "修改标题、正文或分类后，会同步更新当前讨论内容。"
             blockJson != null -> "可以补充适用场景、参数说明或遇到的问题，方便别人复用和讨论。"
             paletteJson != null -> "建议写清配色用途、适配场景和使用建议，让别人更容易参考。"
@@ -851,15 +867,17 @@ class CreateDiscussionFragment : Fragment() {
         binding.btnSubmit.alpha = if (canSubmit) 1f else 0.6f
         binding.btnAddImage.isEnabled = !isLoading && imageAdapter.size() < maxImages
         binding.btnAddImage.alpha = if (binding.btnAddImage.isEnabled) 1f else 0.6f
+        // 底栏这行说的是「当前能不能发、还差什么」（状态），不再重复标题字段上那句
+        // 静态建议 —— 两句话相隔 500px 说同一件事，是这页原先最明显的冗余。
         binding.tvSubmitHint.text = when {
             isLoading && discussionId != null -> "正在保存讨论修改，请稍候…"
             isLoading -> "正在发布讨论，请稍候…"
             isUploadingImages -> "图片仍在上传中，上传完成后即可发布"
-            title.isEmpty() -> "先写一个清晰的标题，方便别人快速理解主题"
-            !hasBodyContent -> "正文至少填写一点内容，或添加图片/分享内容"
-            discussionId != null -> "修改完成后会同步更新讨论详情和列表"
-            linkedArticleId != null -> "发布后会成为该文章下的关联讨论"
-            else -> "可以直接发布，也可以继续补充细节和图片"
+            title.isEmpty() -> "还差一个标题"
+            !hasBodyContent -> "正文还是空的，写点内容或添加图片/分享内容"
+            discussionId != null -> "可以保存了，修改会同步到详情与列表"
+            linkedArticleId != null -> "可以发布了，发布后会挂在这篇文章下"
+            else -> "可以发布了，也可以继续补充"
         }
     }
 

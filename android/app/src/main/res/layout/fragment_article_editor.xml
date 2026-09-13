@@ -25,31 +25,9 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="20dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="14dp">
-
-                    <TextView
-                        android:id="@+id/tvScreenSubtitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="整理好标题、摘要和 Markdown 正文后再保存，阅读体验会更清晰。"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="13sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            <!-- 原先这里也有一张与发起讨论页同款的「引导卡」。按主流发布器的做法删掉，
+                 提示语改由正文框占位符承担（见 ArticleEditorFragment），
+                 理由同 fragment_create_discussion.xml 里的注释。 -->
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layoutTitle"
