@@ -140,6 +140,8 @@ class DiscussionListFragment : Fragment() {
                 if (shouldRefresh == true) {
                     viewModel.invalidateCache()
                     viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
+                    // 从详情页回来时未读状态可能变了（刚把那条标成已读）
+                    viewModel.loadUnread()
                     findNavController().currentBackStackEntry?.savedStateHandle?.remove<Boolean>("refresh_discussions")
                 }
             }
@@ -169,6 +171,7 @@ class DiscussionListFragment : Fragment() {
 
         viewModel.loadCategories()
         viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort)
+        viewModel.loadUnread()
     }
 
     private fun renderCategoryChips(categories: List<DiscussionCategory>) {
@@ -228,7 +231,10 @@ class DiscussionListFragment : Fragment() {
             // 空结果也报「0 条讨论」：此前这里留空字符串，筛选到没有内容的分类时
             // 页头那行计数会整条消失，读起来像「没加载出来」。
             binding.tvDiscussionCount.text = "${list.size} 条讨论"
+            // 列表先到、未读后到也没关系：适配器按 id 精确刷新受影响的那几行
+            adapter.setUnread(viewModel.unread.value.orEmpty())
         }
+        viewModel.unread.observe(viewLifecycleOwner) { adapter.setUnread(it.orEmpty()) }
         viewModel.categories.observe(viewLifecycleOwner) { renderCategoryChips(it) }
         viewModel.isLoading.observe(viewLifecycleOwner) {
             binding.swipeRefresh.isRefreshing = it && contentShown

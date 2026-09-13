@@ -59,7 +59,20 @@ data class DiscussionCategory(
 )
 
 data class DiscussionCategoriesResponse(val categories: List<DiscussionCategory>)
+
 data class DiscussionCategoryResponse(val category: DiscussionCategory)
+
+/** 未读项：某条讨论在我上次读过之后新增的回复数。 */
+data class UnreadDiscussionItem(
+    @SerializedName("discussion_id") val discussionId: Long,
+    @SerializedName("new_reply_count") val newReplyCount: Int = 0
+)
+
+data class UnreadDiscussionsResponse(
+    val items: List<UnreadDiscussionItem> = emptyList(),
+    @SerializedName("total_unread") val totalUnread: Int = 0,
+    @SerializedName("total_new_replies") val totalNewReplies: Int = 0
+)
 
 data class CreateDiscussionCategoryRequest(
     val slug: String,

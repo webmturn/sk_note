@@ -262,6 +262,20 @@ CREATE TABLE IF NOT EXISTS content_views (
 CREATE INDEX IF NOT EXISTS idx_content_views_target ON content_views(target_type, target_id);
 CREATE INDEX IF NOT EXISTS idx_content_views_viewed_at ON content_views(viewed_at);
 
+-- 讨论已读位置。一次「我读到哪儿了」，用来算「读完之后又有几条新回复」。
+-- 不能复用 content_views：那是 INSERT OR IGNORE（首次浏览即定、viewed_at 不更新），
+-- 而且 30 天后会被清理（server.ts 的定时任务），语义与时序都不对。
+CREATE TABLE IF NOT EXISTS discussion_reads (
+    user_id INTEGER NOT NULL,
+    discussion_id INTEGER NOT NULL,
+    last_read_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, discussion_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (discussion_id) REFERENCES discussions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_discussion_reads_user ON discussion_reads(user_id);
+
 -- 搜索索引
 CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);
 CREATE INDEX IF NOT EXISTS idx_articles_author ON articles(author_id);

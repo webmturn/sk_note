@@ -19,6 +19,26 @@ class DiscussionAdapter(
     private val onAuthorClick: (Discussion) -> Unit = {}
 ) : ListAdapter<Discussion, DiscussionAdapter.ViewHolder>(DiffCallback) {
 
+    /**
+     * 未读表：discussionId -> 上次读过之后新增的回复数。
+     * 不属于 Discussion 本身（那是接口数据），所以放在适配器上；
+     * 变化时用 notifyItemChanged 精确刷新，避免整表重绑闪一下。
+     */
+    private var unread: Map<Long, Int> = emptyMap()
+
+    fun setUnread(map: Map<Long, Int>) {
+        if (map == unread) return
+        val changed = mutableListOf<Int>()
+        val old = unread
+        unread = map
+        currentList.forEachIndexed { index, discussion ->
+            val before = old[discussion.id] ?: 0
+            val after = map[discussion.id] ?: 0
+            if (before != after) changed.add(index)
+        }
+        changed.forEach { notifyItemChanged(it) }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemDiscussionBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
@@ -84,6 +104,14 @@ class DiscussionAdapter(
             binding.tvReplies.text = "${discussion.replyCount} 回复"
             binding.tvViews.text = "${discussion.viewCount} 阅读"
             binding.tvTime.text = TimeUtil.formatRelative(discussion.createdAt)
+
+            // 未读：标题前一个小圆点（Discourse 的位置）+ 底部一行「N 条新回复」。
+            // 读完之后有新回复才出现；从没打开过的不算（后端只返回有阅读记录的）。
+            val newReplies = unread[discussion.id] ?: 0
+            binding.ivUnreadDot.visibility = if (newReplies > 0) View.VISIBLE else View.GONE
+            binding.tvUnread.visibility = if (newReplies > 0) View.VISIBLE else View.GONE
+            binding.tvUnread.text = "$newReplies 条新回复"
+
             binding.root.setOnClickListener { onClick(discussion) }
             binding.tvAuthor.setOnClickListener { onAuthorClick(discussion) }
             binding.ivAvatar.setOnClickListener { onAuthorClick(discussion) }

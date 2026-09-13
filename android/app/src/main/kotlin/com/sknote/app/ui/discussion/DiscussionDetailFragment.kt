@@ -51,6 +51,8 @@ class DiscussionDetailFragment : Fragment() {
     private lateinit var headerAdapter: DiscussionHeaderAdapter
     private lateinit var markwon: Markwon
     private var discussionId: Long = 0
+    /** 本次已上报过已读的讨论 id，避免每次 liveData 回调都打一次接口。 */
+    private val markedReadIds = mutableSetOf<Long>()
     private var cachedUserId: Long = -1
     private var cachedRole: String = "user"
     private var isLoggedIn: Boolean = false
@@ -79,6 +81,28 @@ class DiscussionDetailFragment : Fragment() {
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
         get() = headerAdapter.headerBinding
+
+    /**
+     * 打开详情即上报「已读」（幂等）。只在登录后调用 —— 后端那个接口需要鉴权。
+     * 成功后让列表页知道要刷新未读状态；失败静默：已读只是增益信息，
+     * 不该因为网络问题弹提示打扰阅读。
+     */
+    private fun markDiscussionRead(discussionId: Long) {
+        if (markedReadIds.contains(discussionId)) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                if (!ApiClient.getTokenManager().isLoggedIn().first()) return@launch
+                val response = ApiClient.getService().markDiscussionRead(discussionId)
+                if (response.isSuccessful) {
+                    markedReadIds.add(discussionId)
+                    findNavController().previousBackStackEntry?.savedStateHandle
+                        ?.set("refresh_discussions", true)
+                }
+            } catch (_: Exception) {
+                // 忽略：下次打开再试
+            }
+        }
+    }
 
     /**
      * 标签渲染成 #chips（与片段详情同一形态；解析规则也一致：逗号/顿号/空白切分）。
@@ -356,6 +380,7 @@ class DiscussionDetailFragment : Fragment() {
                 DiscussionCategoryDefaults.label(discussion.category)
             }
             bindTags(discussion.tags.orEmpty())
+            markDiscussionRead(discussion.id)
 
             // Handle block/palette share preview
             h.blockPreviewContainer.removeAllViews()

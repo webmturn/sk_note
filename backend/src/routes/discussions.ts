@@ -103,6 +103,60 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   });
 });
 
+// 我的未读讨论（需要登录）
+//
+// 为什么单独开一个接口、而不是把 new_reply_count 塞进上面的列表响应：
+// 列表路由挂着 edgeCache(120)，缓存键就是 URL —— 一旦响应里带上「按用户不同」的字段，
+// 先访问的那个人的未读状态会被缓存并展示给所有人。把这个信息独立出来，
+// 列表继续对所有用户共享缓存，未读状态各自取各自的。
+discussionRoutes.get('/unread', authMiddleware(), async (c) => {
+  const user = c.get('user')!;
+
+  // 只算「读过之后又有新回复」的：没有阅读记录（从没打开过）不算未读，
+  // 否则新用户第一次进讨论区会看到满屏红点，反而没有信息量。
+  const rows = await c.env.DB.prepare(`
+    SELECT dr.discussion_id,
+           (SELECT COUNT(*) FROM comments c
+             WHERE c.discussion_id = dr.discussion_id
+               AND c.created_at > dr.last_read_at) AS new_reply_count
+    FROM discussion_reads dr
+    JOIN discussions d ON d.id = dr.discussion_id
+    WHERE dr.user_id = ?
+    ORDER BY d.updated_at DESC
+    LIMIT 200
+  `).bind(user.id).all<{ discussion_id: number; new_reply_count: number }>();
+
+  const items = (rows.results || [])
+    .map(r => ({ discussion_id: r.discussion_id, new_reply_count: r.new_reply_count || 0 }))
+    .filter(r => r.new_reply_count > 0);
+
+  return c.json({
+    items,
+    total_unread: items.length,
+    total_new_replies: items.reduce((sum, r) => sum + r.new_reply_count, 0),
+  });
+});
+
+// 标记讨论已读（需要登录）。详情页打开后调用，幂等。
+discussionRoutes.post('/:id/read', authMiddleware(), async (c) => {
+  const discussionId = Number.parseInt(c.req.param('id'), 10);
+  if (!Number.isInteger(discussionId) || discussionId <= 0) {
+    return c.json({ error: '无效的讨论ID' }, 400);
+  }
+  const user = c.get('user')!;
+
+  const exists = await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?').bind(discussionId).first();
+  if (!exists) return c.json({ error: '讨论不存在' }, 404);
+
+  await c.env.DB.prepare(`
+    INSERT INTO discussion_reads (user_id, discussion_id, last_read_at)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(user_id, discussion_id) DO UPDATE SET last_read_at = datetime('now')
+  `).bind(user.id, discussionId).run();
+
+  return c.json({ message: '已标记为已读' });
+});
+
 // 获取单个讨论（含评论）
 discussionRoutes.get('/:id', authMiddleware(false), async (c) => {
   const id = c.req.param('id');

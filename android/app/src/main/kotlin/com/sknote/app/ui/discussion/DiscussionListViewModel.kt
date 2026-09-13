@@ -9,12 +9,17 @@ import com.sknote.app.data.model.Discussion
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.util.DiscussionCategoryDefaults
 import com.sknote.app.util.ErrorUtil
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class DiscussionListViewModel : ViewModel() {
 
     private val _discussions = MutableLiveData<List<Discussion>>()
     val discussions: LiveData<List<Discussion>> = _discussions
+
+    /** 未读：discussionId -> 新增回复数。只在登录后取，匿名时为空。 */
+    private val _unread = MutableLiveData<Map<Long, Int>>(emptyMap())
+    val unread: LiveData<Map<Long, Int>> = _unread
 
     private val _categories = MutableLiveData<List<DiscussionCategory>>()
     val categories: LiveData<List<DiscussionCategory>> = _categories
@@ -26,6 +31,29 @@ class DiscussionListViewModel : ViewModel() {
     val error: LiveData<String?> = _error
 
     fun invalidateCache() = Unit
+
+    /**
+     * 取「我的未读」。与列表分开请求：列表接口带 120s 共享缓存，未读是按用户不同的，
+     * 混在一起会把别人的未读状态缓存给你（后端注释里写了同样的理由）。
+     * 未登录时保持空表，失败也保持空表 —— 未读只是增益信息，不该影响列表可用性。
+     */
+    fun loadUnread() {
+        viewModelScope.launch {
+            try {
+                if (!ApiClient.getTokenManager().isLoggedIn().first()) {
+                    _unread.value = emptyMap()
+                    return@launch
+                }
+                val response = ApiClient.getService().getUnreadDiscussions()
+                if (response.isSuccessful) {
+                    val items = response.body()?.items.orEmpty()
+                    _unread.value = items.associate { it.discussionId to it.newReplyCount }
+                }
+            } catch (_: Exception) {
+                // 未读取不到就不标红点，不打扰用户
+            }
+        }
+    }
 
     fun loadCategories() {
         // 先用本地兜底分类把 chip 行填上，再去请求网络。

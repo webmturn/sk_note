@@ -104,6 +104,14 @@ interface ApiService {
     @GET("api/discussions/{id}")
     suspend fun getDiscussion(@Path("id") id: Long): Response<DiscussionDetailResponse>
 
+    /** 我的未读讨论（读过之后又有了新回复的）。与列表分开取，避免污染列表的共享缓存。 */
+    @GET("api/discussions/unread")
+    suspend fun getUnreadDiscussions(): Response<UnreadDiscussionsResponse>
+
+    /** 标记讨论已读，详情页打开后调用，幂等。 */
+    @POST("api/discussions/{id}/read")
+    suspend fun markDiscussionRead(@Path("id") id: Long): Response<MessageResponse>
+
     @POST("api/discussions")
     suspend fun createDiscussion(@Body request: CreateDiscussionRequest): Response<MessageResponse>
 
