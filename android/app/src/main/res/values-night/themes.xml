@@ -15,6 +15,12 @@
         <item name="colorOnTertiary">@color/on_tertiary</item>
         <item name="colorTertiaryContainer">@color/tertiary_container</item>
         <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
+        <!-- Snackbar（提示条）用的三个反色角色，必须与 values/themes.xml 成对声明：
+             .Base 的条目按昼夜解析，只在浅色那边声明的话夜间会拿到浅色值。
+             attr 名为「角色名 + Inverse」，见 material-1.11.0.aar 的 public.txt。 -->
+        <item name="colorSurfaceInverse">@color/inverse_surface</item>
+        <item name="colorOnSurfaceInverse">@color/inverse_on_surface</item>
+        <item name="colorPrimaryInverse">@color/inverse_primary</item>
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface_card</item>

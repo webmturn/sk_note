@@ -1119,6 +1119,45 @@ Error: Cannot find module '../clientIp'
 2. 若服务端返回的分类集合与本地兜底表不同，chips 会在网络回来后变化（文字变、行高不变，不产生位移）。本地兜底表本就是该页原有的失败兜底，两者当前一致（实测冻结态与加载态可见 chip 文字相同）。
 3. 首页与文章列表未发现同类问题：文章列表没有 chip 行；首页的分类是骨架里的占位卡。
 
+### 第二十三批（提示条：补齐反色角色，明暗两套都不再落回 M3 基线，已修复）
+
+**问题**：用户反馈「提示条 UI 不好，而且还没做夜间效果」。
+
+**根因（静态链路已完整展开）**：`Theme.SkNote.Base` 只定义了 **12 个颜色角色**（primary / secondary / tertiary 三族各 4 个），**一个反色角色都没有**。而从 `material-1.11.0.aar` 的 macro 展开可以看到，M3 的 Snackbar 恰好全靠这三个：
+
+| 提示条部件 | 样式来源 | 引用的 attr |
+|---|---|---|
+| 容器底 | `@macro/m3_comp_snackbar_container_color` | `?attr/colorSurfaceInverse` |
+| 消息文字 | `@macro/m3_comp_snackbar_supporting_text_color` | `?attr/colorOnSurfaceInverse` |
+| 动作按钮 | `ThemeOverlay.Material3.Button.TextButton.Snackbar` 的 `colorOnContainer` | `?attr/colorPrimaryInverse` |
+
+未定义 → 回落到 M3 基线：
+
+| 部件 | 改前（基线） | 改后（项目） |
+|---|---|---|
+| 容器底 | 浅 `#322F35`｜夜 `#E6E0E9` | 浅 `#263238`｜夜 `#ECEFF1` |
+| 消息文字 | 浅 `#F5EFF7`｜夜 `#322F35` | 浅 `#ECEFF1`｜夜 `#263238` |
+| **动作按钮** | 浅 **`#D0BCFF` 淡紫**｜夜 **`#6750A4` 深紫** | 浅 `#90CAF9`｜夜 `#1976D2` |
+
+**动作按钮在明暗两种模式下都是 M3 基线的紫色** —— 与第十三批的 tertiary 属同一类问题：项目自定调色板后，未声明的角色仍走基线，于是出现「蓝色系 App 里跳出紫色按钮」。这就是「提示条 UI 不好」的主要来源。
+
+**改动**：`values/colors.xml` 与 `values-night/colors.xml` 各加 3 色，`values/themes.xml` 与 `values-night/themes.xml` 的 `.Base` 各加 3 个 attr。取值沿用项目自己的规律（浅色取 900/50 调 Blue Grey 作底、动作文字用夜间主色；夜间整体倒过来），并符合 M3 对反色角色的语义。
+
+**踩到一个坑**：attr 名是「角色名 + Inverse」（`colorSurfaceInverse`），不是「Inverse + 角色名」。我第一次按记忆写成 `colorInverseSurface`，资源链接直接失败。以 `material-1.11.0.aar` 的 `public.txt` / `R.txt` 为准改正。
+
+**真机验证**（截图取像素，夜间模式）：
+
+- 提示条容器实测 **`#ECEFF1`** —— 正是项目的夜间反色底，而非基线的 `#E6E0E9`（两者可分辨，因此这是一次判定性测量）；
+- 文字为深色 `#263238`，在浅底上清晰可读。
+
+门禁：`:app:assembleDebug` 通过、`:app:lintDebug` **0 errors**、2356 warnings（无新增）。
+
+**同批发现、尚未修的位置问题**
+
+1. **实测**：提示条贴着屏幕最底部 —— 占 `y=2236..2372`，而 App 内容区只到 `y=2301`（其下 99px 是系统手势导航条），**下沿伸进系统导航区 71px**。原因是 Material 的 `findSuitableParent` 会一路向上找父容器：页面根不是 `CoordinatorLayout` 时它落到 `android.R.id.content`，而那一层没有 `fitsSystemWindows`，于是完全无视系统 inset。
+2. **推导（未实测）**：顶层四页的应用底部导航栏占 `y=2157..2301`，而 App 内容区延伸到导航栏之下（所以顶层页才需要 104dp 让位内边距），因此这些页面上的提示条还会与应用底栏重叠。顶层页的提示条只有 **6 处**（首页 1、讨论区 2、片段列表 2、我的 1）加 MainActivity 3 处，其余约 170 处都在压栈页上。
+   **未实测的原因**：顶层页触发提示条需要「退出登录」或一次写操作，我没有为了观察去写生产数据或登出（登出后没有密码可登回）。
+
 ---
 
 ## 九、剩余待办

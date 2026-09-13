@@ -16,6 +16,14 @@
     <color name="tertiary_container">#FF004D40</color>
     <color name="on_tertiary_container">#FFB2DFDB</color>
 
+    <!-- 反色三兄弟（Snackbar 专用），与浅色成对声明。
+         夜间把「反色」倒过来：底用浅的 Blue Grey 50，文字用深的 900 调，
+         动作文字用浅色主色（Blue 700）—— 因为它是画在【浅色】底上的。
+         此前未定义，提示条在夜间同样落回 M3 基线，不跟随项目调色板。 -->
+    <color name="inverse_surface">#FFECEFF1</color>
+    <color name="inverse_on_surface">#FF263238</color>
+    <color name="inverse_primary">#FF1976D2</color>
+
     <color name="icon_bg_orange">#66795548</color>
     <color name="icon_bg_green">#66388E3C</color>
     <color name="icon_bg_purple">#667B1FA2</color>

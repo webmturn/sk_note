@@ -27,6 +27,13 @@
         <item name="colorOnTertiary">@color/on_tertiary</item>
         <item name="colorTertiaryContainer">@color/tertiary_container</item>
         <item name="colorOnTertiaryContainer">@color/on_tertiary_container</item>
+        <!-- Snackbar（提示条）用的三个反色角色。不声明就会落回 M3 基线：
+             浅色下得到基线灰底 + 基线【淡紫】动作文字，夜间同样不跟随项目调色板。
+             注意 attr 名是「角色名 + Inverse」（colorSurfaceInverse 而非
+             colorInverseSurface）—— 以 material-1.11.0.aar 的 public.txt 为准。 -->
+        <item name="colorSurfaceInverse">@color/inverse_surface</item>
+        <item name="colorOnSurfaceInverse">@color/inverse_on_surface</item>
+        <item name="colorPrimaryInverse">@color/inverse_primary</item>
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/surface_card</item>

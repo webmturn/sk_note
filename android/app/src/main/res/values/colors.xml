@@ -17,6 +17,17 @@
     <color name="tertiary_container">#FFB2DFDB</color>
     <color name="on_tertiary_container">#FF00201A</color>
 
+    <!-- 反色三兄弟：Snackbar（提示条）专用。M3 里 Snackbar 的容器取
+         colorInverseSurface、文字取 colorInverseOnSurface、动作文字取 colorInversePrimary。
+         项目此前一个都没定义，于是 179 处提示条全部落回 M3 基线 ——
+         浅色下是基线的灰底 + 基线的【淡紫】动作文字，与项目的 Material Blue 主色冲突；
+         夜间同样不跟随项目调色板。这与第十三批的 tertiary 属同一类问题。
+         取值沿用项目自己的规律：浅色取 900/50 调的 Blue Grey 作底，
+         动作文字用夜间主色（Blue 200），因为它是画在【深色】底上的。 -->
+    <color name="inverse_surface">#FF263238</color>
+    <color name="inverse_on_surface">#FFECEFF1</color>
+    <color name="inverse_primary">#FF90CAF9</color>
+
     <color name="icon_bg_orange">#FFE0B2</color>
     <color name="icon_bg_green">#C8E6C9</color>
     <color name="icon_bg_purple">#E1BEE7</color>
