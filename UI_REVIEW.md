@@ -1196,6 +1196,41 @@ Error: Cannot find module '../clientIp'
 
 **真机验证被环境中断过一次**：手机熄屏且锁屏（`mScreenState=OFF`、`isKeyguardShowing=true`），我后续 8 轮循环的点击全落在锁屏上；`KEYCODE_WAKEUP` 无法恢复焦点，需用户解锁。解锁后复测通过。另外屏幕上出现过「已连接 USB 调试」提示，**它写着「点击可停用」—— 不能点，一点就断 adb**，只能等它自行消失。
 
+### 第二十四批（个人资料页统计行错位，已修复）
+
+**问题**：用户反馈「个人资料页面也有问题」。截图一眼就能看出统计行是歪的 —— 「0 关注 / 0 粉丝」比「0 讨论 / 20 片段」低一截。
+
+**实测坐实**（`uiautomator` 读父容器 bounds，480dpi）：
+
+| 统计格 | 可点击 | 父容器高度 | 文字 top |
+|---|---|---|---|
+| 关注 | ✓ | **144px = 48dp** | 666 |
+| 粉丝 | ✓ | **144px = 48dp** | 666 |
+| 讨论 | ✗ | **68px = 22.7dp** | **628** |
+| 片段 | ✗ | **68px = 22.7dp** | **628** |
+
+**根因**：布局里只有前两格（可点击的）带 `android:minHeight="48dp"`（给点击热区），后两格没有；而这一行是横向 `LinearLayout` 且**未设 `gravity`** → 矮的两个贴顶对齐，比高的两个高 38px。四格都有 `gravity="center"`，但那只是让**格内**内容居中，管不了格子自身在行内的位置。
+
+**公开主页 `fragment_public_profile.xml` 是同一套结构、同一个问题**（同样只有前两格有 `minHeight`），一并修了。
+
+**改动**：给两个布局里「讨论」「片段」四格各补 `android:minHeight="48dp"`。行高本来就由前两格决定（48dp），补上后行高不变，**不产生位移**。
+
+**真机验证**：修复后四格父容器高度均为 **144px = 48dp**，截图确认四格落在同一基线上。
+
+门禁：`:app:assembleDebug` 通过、`:app:lintDebug` **0 errors**、2356 warnings（无新增）。
+
+**同批发现、未修的相邻问题：我的页把那三个数字混了语义**
+
+`AdminFragment`（我的页）的一行统计绑定如下：
+
+- `tvStatArticles` ← `stats.totalArticles` → 接口的 `total_articles` = **全站**已发布文章数
+- `tvStatDiscussions` ← `stats.totalDiscussions` → `total_discussions` = **全站**讨论数
+- `tvStatNotifications` ← `stats.unreadNotifications` → `unread_notifications` = **该用户自己的**未读数
+
+接口同时返回了 `my_discussions` / `my_snippets` / `my_articles`（`aggregated.ts:66-68`），我的页一个都没用。结果是那一行把「全站 3 条讨论」和「我的 0 条未读」并排显示，标签却只写「文章 / 讨论 / 通知」，读起来就是「我发了 3 条讨论」—— 而管理员实际 **0 条**（个人资料页显示 0 是正确的，讨论区那 3 条属于用户「10」）。
+
+这属于**语义/产品选择**：要么改用 `my_*`（显示自己的），要么把标签改成「全站文章 / 全站讨论」。未擅自改。
+
 ---
 
 ## 九、剩余待办
