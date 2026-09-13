@@ -75,6 +75,13 @@ class CreateDiscussionFragment : Fragment() {
     private var initialDraftState = DiscussionDraftState("", "", "general", 0)
     private var isPreviewMode = false
     private var draftRestored = false
+
+    // 发布/保存成功之后，这份草稿就「用掉」了：此后任何一次 flush 都不能再把它写回。
+    // 必要性：success 分支里 clearDraft() 之后紧接着 navigateUp()，而 onDestroyView() 会
+    // 「flush 未落盘的草稿」→ persistDraftNow()；此时输入框里的文字还在，刚删掉的键会被原样
+    // 写回，用户下次进来就会被问「恢复未发布草稿？」（第三十一批复验发现，6984cfc 起就存在）。
+    // 只在成功分支置位：用户点「丢弃草稿」后继续写的内容仍要能存成草稿，那条路径不能拦。
+    private var draftConsumed = false
     private var markwon: Markwon? = null
     private val draftSaveHandler = Handler(Looper.getMainLooper())
     private val draftSaveRunnable = Runnable { persistDraftNow() }
@@ -897,6 +904,8 @@ class CreateDiscussionFragment : Fragment() {
         viewModel.success.observe(viewLifecycleOwner) { success ->
             if (success == true) {
                 viewModel.onSuccessHandled()
+                // 先关门再清：navigateUp() 会触发 onDestroyView() 的 flush，那一下必须写不进去。
+                draftConsumed = true
                 clearDraft()
                 findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
                 findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussion_detail", true)
@@ -940,6 +949,7 @@ class CreateDiscussionFragment : Fragment() {
     }
 
     private fun scheduleDraftSave() {
+        if (draftConsumed) return
         if (!draftRestored) return
         if (draftKey() == null) return
         // Debounce frequent text changes: persist 400ms after the last edit.
@@ -949,6 +959,7 @@ class CreateDiscussionFragment : Fragment() {
 
     private fun persistDraftNow() {
         if (_binding == null) return
+        if (draftConsumed) return
         if (!draftRestored) return
         val key = draftKey() ?: return
         val title = binding.etTitle.text?.toString().orEmpty()
