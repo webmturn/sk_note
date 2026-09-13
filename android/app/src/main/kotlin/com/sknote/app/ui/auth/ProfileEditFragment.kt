@@ -98,6 +98,7 @@ class ProfileEditFragment : Fragment() {
     private fun observeData() {
         viewModel.user.observe(viewLifecycleOwner) { user ->
             binding.tvUsername.text = user.displayName
+            binding.tvHandle.text = "@${user.username}"
             binding.tvEmail.text = user.email ?: ""
             binding.tvEmail.visibility = if (user.email.isNullOrBlank()) View.GONE else View.VISIBLE
             binding.etNickname.setText(user.displayName)
@@ -112,7 +113,9 @@ class ProfileEditFragment : Fragment() {
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // 用 INVISIBLE 而不是 GONE：加载条占 2dp 高度，若收起时把高度也收掉，
+            // 数据到达的那一刻整页会下移 2dp。
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.INVISIBLE
             binding.etNickname.isEnabled = !isLoading
             binding.etUsername.isEnabled = !isLoading
             binding.etBio.isEnabled = !isLoading
@@ -282,6 +285,7 @@ class ProfileEditFragment : Fragment() {
         val nickname = binding.etNickname.text?.toString()?.trim().orEmpty()
         val username = binding.etUsername.text?.toString()?.trim().orEmpty()
         binding.tvUsername.text = nickname.ifEmpty { username }
+        binding.tvHandle.text = if (username.isEmpty()) "" else "@$username"
     }
 
     private fun hasProfileChanges(): Boolean {
@@ -319,7 +323,6 @@ class ProfileEditFragment : Fragment() {
         val profileChanged = isProfileLoaded && hasProfileChanges()
         val passwordInput = hasPasswordInput()
         val passwordReady = isPasswordReadyToSubmit()
-        val hasDraft = profileChanged || passwordInput
 
         binding.btnSaveProfile.isEnabled = !isLoading && profileChanged && !invalidAvatarUrl
         binding.btnChangePassword.isEnabled = !isLoading && passwordReady
@@ -327,21 +330,34 @@ class ProfileEditFragment : Fragment() {
         binding.btnChangePassword.alpha = if (binding.btnChangePassword.isEnabled) 1f else 0.7f
         binding.btnUploadAvatar.alpha = if (isLoading) 0.7f else 1f
         binding.ivAvatar.alpha = if (isLoading) 0.72f else 1f
+
+        // 两行状态各管各的卡片：以前只有一行写在页头，密码的提示却出现在资料按钮旁边。
         binding.tvProfileStatus.text = when {
             isLoading -> "正在同步资料..."
             !isProfileLoaded -> "正在加载资料..."
             invalidAvatarUrl -> "头像链接格式无效，暂时不能保存"
-            passwordInput && !passwordReady -> "请完整填写并确认新密码"
             profileChanged -> "资料已修改，记得保存"
-            passwordReady -> "密码已准备提交"
             else -> "资料已同步"
         }
-        binding.tvProfileStatus.alpha = if (hasDraft || isLoading || !isProfileLoaded) 1f else 0.78f
+        binding.tvProfileStatus.alpha =
+            if (profileChanged || invalidAvatarUrl || isLoading || !isProfileLoaded) 1f else 0.78f
+
+        binding.tvPasswordStatus.text = when {
+            isLoading -> "正在提交..."
+            passwordInput && !passwordReady -> "请完整填写并确认新密码"
+            passwordReady -> "密码已准备提交"
+            else -> "留空表示不修改密码"
+        }
+        binding.tvPasswordStatus.alpha = if (passwordInput || isLoading) 1f else 0.78f
     }
 
+    /**
+     * 与 [com.sknote.app.ui.profile.UserProfileFragment.renderAvatar] 保持一致：
+     * 头像与图标的内缩量由布局的 4dp padding 统一决定，这里不再按「有无链接」改 padding，
+     * 否则同一张头像在本页与个人资料页会差一圈。
+     */
     private fun renderAvatar(url: String?) {
         if (!url.isNullOrEmpty()) {
-            binding.ivAvatar.setPadding(0, 0, 0, 0)
             Glide.with(this)
                 .load(url)
                 .circleCrop()
@@ -349,8 +365,6 @@ class ProfileEditFragment : Fragment() {
                 .into(binding.ivAvatar)
         } else {
             Glide.with(this).clear(binding.ivAvatar)
-            val padding = (8 * resources.displayMetrics.density).toInt()
-            binding.ivAvatar.setPadding(padding, padding, padding, padding)
             binding.ivAvatar.setImageResource(R.drawable.ic_account_circle)
         }
     }
