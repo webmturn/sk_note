@@ -1219,17 +1219,37 @@ Error: Cannot find module '../clientIp'
 
 门禁：`:app:assembleDebug` 通过、`:app:lintDebug` **0 errors**、2356 warnings（无新增）。
 
-**同批发现、未修的相邻问题：我的页把那三个数字混了语义**
+**同批发现并修掉的相邻问题：我的页那行数字混了语义**
 
-`AdminFragment`（我的页）的一行统计绑定如下：
+`AdminFragment`（我的页）原来的绑定：
 
 - `tvStatArticles` ← `stats.totalArticles` → 接口的 `total_articles` = **全站**已发布文章数
 - `tvStatDiscussions` ← `stats.totalDiscussions` → `total_discussions` = **全站**讨论数
 - `tvStatNotifications` ← `stats.unreadNotifications` → `unread_notifications` = **该用户自己的**未读数
 
-接口同时返回了 `my_discussions` / `my_snippets` / `my_articles`（`aggregated.ts:66-68`），我的页一个都没用。结果是那一行把「全站 3 条讨论」和「我的 0 条未读」并排显示，标签却只写「文章 / 讨论 / 通知」，读起来就是「我发了 3 条讨论」—— 而管理员实际 **0 条**（个人资料页显示 0 是正确的，讨论区那 3 条属于用户「10」）。
+接口另有 `my_*` 三个字段，我的页一个都没用。于是那一行把「全站 3 条讨论」和「我的 0 条未读」并排显示，标签只写「文章 / 讨论 / 通知」，读起来就是「我发了 3 条讨论」—— 而管理员实际 **0 条**。
 
-这属于**语义/产品选择**：要么改用 `my_*`（显示自己的），要么把标签改成「全站文章 / 全站讨论」。未擅自改。
+**改成显示自己的之后，又暴露了后端一个名不副实的字段**：`my_discussions` 的 SQL 是
+
+```sql
+SELECT COUNT(DISTINCT d.id) ... WHERE d.author_id = ? OR c.author_id = ?
+```
+
+即「我发的**或我评论过的**」，而 `my_snippets` / `my_articles` 都是纯 `author_id = ?` —— 只有讨论这一个字段是特例。管理员在那 3 条讨论里都留过言，所以这个字段给 3；个人资料页按纯作者口径给 0。**两个数都没算错，是口径不同**。
+
+**修复**：把该 SQL 改成 `SELECT COUNT(*) as count FROM discussions WHERE author_id = ?`，与另外两个 `my_*` 及字段名统一；App 侧 `AdminFragment` 改读 `stats.myArticles` / `stats.myDiscussions`，本地缓存键也换成 `my_` 前缀（旧键缓存的是全站数字，换键后自然失效，升级后第一次启动不会闪出全站数）。
+
+**SQL 用真实 schema 复现并验证**（`node:sqlite`，造「用户1 在用户2的 3 条讨论里都评论过、自己发 0 条」这一场景）：
+
+```
+旧 SQL（参与过）-> 3      ← 正是页面上显示的 3
+新 SQL（我发的）-> 0      ← 正确
+REPRODUCES_THE_BUG_AND_FIX
+```
+
+**消费方核查**：`my_discussions` 在本仓库内只有那一行响应引用；`myDiscussions`/`mySnippets`/`myArticles` 在 App 里改我之前一处都没用；仓库只有 `android/` 与 `backend/`，后端也不提供任何网页（无 `text/html` / `serveStatic` / 静态资源）。因此本仓库内它是死字段 —— 但**无法排除仓外客户端**在用它，故已向用户确认后才改。
+
+**真机复测未做**：部署成功（`online`、`Deploy complete!`，四个接口 200），但复测时手机已再次息屏锁屏（`mScreenState=OFF`、`isWakefulness=Asleep`、焦点 `NotificationShade`），需用户解锁。**这是本轮唯一未经真机确认的一项。**
 
 ---
 

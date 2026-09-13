@@ -253,12 +253,14 @@ class AdminFragment : Fragment() {
     }
 
     private fun loadStats() {
-        // 先显示本地缓存的统计值（避免闪烁"0"）
+        // 先显示本地缓存的统计值（避免闪烁"0"）。
+        // 缓存键带 my_ 前缀：旧版本缓存的是【全站】数字，换键后旧值自然失效，
+        // 升级后的第一次启动不会闪出全站数字。
         val prefs = requireContext().getSharedPreferences("stats_cache", android.content.Context.MODE_PRIVATE)
-        val cachedArticles = prefs.getInt("articles", -1)
+        val cachedArticles = prefs.getInt("my_articles", -1)
         if (cachedArticles >= 0) {
             binding.tvStatArticles.text = "${cachedArticles}"
-            binding.tvStatDiscussions.text = "${prefs.getInt("discussions", 0)}"
+            binding.tvStatDiscussions.text = "${prefs.getInt("my_discussions", 0)}"
             binding.tvStatNotifications.text = "${prefs.getInt("notifications", 0)}"
             val n = prefs.getInt("notifications", 0)
             binding.tvNotificationDesc.text = if (n > 0) "$n 条未读" else ""
@@ -272,12 +274,14 @@ class AdminFragment : Fragment() {
                     val stats = response.body() ?: return@launch
                     binding.tvStatNotifications.text = "${stats.unreadNotifications}"
                     binding.tvNotificationDesc.text = if (stats.unreadNotifications > 0) "${stats.unreadNotifications} 条未读" else ""
-                    binding.tvStatArticles.text = "${stats.totalArticles}"
-                    binding.tvStatDiscussions.text = "${stats.totalDiscussions}"
+                    // 这是「我的」页，取 my_*（自己的）而不是 total_*（全站的）：
+                    // 后者会让管理员看到「3 讨论」，而全站那 3 条讨论与他无关。
+                    binding.tvStatArticles.text = "${stats.myArticles}"
+                    binding.tvStatDiscussions.text = "${stats.myDiscussions}"
                     // 缓存到本地
                     prefs.edit()
-                        .putInt("articles", stats.totalArticles)
-                        .putInt("discussions", stats.totalDiscussions)
+                        .putInt("my_articles", stats.myArticles)
+                        .putInt("my_discussions", stats.myDiscussions)
                         .putInt("notifications", stats.unreadNotifications)
                         .apply()
                 }
