@@ -18,7 +18,13 @@ snippetRoutes.get('/', edgeCache(120), async (c) => {
   const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
-  let query = 'SELECT id, title, description, language, category, tags, author_id, author_name, view_count, like_count, created_at, updated_at FROM snippets WHERE is_approved = 1';
+  // 列表刻意带上 code：客户端「列表 → 详情」会把整条 Snippet 作为导航参数传过去，
+  // 详情页据此在第一帧就渲染真实代码，避免骨架到内容的跳变（UI_REVIEW.md 第二十一批）。
+  // code 缺失时详情页会退回骨架路径——不会崩，但会丢掉这个优化，所以别把这一列删掉。
+  // 本接口有 edgeCache(120)。code 的写入上限是 50000 字符（见本文件创建/更新的校验），
+  // 因此理论最坏情况偏大；但实测全站 20 条片段的 code 合计仅约 3KB，实际代价可忽略。
+  // 讨论列表（带 d.content）与文章列表（带 a.content）用的是同一套取舍。
+  let query = 'SELECT id, title, description, code, language, category, tags, author_id, author_name, view_count, like_count, created_at, updated_at FROM snippets WHERE is_approved = 1';
   const params: any[] = [];
 
   if (category) {
