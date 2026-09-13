@@ -1249,7 +1249,15 @@ REPRODUCES_THE_BUG_AND_FIX
 
 **消费方核查**：`my_discussions` 在本仓库内只有那一行响应引用；`myDiscussions`/`mySnippets`/`myArticles` 在 App 里改我之前一处都没用；仓库只有 `android/` 与 `backend/`，后端也不提供任何网页（无 `text/html` / `serveStatic` / 静态资源）。因此本仓库内它是死字段 —— 但**无法排除仓外客户端**在用它，故已向用户确认后才改。
 
-**真机复测未做**：部署成功（`online`、`Deploy complete!`，四个接口 200），但复测时手机已再次息屏锁屏（`mScreenState=OFF`、`isWakefulness=Asleep`、焦点 `NotificationShade`），需用户解锁。**这是本轮唯一未经真机确认的一项。**
+**真机复测（补做，通过）**：部署成功（`online`、`Deploy complete!`，四个接口 200）。首次复测时手机息屏锁屏（`mScreenState=OFF`、`isWakefulness=Asleep`、焦点 `NotificationShade`），用户解锁后复测：
+
+| 我的页统计格 | 改动前 | 改动后 |
+|---|---|---|
+| 文章 | 2 | 2 |
+| **讨论** | **3**（全站数） | **0**（我自己 0 条） ✓ |
+| 通知 | 0 | 0 |
+
+三格的 bounds 与改动前逐像素相同（`[176,441][207,509]` / `[528,441][559,509]` / `[880,441][911,509]`），**无布局回归**；「0 讨论」与个人资料页的「0 讨论」现已一致。
 
 ---
 
