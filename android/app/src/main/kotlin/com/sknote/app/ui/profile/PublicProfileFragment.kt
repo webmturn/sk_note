@@ -382,7 +382,11 @@ class PublicProfileFragment : Fragment() {
             } else {
                 binding.tvEmpty.visibility = View.GONE
                 val adapter = ProfileContentAdapter<Snippet>(list, ProfileContentAdapter.TYPE_SNIPPET) { item ->
-                    val bundle = Bundle().apply { putLong("snippet_id", item.id) }
+                    val bundle = Bundle().apply {
+                        putLong("snippet_id", item.id)
+                        // 该接口用 `SELECT *`（`follows.ts`），字段完整，可整页预填。
+                        putPrefill(NavPrefill.KEY_SNIPPET, item)
+                    }
                     findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
                 }
                 binding.rvContent.adapter = adapter

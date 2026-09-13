@@ -365,7 +365,11 @@ class UserProfileFragment : Fragment() {
                     .setEnterAnim(R.anim.slide_in_right).setExitAnim(R.anim.slide_out_left)
                     .setPopEnterAnim(R.anim.slide_in_left).setPopExitAnim(R.anim.slide_out_right).build()
                 binding.rvContent.adapter = ProfileContentAdapter<Snippet>(list, ProfileContentAdapter.TYPE_SNIPPET) { item ->
-                    val bundle = Bundle().apply { putLong("snippet_id", item.id) }
+                    val bundle = Bundle().apply {
+                        putLong("snippet_id", item.id)
+                        // 该接口用 `SELECT *`（`follows.ts`），字段完整，可整页预填。
+                        putPrefill(NavPrefill.KEY_SNIPPET, item)
+                    }
                     findNavController().navigate(R.id.snippetDetailFragment, bundle, navOptions)
                 }
                 restoreListStateForTab(1)

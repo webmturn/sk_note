@@ -29,6 +29,7 @@ object NavPrefill {
      */
     const val KEY_ARTICLE = "prefill_article"
     const val KEY_SHARE = "prefill_share"
+    const val KEY_SNIPPET = "prefill_snippet"
     const val KEY_DISCUSSION = "prefill_discussion"
 
     private val gson = Gson()

@@ -16,6 +16,8 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetManageBinding
+import com.sknote.app.util.NavPrefill
+import com.sknote.app.util.putPrefill
 import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -58,7 +60,11 @@ class SnippetManageFragment : Fragment() {
 
         adapter = SnippetManageAdapter(
             onView = { snippet ->
-                val bundle = Bundle().apply { putLong("snippet_id", snippet.id) }
+                val bundle = Bundle().apply {
+                    putLong("snippet_id", snippet.id)
+                    // 管理页用的是同一个列表接口（`getSnippets`），同样已带 code。
+                    putPrefill(NavPrefill.KEY_SNIPPET, snippet)
+                }
                 findNavController().navigate(R.id.snippetDetailFragment, bundle, slideNavOptions())
             },
             onDelete = { snippet -> showDeleteConfirm(snippet) }

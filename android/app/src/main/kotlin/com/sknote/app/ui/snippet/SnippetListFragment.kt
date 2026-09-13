@@ -21,8 +21,10 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSnippetListBinding
+import com.sknote.app.util.NavPrefill
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.putPrefill
 import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
@@ -65,7 +67,11 @@ class SnippetListFragment : Fragment() {
         val navOptions = slideNavOptions()
 
         adapter = SnippetAdapter { snippet ->
-            val bundle = Bundle().apply { putLong("snippet_id", snippet.id) }
+            val bundle = Bundle().apply {
+                putLong("snippet_id", snippet.id)
+                // 片段列表接口已带上 code，整条带过去，详情页第一帧就能渲染真实代码。
+                putPrefill(NavPrefill.KEY_SNIPPET, snippet)
+            }
             navController.navigate(R.id.snippetDetailFragment, bundle, navOptions)
         }
 

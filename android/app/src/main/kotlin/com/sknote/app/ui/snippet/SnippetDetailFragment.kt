@@ -19,7 +19,9 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.Snippet
 import com.sknote.app.databinding.FragmentSnippetDetailBinding
 import com.sknote.app.util.SkeletonAnimator
+import com.sknote.app.util.NavPrefill
 import com.sknote.app.util.hideSkeletonAndShow
+import com.sknote.app.util.prefill
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
@@ -91,8 +93,20 @@ class SnippetDetailFragment : Fragment() {
 
         binding.btnCopy.setOnClickListener { copyCode() }
 
-        showSkeleton(binding.skeletonContainer.root, binding.scrollView)
-        skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        // 有预填数据时首帧就是真实内容，不使用整页骨架。这一页的全部内容（标题、
+        // 描述、代码、语言、分类、标签、作者、计数）都来自 Snippet 对象本身，而片段
+        // 列表接口已带上 code，因此可以整页预填。没有预填数据（通知入口只带
+        // snippet_id）时才退回骨架路径。
+        val prefill = arguments?.prefill<Snippet>(NavPrefill.KEY_SNIPPET)
+        if (prefill != null) {
+            binding.skeletonContainer.root.visibility = View.GONE
+            binding.scrollView.visibility = View.VISIBLE
+            contentShown = true
+            renderSnippet(prefill)
+        } else {
+            showSkeleton(binding.skeletonContainer.root, binding.scrollView)
+            skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
@@ -141,42 +155,8 @@ class SnippetDetailFragment : Fragment() {
                 if (_binding == null) return@launch
                 if (response.isSuccessful) {
                     val snippet = response.body()?.snippet ?: return@launch
-                    if (!contentShown) {
-                        contentShown = true
-                        skeletonAnimator?.stop()
-                        hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
-                    }
-                    currentSnippet = snippet
-                    codeText = snippet.code.orEmpty()
-                    val displayLanguage = snippet.language.orEmpty().trim().ifEmpty { "other" }
-                    val displayCode = codeText.ifEmpty { "暂无代码" }
-
-                    binding.tvTitle.text = snippet.title
-                    if (snippet.description.orEmpty().isNotEmpty()) {
-                        binding.tvDescription.text = snippet.description.orEmpty()
-                        binding.tvDescription.visibility = View.VISIBLE
-                    } else {
-                        binding.tvDescription.visibility = View.GONE
-                    }
-                    val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                    binding.tvCode.text = if (codeText.isEmpty()) {
-                        displayCode
-                    } else {
-                        SyntaxHighlightUtil.highlight(codeText, displayLanguage, isDark)
-                    }
-                    binding.tvLanguage.text = displayLanguage.uppercase()
-                    binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())
-                    binding.tvAuthor.text = snippet.authorName.orEmpty().ifEmpty { "系统" }
-                    binding.tvTime.text = TimeUtil.formatRelative(snippet.createdAt)
-                    binding.tvViews.text = "${snippet.viewCount} 浏览"
-                    binding.btnLike.text = "点赞 (${snippet.likeCount})"
-                    binding.btnCopy.isEnabled = codeText.isNotEmpty()
-                    binding.btnCopy.alpha = if (codeText.isNotEmpty()) 1f else 0.5f
-                    bindTags(snippet.tags.orEmpty())
-
-                    binding.toolbar.title = snippet.title
-                    val canEdit = snippet.authorId == currentUserId || currentUserRole == "admin"
-                    binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
+                    revealContent()
+                    renderSnippet(snippet)
                 } else {
                     Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
@@ -186,6 +166,64 @@ class SnippetDetailFragment : Fragment() {
             } finally {
                 _binding?.progressBar?.visibility = View.GONE
             }
+        }
+    }
+
+    /**
+     * 把一个 [Snippet] 渲染到页面上。预填路径与详情接口路径共用这一份，
+     * 避免出现「预填一套 / 接口一套」两段渲染代码。
+     *
+     * 注意代码高亮依赖当前昼夜模式（`resources.configuration`），标签是动态生成的
+     * Chip —— 两者在预填路径下同样可用，因为渲染发生在 Fragment 已 attach 之后。
+     */
+    private fun renderSnippet(snippet: Snippet) {
+        currentSnippet = snippet
+        codeText = snippet.code.orEmpty()
+        val displayLanguage = snippet.language.orEmpty().trim().ifEmpty { "other" }
+        val displayCode = codeText.ifEmpty { "暂无代码" }
+
+        binding.tvTitle.text = snippet.title
+        if (snippet.description.orEmpty().isNotEmpty()) {
+            binding.tvDescription.text = snippet.description.orEmpty()
+            binding.tvDescription.visibility = View.VISIBLE
+        } else {
+            binding.tvDescription.visibility = View.GONE
+        }
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        binding.tvCode.text = if (codeText.isEmpty()) {
+            displayCode
+        } else {
+            SyntaxHighlightUtil.highlight(codeText, displayLanguage, isDark)
+        }
+        binding.tvLanguage.text = displayLanguage.uppercase()
+        binding.tvCategory.text = SnippetCategories.getLabel(snippet.category.orEmpty())
+        binding.tvAuthor.text = snippet.authorName.orEmpty().ifEmpty { "系统" }
+        binding.tvTime.text = TimeUtil.formatRelative(snippet.createdAt)
+        binding.tvViews.text = "${snippet.viewCount} 浏览"
+        binding.btnLike.text = "点赞 (${snippet.likeCount})"
+        binding.btnCopy.isEnabled = codeText.isNotEmpty()
+        binding.btnCopy.alpha = if (codeText.isNotEmpty()) 1f else 0.5f
+        bindTags(snippet.tags.orEmpty())
+
+        binding.toolbar.title = snippet.title
+        val canEdit = snippet.authorId == currentUserId || currentUserRole == "admin"
+        binding.toolbar.menu.findItem(R.id.action_edit)?.isVisible = canEdit
+    }
+
+    /**
+     * 首次显示真实内容。两条路径的进入方式不同，因此收敛到这里：
+     * 有预填数据时首帧就是正确的，直接显示；没有预填数据时整页骨架正在呼吸，交叉淡出。
+     */
+    private fun revealContent() {
+        if (contentShown) return
+        contentShown = true
+        val animator = skeletonAnimator
+        if (animator == null) {
+            binding.scrollView.visibility = View.VISIBLE
+        } else {
+            animator.stop()
+            skeletonAnimator = null
+            hideSkeletonAndShow(binding.skeletonContainer.root, binding.scrollView)
         }
     }
 
