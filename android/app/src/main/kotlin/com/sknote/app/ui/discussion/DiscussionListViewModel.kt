@@ -50,12 +50,21 @@ class DiscussionListViewModel : ViewModel() {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun loadDiscussions(category: String? = null, articleId: Long? = null, force: Boolean = false) {
+    fun loadDiscussions(
+        category: String? = null,
+        articleId: Long? = null,
+        sort: String = SORT_LATEST,
+        force: Boolean = false
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response = ApiClient.getService().getDiscussions(category = category, articleId = articleId)
+                val response = ApiClient.getService().getDiscussions(
+                    category = category,
+                    articleId = articleId,
+                    sort = sort
+                )
                 if (response.isSuccessful) {
                     _discussions.value = response.body()?.discussions ?: emptyList()
                 } else {
@@ -67,5 +76,21 @@ class DiscussionListViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    companion object {
+        const val SORT_LATEST = "latest"
+        const val SORT_HOT = "hot"
+        const val SORT_REPLIES = "replies"
+
+        /** 排序项：(接口值, 按钮上显示的短标签)。顺序即菜单顺序。 */
+        val SORT_OPTIONS = listOf(
+            SORT_LATEST to "最新",
+            SORT_HOT to "最热",
+            SORT_REPLIES to "最多回复"
+        )
+
+        fun sortLabel(sort: String): String =
+            SORT_OPTIONS.firstOrNull { it.first == sort }?.second ?: "最新"
     }
 }

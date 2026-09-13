@@ -363,6 +363,29 @@
                         tools:text="预览内容" />
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- 标签：与片段发布页同一种输入方式与存储（逗号分隔文本），
+                     位置也一致 —— 放在正文之后，元数据收尾。 -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutTags"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="标签（用逗号分隔，可选）"
+                    app:counterEnabled="true"
+                    app:counterMaxLength="80"
+                    app:helperText="便于他人按主题找到这条讨论，最多 5 个">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etTags"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionDone"
+                        android:inputType="text"
+                        android:maxLength="80"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <!-- 已选图片区：只在实际有图片时出现（由 updateImageUI 控制整块可见性）。
                      这样页面上不再有一条常驻的「最多 9 张…」灰字 —— 该信息移到了工具条
                      那个图片图标的 tooltip，以及张数用满时已有的提示条。 -->

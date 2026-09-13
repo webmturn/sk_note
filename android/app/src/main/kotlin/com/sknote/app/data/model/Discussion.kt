@@ -20,7 +20,9 @@ data class Discussion(
     @SerializedName("view_count") val viewCount: Int = 0,
     @SerializedName("reply_count") val replyCount: Int = 0,
     @SerializedName("created_at") val createdAt: String? = null,
-    @SerializedName("updated_at") val updatedAt: String? = null
+    @SerializedName("updated_at") val updatedAt: String? = null,
+    /** 标签：逗号分隔的纯文本，与 Snippet.tags 同一做法（详情页渲染成 #chips）。 */
+    val tags: String? = ""
 )
 
 data class Comment(
@@ -71,14 +73,17 @@ data class CreateDiscussionRequest(
     val title: String,
     val content: String,
     val category: String = "general",
-    @SerializedName("article_id") val articleId: Long? = null
+    @SerializedName("article_id") val articleId: Long? = null,
+    /** 标签原文（逗号分隔），后端 normalizeTags 会去空/去重/限量。 */
+    val tags: String = ""
 )
 
 data class UpdateDiscussionRequest(
     val title: String,
     val content: String,
     val category: String = "general",
-    @SerializedName("article_id") val articleId: Long? = null
+    @SerializedName("article_id") val articleId: Long? = null,
+    val tags: String = ""
 )
 
 data class CreateCommentRequest(

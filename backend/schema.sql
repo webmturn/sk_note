@@ -75,6 +75,10 @@ CREATE TABLE IF NOT EXISTS discussions (
     reply_count INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
+    -- 标签：逗号分隔，与 snippets.tags 同一做法（同一套解析规则见
+    -- 客户端 SnippetDetailFragment.bindTags 与后端 normalizeTags）。
+    -- 位置放在最后，与 ALTER TABLE 追加的结果一致，保证新库与迁移库的列序相同。
+    tags TEXT DEFAULT '',
     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL,
     FOREIGN KEY (category) REFERENCES discussion_categories(slug) ON DELETE RESTRICT ON UPDATE CASCADE

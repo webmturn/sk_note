@@ -72,12 +72,12 @@ class CreateDiscussionViewModel : ViewModel() {
 
     fun onErrorHandled() { _error.value = null }
 
-    fun createDiscussion(title: String, content: String, category: String, articleId: Long?) {
+    fun createDiscussion(title: String, content: String, category: String, articleId: Long?, tags: String = "") {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = ApiClient.getService().createDiscussion(
-                    CreateDiscussionRequest(title, content, category, articleId)
+                    CreateDiscussionRequest(title, content, category, articleId, tags)
                 )
                 if (response.isSuccessful) {
                     _success.value = true
@@ -92,13 +92,13 @@ class CreateDiscussionViewModel : ViewModel() {
         }
     }
 
-    fun updateDiscussion(id: Long, title: String, content: String, category: String, articleId: Long?) {
+    fun updateDiscussion(id: Long, title: String, content: String, category: String, articleId: Long?, tags: String = "") {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 val response = ApiClient.getService().updateDiscussion(
                     id,
-                    UpdateDiscussionRequest(title, content, category, articleId)
+                    UpdateDiscussionRequest(title, content, category, articleId, tags)
                 )
                 if (response.isSuccessful) {
                     _success.value = true

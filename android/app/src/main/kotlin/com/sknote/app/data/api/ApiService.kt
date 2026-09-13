@@ -96,7 +96,9 @@ interface ApiService {
         @Query("limit") limit: Int = 20,
         @Query("category") category: String? = null,
         @Query("article_id") articleId: Long? = null,
-        @Query("search") search: String? = null
+        @Query("search") search: String? = null,
+        /** latest（默认，按最后活动）/ hot（阅读数）/ replies（回复数）。 */
+        @Query("sort") sort: String? = null
     ): Response<DiscussionsResponse>
 
     @GET("api/discussions/{id}")

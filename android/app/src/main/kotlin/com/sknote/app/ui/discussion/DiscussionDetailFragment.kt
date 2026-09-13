@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import android.content.Intent
 import com.bumptech.glide.Glide
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
@@ -78,6 +79,37 @@ class DiscussionDetailFragment : Fragment() {
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
         get() = headerAdapter.headerBinding
+
+    /**
+     * 标签渲染成 #chips（与片段详情同一形态；解析规则也一致：逗号/顿号/空白切分）。
+     * 无标签时整块隐藏，不留空白行。
+     */
+    private fun bindTags(rawTags: String) {
+        val h = hb ?: return
+        val tags = rawTags
+            .split(Regex("[,，、\\s]+"))
+            .map { it.trim().removePrefix("#") }
+            .filter { it.isNotEmpty() }
+
+        if (tags.isEmpty()) {
+            h.layoutTags.visibility = View.GONE
+            h.chipGroupTags.removeAllViews()
+            return
+        }
+
+        h.layoutTags.visibility = View.VISIBLE
+        h.chipGroupTags.removeAllViews()
+        tags.forEach { tag ->
+            val chip = Chip(requireContext()).apply {
+                text = "#$tag"
+                isCheckable = false
+                isClickable = false
+                isCloseIconVisible = false
+                setEnsureMinTouchTargetSize(false)
+            }
+            h.chipGroupTags.addView(chip)
+        }
+    }
 
     private fun renderDiscussionAuthorAvatar(avatarUrl: String?) {
         val h = hb ?: return
@@ -323,6 +355,7 @@ class DiscussionDetailFragment : Fragment() {
             h.chipCategory.text = discussion.categoryName.orEmpty().ifEmpty {
                 DiscussionCategoryDefaults.label(discussion.category)
             }
+            bindTags(discussion.tags.orEmpty())
 
             // Handle block/palette share preview
             h.blockPreviewContainer.removeAllViews()

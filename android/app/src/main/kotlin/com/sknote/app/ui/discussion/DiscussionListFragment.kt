@@ -34,12 +34,15 @@ class DiscussionListFragment : Fragment() {
     private lateinit var adapter: DiscussionAdapter
     private var currentCategory: String? = null
     private var currentArticleId: Long? = null
+    /** 当前排序，取值见 DiscussionListViewModel.SORT_*；随 savedInstanceState 保留。 */
+    private var currentSort: String = DiscussionListViewModel.SORT_LATEST
     private var listState: Parcelable? = null
     private var skeletonAnimator: SkeletonAnimator? = null
     private var contentShown: Boolean = false
 
     companion object {
         private const val STATE_CATEGORY = "state_category"
+        private const val STATE_SORT = "state_sort"
         private const val STATE_LIST = "state_list"
     }
 
@@ -51,7 +54,11 @@ class DiscussionListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        currentCategory = savedInstanceState?.getString(STATE_CATEGORY)
+        currentCategory = savedInstanceState?.getString(STATE_CATEGORY) ?: currentCategory
+        // 只在有存档时才覆盖：视图被重建（例如从详情页返回、宿主重建 View）时
+        // savedInstanceState 可能为 null，无条件赋值会把用户刚选的排序打回「最新」
+        // —— 这是真机验证时抓到的：选「最热」→ 进详情 → 返回，按钮又变回「最新」。
+        savedInstanceState?.getString(STATE_SORT)?.let { currentSort = it }
         listState = savedInstanceState?.getParcelable(STATE_LIST)
         currentArticleId = arguments?.getLong("article_id")?.takeIf { it > 0L }
         val navOptions = slideNavOptions()
@@ -79,7 +86,29 @@ class DiscussionListFragment : Fragment() {
             adapter = this@DiscussionListFragment.adapter
         }
 
-        binding.swipeRefresh.setOnRefreshListener { viewModel.loadDiscussions(currentCategory, currentArticleId, force = true) }
+        binding.swipeRefresh.setOnRefreshListener {
+            viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
+        }
+
+        binding.btnSort.text = DiscussionListViewModel.sortLabel(currentSort)
+        binding.btnSort.setOnClickListener { anchor ->
+            val popup = androidx.appcompat.widget.PopupMenu(requireContext(), anchor)
+            DiscussionListViewModel.SORT_OPTIONS.forEachIndexed { index, (value, label) ->
+                popup.menu.add(0, index, index, label)
+            }
+            popup.setOnMenuItemClickListener { item ->
+                val picked = DiscussionListViewModel.SORT_OPTIONS.getOrNull(item.itemId)?.first
+                if (picked != null && picked != currentSort) {
+                    currentSort = picked
+                    binding.btnSort.text = DiscussionListViewModel.sortLabel(picked)
+                    // 换排序等于换一份列表：滚回顶部再加载，否则会停在上一次的滚动位置
+                    binding.rvDiscussions.scrollToPosition(0)
+                    viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
+                }
+                true
+            }
+            popup.show()
+        }
 
         binding.fabNewDiscussion.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -110,7 +139,7 @@ class DiscussionListFragment : Fragment() {
             ?.observe(viewLifecycleOwner) { shouldRefresh ->
                 if (shouldRefresh == true) {
                     viewModel.invalidateCache()
-                    viewModel.loadDiscussions(currentCategory, currentArticleId, force = true)
+                    viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
                     findNavController().currentBackStackEntry?.savedStateHandle?.remove<Boolean>("refresh_discussions")
                 }
             }
@@ -139,7 +168,7 @@ class DiscussionListFragment : Fragment() {
         }
 
         viewModel.loadCategories()
-        viewModel.loadDiscussions(currentCategory, currentArticleId)
+        viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort)
     }
 
     private fun renderCategoryChips(categories: List<DiscussionCategory>) {
@@ -169,7 +198,7 @@ class DiscussionListFragment : Fragment() {
                     }
                     isChecked = true
                     currentCategory = category
-                    viewModel.loadDiscussions(category, currentArticleId)
+                    viewModel.loadDiscussions(category, currentArticleId, currentSort)
                 }
             }
             binding.chipGroup.addView(chip)
@@ -221,7 +250,7 @@ class DiscussionListFragment : Fragment() {
                 showSkeleton(binding.skeletonContainer.root, binding.rvDiscussions)
                 skeletonAnimator = SkeletonAnimator.start(viewLifecycleOwner, binding.skeletonContainer.root)
             }
-            viewModel.loadDiscussions(currentCategory, currentArticleId)
+            viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort)
         }
     }
 
@@ -239,6 +268,7 @@ class DiscussionListFragment : Fragment() {
         captureUiState()
         super.onSaveInstanceState(outState)
         outState.putString(STATE_CATEGORY, currentCategory)
+        outState.putString(STATE_SORT, currentSort)
         outState.putParcelable(STATE_LIST, listState)
     }
 

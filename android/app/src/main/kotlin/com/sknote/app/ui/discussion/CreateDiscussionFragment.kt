@@ -54,7 +54,8 @@ class CreateDiscussionFragment : Fragment() {
         val title: String,
         val content: String,
         val category: String,
-        val imageCount: Int
+        val imageCount: Int,
+        val tags: String = ""
     )
 
     private var _binding: FragmentCreateDiscussionBinding? = null
@@ -153,6 +154,8 @@ class CreateDiscussionFragment : Fragment() {
             updateFormState()
             scheduleDraftSave()
         }
+        // 标签不参与校验与提交按钮状态，只影响草稿内容
+        binding.etTags.doAfterTextChanged { scheduleDraftSave() }
     }
 
     private fun setupFormatToolbar() {
@@ -351,6 +354,7 @@ class CreateDiscussionFragment : Fragment() {
             rawContent
         }
         binding.etContent.setText(cleanContent)
+        binding.etTags.setText(discussion.tags.orEmpty())
 
         renderAttachmentPreview()
 
@@ -764,11 +768,12 @@ class CreateDiscussionFragment : Fragment() {
 
         val finalContent = parts.joinToString("\n\n")
 
+        val tags = binding.etTags.text?.toString()?.trim().orEmpty()
         val editingId = discussionId
         if (editingId != null) {
-            viewModel.updateDiscussion(editingId, title, finalContent, selectedCategory, linkedArticleId)
+            viewModel.updateDiscussion(editingId, title, finalContent, selectedCategory, linkedArticleId, tags)
         } else {
-            viewModel.createDiscussion(title, finalContent, selectedCategory, linkedArticleId)
+            viewModel.createDiscussion(title, finalContent, selectedCategory, linkedArticleId, tags)
         }
     }
 
@@ -807,7 +812,8 @@ class CreateDiscussionFragment : Fragment() {
             title = binding.etTitle.text?.toString()?.trim().orEmpty(),
             content = binding.etContent.text?.toString()?.trim().orEmpty(),
             category = selectedCategory,
-            imageCount = imageAdapter.size()
+            imageCount = imageAdapter.size(),
+            tags = binding.etTags.text?.toString()?.trim().orEmpty()
         )
     }
 
@@ -947,15 +953,17 @@ class CreateDiscussionFragment : Fragment() {
         val key = draftKey() ?: return
         val title = binding.etTitle.text?.toString().orEmpty()
         val content = binding.etContent.text?.toString().orEmpty()
+        val tags = binding.etTags.text?.toString().orEmpty()
         val prefs = draftPrefs()
-        if (title.isBlank() && content.isBlank()) {
-            prefs.edit().remove("${key}_title").remove("${key}_content").remove("${key}_category").apply()
+        if (title.isBlank() && content.isBlank() && tags.isBlank()) {
+            prefs.edit().remove("${key}_title").remove("${key}_content").remove("${key}_category").remove("${key}_tags").apply()
             return
         }
         prefs.edit()
             .putString("${key}_title", title)
             .putString("${key}_content", content)
             .putString("${key}_category", selectedCategory)
+            .putString("${key}_tags", tags)
             .apply()
     }
 
@@ -965,6 +973,7 @@ class CreateDiscussionFragment : Fragment() {
             .remove("${key}_title")
             .remove("${key}_content")
             .remove("${key}_category")
+            .remove("${key}_tags")
             .apply()
     }
 
@@ -978,6 +987,7 @@ class CreateDiscussionFragment : Fragment() {
         val savedTitle = prefs.getString("${key}_title", "").orEmpty()
         val savedContent = prefs.getString("${key}_content", "").orEmpty()
         val savedCategory = prefs.getString("${key}_category", null)
+        val savedTags = prefs.getString("${key}_tags", "").orEmpty()
         val hasCurrentInput = !binding.etTitle.text.isNullOrBlank() || !binding.etContent.text.isNullOrBlank()
         if (savedTitle.isBlank() && savedContent.isBlank()) {
             draftRestored = true
@@ -995,6 +1005,7 @@ class CreateDiscussionFragment : Fragment() {
             .setPositiveButton("载入草稿") { _, _ ->
                 binding.etTitle.setText(savedTitle)
                 binding.etContent.setText(savedContent)
+                binding.etTags.setText(savedTags)
                 if (!savedCategory.isNullOrBlank()) {
                     selectedCategory = savedCategory
                     syncSelectedChip()

@@ -140,6 +140,25 @@
         android:textColor="?attr/colorOnSurface"
         android:textIsSelectable="true" />
 
+    <!-- 标签：#chips，无标签时整块隐藏（与片段详情同一形态） -->
+    <LinearLayout
+        android:id="@+id/layoutTags"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:visibility="gone">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupTags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:chipSpacingHorizontal="8dp"
+            app:chipSpacingVertical="6dp"
+            app:singleLine="false" />
+    </LinearLayout>
+
     <!-- Block/palette share preview container -->
     <FrameLayout
         android:id="@+id/blockPreviewContainer"

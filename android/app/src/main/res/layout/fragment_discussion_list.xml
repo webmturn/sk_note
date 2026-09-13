@@ -46,12 +46,26 @@
                         android:layout_marginTop="1dp" />
                 </LinearLayout>
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_discussion"
-                    android:alpha="0.3"
-                    android:importantForAccessibility="no" />
+                <!-- 排序控件。此前这里是同一位置一个纯装饰、不可点的 ic_discussion
+                     （alpha 0.3），第二十八批的核查把它记为「唯一多余的元素」；
+                     现在换成真正有用的排序入口 —— 主流做法里排序就在列表页头
+                     （Discourse 的 Latest 下拉、Reddit / GitHub 的排序标签）。 -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSort"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="最新"
+                    android:textSize="13sp"
+                    android:minWidth="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingHorizontal="10dp"
+                    app:icon="@drawable/ic_sort"
+                    app:iconSize="16dp"
+                    app:iconPadding="4dp"
+                    app:iconGravity="textStart" />
             </LinearLayout>
 
             <HorizontalScrollView

@@ -10,6 +10,29 @@ import { createNotification, deleteActorNotification, deleteNotificationsByRelat
 
 export const discussionRoutes = new Hono<AppEnv>();
 
+/**
+ * 标签规范化。客户端把标签当自由文本输入（与片段页的「标签（用逗号分隔，可选）」同一套
+ * 输入方式），所以入库前统一收拾一遍，避免脏数据直接变成详情页上的 chips：
+ * 按逗号/顿号/空白切分、去空、去重（忽略大小写）、单个最长 20 字符、最多 5 个。
+ * 存储仍是逗号分隔的纯文本列，与 snippets.tags 一致（不做独立的标签表）。
+ */
+function normalizeTags(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[,，、\s]+/)) {
+    const tag = part.trim().replace(/^#+/, '');
+    if (!tag) continue;
+    const clipped = tag.slice(0, 20);
+    const key = clipped.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(clipped);
+    if (out.length >= 5) break;
+  }
+  return out.join(',');
+}
+
 // 获取讨论列表
 discussionRoutes.get('/', edgeCache(120), async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1') || 1);
@@ -17,10 +40,16 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   const category = c.req.query('category');
   const articleId = c.req.query('article_id');
   const search = (c.req.query('search') || '').slice(0, 100);
+  // 排序。默认 latest（= 现状：按最后活动时间），向后兼容。
+  // 公式刻意做得一眼能看懂，不做时间衰减：hot = 阅读数、replies = 回复数。
+  // （Discourse 的 Top 带时间窗、Reddit 的 hot 带时间衰减，我们这体量不值得引入
+  //  一个说不清的评分。）三个分支都在白名单内，不拼接用户输入。
+  const sortParam = (c.req.query('sort') || 'latest').toLowerCase();
+  const sort = ['latest', 'hot', 'replies'].includes(sortParam) ? sortParam : 'latest';
   const offset = (page - 1) * limit;
 
   let query = `
-    SELECT d.id, d.title, d.content, d.author_id, d.article_id, d.category,
+    SELECT d.id, d.title, d.content, d.tags, d.author_id, d.article_id, d.category,
     COALESCE(dc.name, d.category) as category_name, COALESCE(dc.icon, '') as category_icon,
     d.is_pinned, d.is_closed, d.view_count, d.reply_count, d.created_at, d.updated_at,
     COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar
@@ -40,11 +69,16 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
     params.push(articleId);
   }
   if (search) {
-    query += " AND (d.title LIKE ? ESCAPE '\\' OR d.content LIKE ? ESCAPE '\\')";
-    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
+    query += " AND (d.title LIKE ? ESCAPE '\\' OR d.content LIKE ? ESCAPE '\\' OR d.tags LIKE ? ESCAPE '\\')";
+    params.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
 
-  query += ' ORDER BY d.is_pinned DESC, d.updated_at DESC LIMIT ? OFFSET ?';
+  const orderBy = sort === 'hot'
+    ? 'd.view_count DESC, d.updated_at DESC'
+    : sort === 'replies'
+      ? 'd.reply_count DESC, d.updated_at DESC'
+      : 'd.updated_at DESC';
+  query += ` ORDER BY d.is_pinned DESC, ${orderBy} LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
   const discussions = await c.env.DB.prepare(query).bind(...params).all();
@@ -54,8 +88,8 @@ discussionRoutes.get('/', edgeCache(120), async (c) => {
   if (category) { countQuery += ' AND category = ?'; countParams.push(category); }
   if (articleId) { countQuery += ' AND article_id = ?'; countParams.push(articleId); }
   if (search) {
-    countQuery += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')";
-    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
+    countQuery += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')";
+    countParams.push(`%${escapeLike(search)}%`, `%${escapeLike(search)}%`, `%${escapeLike(search)}%`);
   }
   const countResult = await c.env.DB.prepare(countQuery).bind(...countParams).first<{ total: number }>();
 
@@ -117,7 +151,7 @@ discussionRoutes.get('/:id', authMiddleware(false), async (c) => {
 // 发起讨论（需要登录）
 discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create', maxRequests: 10, windowMs: 10 * 60 * 1000, identifier: userOrIpIdentifier }), async (c) => {
   const user = c.get('user')!;
-  const { title, content, category, article_id } = await c.req.json();
+  const { title, content, category, article_id, tags } = await c.req.json();
 
   if (!title || !content) {
     return c.json({ error: '标题和内容不能为空' }, 400);
@@ -170,9 +204,9 @@ discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create
   }
 
   const result = await c.env.DB.prepare(`
-    INSERT INTO discussions (title, content, author_id, category, article_id)
-    VALUES (?, ?, ?, ?, ?)
-  `).bind(title, content, user.id, resolvedCategory, articleIdForInsert).run();
+    INSERT INTO discussions (title, content, author_id, category, article_id, tags)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(title, content, user.id, resolvedCategory, articleIdForInsert, normalizeTags(tags)).run();
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/stats`]);
@@ -182,7 +216,7 @@ discussionRoutes.post('/', authMiddleware(), rateLimit({ key: 'discussion:create
 // 更新讨论（仅作者或管理员）
 discussionRoutes.put('/:id', authMiddleware(), async (c) => {
   const id = c.req.param('id');
-  const { title, content, category, article_id } = await c.req.json();
+  const { title, content, category, article_id, tags } = await c.req.json();
 
   if (!title || !content) {
     return c.json({ error: '标题和内容不能为空' }, 400);
@@ -248,9 +282,9 @@ discussionRoutes.put('/:id', authMiddleware(), async (c) => {
 
   await c.env.DB.prepare(`
     UPDATE discussions
-    SET title = ?, content = ?, category = ?, article_id = ?, updated_at = datetime('now')
+    SET title = ?, content = ?, category = ?, article_id = ?, tags = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).bind(title, content, resolvedCategory, articleIdForUpdate, id).run();
+  `).bind(title, content, resolvedCategory, articleIdForUpdate, normalizeTags(tags), id).run();
 
   const baseUrl = new URL(c.req.url).origin;
   await purgeCache([`${baseUrl}/api/discussions`, `${baseUrl}/api/discussions/${id}`, `${baseUrl}/api/stats`]);
