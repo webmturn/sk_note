@@ -12,8 +12,9 @@ bookmarkRoutes.get('/', authMiddleware(), async (c) => {
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
 
+  // 带 a.content 是为了让收藏点进详情时能立即渲染正文（理由见 articles.ts 列表查询）。
   const result = await c.env.DB.prepare(
-    `SELECT b.id, b.created_at as bookmarked_at, a.id as article_id, a.title, a.summary,
+    `SELECT b.id, b.created_at as bookmarked_at, a.id as article_id, a.title, a.content, a.summary,
      COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
      a.view_count, a.like_count, a.created_at
      FROM bookmarks b
@@ -78,8 +79,9 @@ bookmarkRoutes.get('/history', authMiddleware(), async (c) => {
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20') || 20));
   const offset = (page - 1) * limit;
 
+  // 带 a.content 是为了让阅读历史点进详情时能立即渲染正文（理由见 articles.ts 列表查询）。
   const result = await c.env.DB.prepare(
-    `SELECT rh.id, rh.read_at, a.id as article_id, a.title, a.summary,
+    `SELECT rh.id, rh.read_at, a.id as article_id, a.title, a.content, a.summary,
      COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name,
      a.view_count, a.created_at
      FROM reading_history rh

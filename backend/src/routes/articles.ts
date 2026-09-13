@@ -18,8 +18,12 @@ articleRoutes.get('/', edgeCache(120), async (c) => {
   const search = (c.req.query('search') || '').slice(0, 100);
   const offset = (page - 1) * limit;
 
+  // 列表刻意带上 a.content：客户端「列表 → 详情」会把整条 Article 作为导航参数传过去，
+  // 详情页据此在第一帧就渲染真实正文，避免骨架到内容的跳变（UI_REVIEW.md 第二十批）。
+  // 正文缺失时详情页会退回骨架路径——不会崩，但会丢掉这个优化，所以别把这一列删掉。
+  // 本接口有 edgeCache(120)，多带一列的代价由缓存吸收。
   let query = `
-    SELECT a.id, a.title, a.summary, a.category_id, a.author_id, a.view_count, a.like_count, a.sort_order, a.created_at, a.updated_at,
+    SELECT a.id, a.title, a.content, a.summary, a.category_id, a.author_id, a.view_count, a.like_count, a.sort_order, a.created_at, a.updated_at,
     COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, c.name as category_name
     FROM articles a
     LEFT JOIN users u ON a.author_id = u.id

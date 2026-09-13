@@ -12,8 +12,10 @@ aggregatedRoutes.get('/home', edgeCache(300), async (c) => {
 
     const [catResult, artResult, shareResult] = await c.env.DB.batch([
       c.env.DB.prepare('SELECT * FROM categories ORDER BY sort_order ASC, id ASC'),
+      // 带 a.content 是为了让首页点进文章详情时能立即渲染正文，理由同 articles.ts 的列表查询。
+      // 本接口有 edgeCache(300)。
       c.env.DB.prepare(
-        `SELECT a.id, a.title, a.summary, a.category_id, a.author_id, a.view_count, a.like_count, a.sort_order, a.created_at,
+        `SELECT a.id, a.title, a.content, a.summary, a.category_id, a.author_id, a.view_count, a.like_count, a.sort_order, a.created_at,
          COALESCE(NULLIF(u.nickname,''), u.username) as author_name, c.name as category_name
          FROM articles a
          LEFT JOIN users u ON a.author_id = u.id
