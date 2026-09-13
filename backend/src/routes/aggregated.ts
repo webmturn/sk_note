@@ -51,7 +51,11 @@ aggregatedRoutes.get('/stats', authMiddleware(), async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM users'),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM shares'),
-      c.env.DB.prepare('SELECT COUNT(DISTINCT d.id) as count FROM discussions d LEFT JOIN comments c ON c.discussion_id = d.id WHERE d.author_id = ? OR c.author_id = ?').bind(user.id, user.id),
+      // my_discussions 是「我发的」讨论数，口径与 my_snippets / my_articles 保持一致。
+      // 原先这里是「我发的**或我评论过的**」（LEFT JOIN comments … OR c.author_id = ?），
+      // 与字段名不符：管理员在那 3 条讨论里都留过言，于是这个字段给出 3，
+      // 而他本人一条讨论都没发（个人资料页按作者口径统计显示 0）。两处口径现已统一。
+      c.env.DB.prepare('SELECT COUNT(*) as count FROM discussions WHERE author_id = ?').bind(user.id),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM snippets WHERE author_id = ?').bind(user.id),
       c.env.DB.prepare('SELECT COUNT(*) as count FROM articles WHERE author_id = ?').bind(user.id),
     ]);
