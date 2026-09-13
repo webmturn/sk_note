@@ -31,6 +31,14 @@ class CreateDiscussionViewModel : ViewModel() {
     val isLoading: LiveData<Boolean> = _isLoading
 
     fun loadCategories() {
+        // 先用本地兜底分类把 chip 行填上，再去请求网络。
+        // 与 DiscussionListViewModel.loadCategories 同一个理由、同一份兜底数据：
+        // 本页 ChipGroup 在 XML 里是空的，分类到达前这一行高度为 0，到达后长到 32dp，
+        // 会把「预览/格式工具条 + 正文输入框」整体向下推 32dp（真机实测 chip 高 96px）。
+        // 服务器返回的分类与兜底表一致（综合/提问/反馈/Bug/功能建议），先填后填内容相同。
+        if (_categories.value == null) {
+            _categories.value = DiscussionCategoryDefaults.categories
+        }
         viewModelScope.launch {
             try {
                 val response = ApiClient.getService().getDiscussionCategories()

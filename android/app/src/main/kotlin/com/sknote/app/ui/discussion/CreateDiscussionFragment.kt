@@ -100,8 +100,6 @@ class CreateDiscussionFragment : Fragment() {
             .build()
 
         binding.toolbar.setNavigationOnClickListener { confirmExit() }
-        binding.toolbar.title = if (discussionId == null) "发起讨论" else "编辑讨论"
-        binding.tvScreenTitle.text = if (discussionId == null) "发起讨论" else "编辑讨论"
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -394,8 +392,7 @@ class CreateDiscussionFragment : Fragment() {
 
         val bj = blockJson ?: return
 
-        // Pre-fill UI
-        binding.toolbar.title = "分享积木块"
+        // 标题交给紧随其后的 updateGuideCard() 统一设置
         binding.etTitle.setText(bj.optString("name", "自定义积木块"))
 
         // Use 'general' category for block shares
@@ -418,7 +415,7 @@ class CreateDiscussionFragment : Fragment() {
 
         val pj = paletteJson ?: return
 
-        binding.toolbar.title = "分享调色板"
+        // 标题交给紧随其后的 updateGuideCard() 统一设置
         binding.etTitle.setText(pj.optString("palette_name", "自定义调色板"))
 
         selectedCategory = "general"
@@ -820,8 +817,13 @@ class CreateDiscussionFragment : Fragment() {
             .show()
     }
 
+    /**
+     * 工具栏标题是「当前是哪种模式的发起页」的唯一来源：引导卡里原先还有一个 18sp 加粗
+     * 的 `tvScreenTitle`，赋值与工具栏完全相同（同一个字符串写两遍），已删除。
+     * 因此这里改为设置工具栏标题，并且把原先只有卡片才显示的「发起文章讨论」也补上。
+     */
     private fun updateGuideCard() {
-        binding.tvScreenTitle.text = when {
+        binding.toolbar.title = when {
             discussionId != null -> "编辑讨论"
             blockJson != null -> "分享积木块"
             paletteJson != null -> "分享调色板"

@@ -59,19 +59,9 @@
                         android:paddingVertical="14dp">
 
                         <TextView
-                            android:id="@+id/tvScreenTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="发起讨论"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <TextView
                             android:id="@+id/tvScreenSubtitle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
                             android:text="尽量写清背景、现象和期望结果，别人更容易理解并回复。"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="13sp" />
@@ -149,8 +139,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
                     android:text="选择分类"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="6dp" />
 
@@ -368,14 +360,6 @@
                         tools:text="预览内容" />
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="建议补充问题背景、复现步骤、预期结果和已尝试过的方法，让回复更聚焦。"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="12sp" />
-
                 <!-- Image section -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -418,12 +402,14 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
-        <!-- Bottom submit bar -->
+        <!-- Bottom submit bar。android:tag 供 AppSnackbar 把提示条抬到这条栏之上，
+             否则提示条会盖住「发布」按钮（与详情页底部操作栏同一处理）。 -->
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
         <LinearLayout
+            android:tag="snackbar_anchor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

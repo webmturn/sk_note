@@ -42,19 +42,9 @@
                     android:paddingVertical="14dp">
 
                     <TextView
-                        android:id="@+id/tvScreenTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="创建文章"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <TextView
                         android:id="@+id/tvScreenSubtitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
                         android:text="整理好标题、摘要和 Markdown 正文后再保存，阅读体验会更清晰。"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="13sp" />
@@ -189,6 +179,7 @@
     </ScrollView>
 
     <LinearLayout
+        android:tag="snackbar_anchor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp"

@@ -87,8 +87,9 @@ class ArticleEditorFragment : Fragment() {
 
         articleId = arguments?.getLong("article_id")?.takeIf { it > 0 }
 
+        // 模式标题只由工具栏承担：引导卡里原先那个 18sp 加粗的 tvScreenTitle
+        // 与这里赋的是同一个字符串，已删除（与发起讨论页同一处理）。
         binding.toolbar.title = if (articleId == null) "创建文章" else "编辑文章"
-        binding.tvScreenTitle.text = if (articleId == null) "创建文章" else "编辑文章"
         binding.tvScreenSubtitle.text = if (articleId == null) {
             "整理好标题、摘要和 Markdown 正文后再保存，阅读体验会更清晰。"
         } else {
