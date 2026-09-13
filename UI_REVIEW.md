@@ -1627,9 +1627,24 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
   "improve discussion editor attachments"），**早于本次改造**，不是第三十批引入的；那一批只是给
   这两个函数各加了一行 `tags`。
 - **影响**：每次发布后都留一份「已发布的草稿」，用户若载入再发一次就会产生重复帖。
-- **建议改法**：给 `clearDraft()` 加一个「已丢弃」标志位并让 `onDestroyView()` 的 flush 跳过，
-  或在 success 分支里先把三个输入框清空再 `navigateUp()`（让 flush 退化成「写入空 → 删键」）。
-  **未擅自改**，等指示。
+- **修法（已按指示修掉）**：加一个 `draftConsumed` 闸门，**只在 success 分支置位**；
+  `scheduleDraftSave()` 与 `persistDraftNow()` 开头各加一行 `if (draftConsumed) return`。
+  共 **11 行，全为新增、无删除**（提交 `3aaf62c`）。
+- **为什么不把闸门也压在「丢弃草稿」那条路径上**：`clearDraft()` 有两个调用点，另一个是恢复
+  弹窗的「丢弃草稿」按钮。用户丢弃后往往会继续写，若那里也置位就等于把草稿功能关掉了；
+  所以只认「发布成功」这一个事件。
+- **修后真机复验（4 项，全部通过）**
+  1. 先打字再离开 → `draft_general_title=verify-draft-clear` 等 4 键正常落盘（草稿功能没被改坏）；
+  2. 发布成功 → `discussion_draft.xml` 变成 **`<map />`**（修前是 4 个键原样留着）；
+  3. 发布后再进发布页 → **不再弹「恢复未发布草稿？」**；
+  4. **回归**：真正的未发布草稿仍会弹恢复框 → 点「丢弃草稿」→ 继续打字 → 再离开，
+     **草稿照样存得下**（`verify-after-discard` 落盘）—— 专门验闸门没有误伤丢弃路径。
+- **门禁**：`assembleDebug` 通过；`lintDebug` **0 errors / 2353 warnings**，与修前逐位相同。
+- **顺带记一个 Git 坑**：本仓库 `core.autocrlf=true`、工作区 CRLF、库里存 LF。
+  `git commit` **自己打印**的统计是「1048 insertions / 1037 deletions」（整文件雪崩），而实际入库的
+  blob 与父提交只差 **11 行**；复核方式是 `git -c core.autocrlf=false diff <c>^ <c>`。
+  这不是推测：我第一次提交时被这个打印吓到，`reset --soft` 重做了一遍，事后复核**被丢掉的那次
+  提交其实也是干净的 11 行**，白折腾一次。**结论：以 raw diff 为准，不要凭 commit 的打印回滚。**
 
 **残留（本轮复验自己造成的一处，如实记录）**
 
@@ -1637,9 +1652,12 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
   `2026-09-13 16:30:41`**。后端 `POST /:id/comments` 写的是 `updated_at = datetime('now')`
   （`discussions.ts:408`），而**删除评论不回退该字段**（删除路径没有对应 UPDATE），所以删掉测试
   评论也恢复不了。后果是 #7 在「最新」下排到第一位（原先 #11 第一）。
-- 计数类数据**全部复原**：讨论仍 3 条，reply 16/1/1，view 45/36/50，tags 全空，
-  `?search=TagCheck` 命中 0，`shared_prefs` 中草稿键已清空（`<map />`）。
-- 要还原 `updated_at` 只能直接写库（SSH + SQL），超出本机 `deploy_now.py` 的能力范围，未做。
+- 计数类数据**全部复原**：讨论仍 3 条，reply 16/1/1，tags 全空，
+  `?search=TagCheck` 命中 0，`shared_prefs` 中草稿键已清空（`<map />`）；view 从 45/36/50 变成
+  **51/45/36**（#7 +1，见下条）。
+- 测试帖 `verify-draft-clear`（id 13）与 `verify-unread-temp` 评论均已删除。
+- 要还原 `updated_at`（连同把 #7 的 view 打回 50）只能直接写库（SSH + SQL），超出本机
+  `deploy_now.py` 的能力范围，未做。用户已明确选择**保留现状**。
 
 **顺带确认无回归**：发布页格式工具条第一枚仍是「添加图片」（第三十批的重排仍在）；列表卡片、
 分类 chips、底部导航均与第三十批一致。
@@ -1674,9 +1692,10 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
 7. **编辑资料页头与个人资料页头是同款但两处各写各的**（20dp/8dp/16dp、72dp 头像、22sp/14sp/12sp）——改一处必须同步另一处，否则「所见即所得」又断了。要做的话应抽成共享 dimen/style，需同时动两个已被真机验证过的布局
 
 **再下一批（体验打磨）**
-0. **发布成功后草稿未被清理**（第三十一批复验发现，`6984cfc` 起就存在）：success 分支
+0. ~~**发布成功后草稿未被清理**（第三十一批复验发现，`6984cfc` 起就存在）：success 分支
    `clearDraft()` → `navigateUp()` → `onDestroyView()` 的 flush `persistDraftNow()` 把刚删掉的键
-   原样写回，用户下次进来会被问「恢复未发布草稿？」，载入再发一次就是重复帖。修法见第三十一批
+   原样写回，用户下次进来会被问「恢复未发布草稿？」，载入再发一次就是重复帖~~ —— **已修复**，
+   见第三十一批（`draftConsumed` 闸门，提交 `3aaf62c`，真机四条路径复验通过）
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
 2. `ProjectAnalyzerFragment` 的 `containerColors` 6 个固定饱和色改 M3 surface 角色
 3. 启动页 `splash_background` 夜间值与 M3 `colorSurface` 对齐（~~`surface_card` 夜间值~~ 部分**已完成**，见第二十七批；splash 部分仍受夜间文件注释里那条限制：系统启动窗口只读浅色值，单独改夜间值会造成「蓝启动窗口 → 深色启动页」闪变）
