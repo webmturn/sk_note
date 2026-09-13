@@ -45,7 +45,12 @@
          故维持两套一致。 -->
     <color name="splash_background">#FF1976D2</color>
 
-    <color name="surface_card">#FF1E1E2E</color>
+    <!-- 外壳色，取值钉在 M3 的夜间 colorSurface 上（m3_sys_color_dark_surface
+         = m3_ref_palette_neutral6 = #141218），理由与同步要求见 values/colors.xml。
+         原值是项目自建的 #1E1E2E（偏蓝一档），它正是每页顶部那道 33dp 色带接缝
+         的来源；真机实测内容是 #141218，故对齐到同一个值。
+         上面 splash 注释里提到的 surface_card 旧值 #FF1E1E2E，指的就是这个原值。 -->
+    <color name="surface_card">#FF141218</color>
     <color name="surface_elevated">#FF252536</color>
     <color name="detail_section_bg">#FF1A1A2A</color>
     <color name="theme_preview_light_bg">#FF6B5C2E</color>

@@ -22,6 +22,9 @@
         <item name="colorSurfaceInverse">@color/snackbar_container</item>
         <item name="colorOnSurfaceInverse">@color/snackbar_on_container</item>
         <item name="colorPrimaryInverse">@color/snackbar_action</item>
+        <!-- 系统栏用 surface_card（与底部导航栏同色），理由见 values/themes.xml。
+             本次修接缝改的是 surface_card 的取值（夜间 #1E1E2E → #141218 =
+             M3 colorSurface），不是这里。两处必须成对，否则夜间会拿到浅色那份。 -->
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface_card</item>

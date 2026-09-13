@@ -35,6 +35,14 @@
         <item name="colorSurfaceInverse">@color/snackbar_container</item>
         <item name="colorOnSurfaceInverse">@color/snackbar_on_container</item>
         <item name="colorPrimaryInverse">@color/snackbar_action</item>
+        <!-- 系统栏（状态栏 / 导航栏）与底部导航栏统一用项目的 surface_card。
+             本次修的是「色带接缝」：surface_card 的取值原先与内容所用的 M3 colorSurface
+             不同源（浅色 #FFFFFF vs #FEF7FF、夜间 #1E1E2E vs #141218），于是每一页顶部
+             33dp 都是「状态栏一个色、其下内容另一个色」的横向接缝（真机实测夜间
+             #1E1E2E 与 #141218）。这里不改结构，只把 surface_card 的取值对齐到
+             M3 colorSurface（见 colors.xml），三处角色因此天然同色。
+             导航栏区域在手势导航下透出的本来就是窗口背景（= colorSurface），对齐后
+             三键导航与手势导航表现一致。 -->
         <item name="android:statusBarColor">@color/surface_card</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/surface_card</item>
@@ -62,6 +70,9 @@
       此前这里写的 itemPaddingTop/Bottom=8dp 是为旧的 64dp 紧凑栏配的，
       在 80dp 标准高度下会与 M3 的 12/16 打架。
       配色走项目自己的定义：底栏与状态栏同色（surface_card），选中图标用 colorPrimary。
+      第十一批把这一行从 M3 默认的 surfaceContainer(#211F26) 改到 surface_card，是刻意的
+      （「底栏与状态栏一致」）；本次修色带接缝改的是 surface_card 的取值而不是这里，
+      所以那层关系保持成立，两个模式也一致。
     -->
     <style name="Widget.SkNote.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
         <item name="backgroundTint">@color/surface_card</item>

@@ -39,7 +39,16 @@
     <color name="banner_text_secondary">#B3FFFFFF</color>
     <color name="splash_background">#FF1976D2</color>
 
-    <color name="surface_card">#FFFFFFFF</color>
+    <!-- 外壳（状态栏 / 导航栏 / 底部导航栏）统一用这个色。
+         取值刻意钉在 M3 的 colorSurface 上（浅色 = m3_sys_color_light_surface
+         = m3_ref_palette_neutral98 = #FEF7FF；夜间见 values-night），
+         为的是让「外壳」和「内容」落在同一个平面上 —— 此前浅色是 #FFFFFF、
+         夜间是 #1E1E2E，与内容的 colorSurface 不同源，于是每页顶部 33dp 都有一道
+         横向色带接缝。之所以不直接写 ?attr/colorSurface，是为了保住项目自己对外壳
+         配色的控制点（第十一批「底栏与状态栏同色」就是在这上面做的）。
+         代价：material 升级若改了 colorSurface，这里要跟着同步（同
+         dimens.xml 里 bottom_nav_height 与 bottom_nav_content_inset 的关系）。 -->
+    <color name="surface_card">#FFFEF7FF</color>
     <color name="surface_elevated">#FFF5F5F5</color>
     <color name="detail_section_bg">#FFF8F9FA</color>
     <color name="theme_preview_light_bg">#FFF8E1</color>
