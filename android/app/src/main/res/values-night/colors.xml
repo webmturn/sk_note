@@ -16,13 +16,14 @@
     <color name="tertiary_container">#FF004D40</color>
     <color name="on_tertiary_container">#FFB2DFDB</color>
 
-    <!-- 反色三兄弟（Snackbar 专用），与浅色成对声明。
-         夜间把「反色」倒过来：底用浅的 Blue Grey 50，文字用深的 900 调，
-         动作文字用浅色主色（Blue 700）—— 因为它是画在【浅色】底上的。
-         此前未定义，提示条在夜间同样落回 M3 基线，不跟随项目调色板。 -->
-    <color name="inverse_surface">#FFECEFF1</color>
-    <color name="inverse_on_surface">#FF263238</color>
-    <color name="inverse_primary">#FF1976D2</color>
+    <!-- Snackbar（提示条）配色，与浅色成对声明。
+         **这里刻意偏离 M3 的「反色」语义**：M3 基线在深色主题里把提示条做成
+         浅底（inverseSurface = neutral90 #E6E0E9），本项目改为深色浮起层，
+         避免深色界面里每次提示都跳出一条亮白条。
+         底取 M3 的 surfaceContainerHigh（深色 #2B2930）—— 比页面 #141218 与卡片
+         #1E1E2E 都亮一档，提示条因此仍「浮」得起来；文字与动作按钮沿用浅色那套
+         （两者都是画在深色底上，不需要区分昼夜）。 -->
+    <color name="snackbar_container">#FF2B2930</color>
 
     <color name="icon_bg_orange">#66795548</color>
     <color name="icon_bg_green">#66388E3C</color>

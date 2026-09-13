@@ -264,6 +264,7 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
         android:gravity="center_vertical"
+        android:tag="snackbar_anchor"
         android:background="?attr/colorSurface">
 
         <com.google.android.material.button.MaterialButton
