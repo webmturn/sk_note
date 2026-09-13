@@ -1511,6 +1511,79 @@ m3_sys_color_light_background = m3_ref_palette_neutral98   （窗口底色与表
 
 ---
 
+### 第三十批（讨论区补三件主流功能：排序 / 标签 / 未读，已修复并部署）
+
+**起因**：用户看了第二十九批末尾那份「主流讨论平台功能面」的对照表，直接点了三条缺口：排序、未读状态、标签。
+
+**动工前的取舍（都已落到代码注释里）**
+
+1. **标签沿用 App 内既有做法，不引入 Discourse 那套**：`snippets.tags` 就是一个逗号分隔的 TEXT 列（`schema.sql:184`），既能被搜索（`snippets.ts:35` 的 `tags LIKE ?`），详情页又渲染成 `#chips`（`SnippetDetailFragment.bindTags`）。讨论照抄 → 只需 `ALTER TABLE ADD COLUMN`（非破坏性），而不是两张新表 + 关联表。
+2. **未读不能塞进列表接口**：列表路由挂着 `edgeCache(120)`，而缓存键就是 URL（`cache.ts:43/70`）—— 响应里一旦有按用户不同的字段，先访问那个人的未读状态就会被缓存并展示给所有人。所以未读独立成接口，列表继续共享缓存。
+3. **也不能复用 `content_views`**：它是 `INSERT OR IGNORE`（首次浏览即定、`viewed_at` 永不更新），而且 `server.ts:53-58` 有个 30 天清理任务。阅读位置需要「最后一次读到哪」且不能过期 → 单开一张表。
+4. **排序公式要能一眼看懂**：`hot = 阅读数`、`replies = 回复数`，不做时间衰减（Discourse 的 Top 带时间窗、Reddit 的 hot 带时间衰减，这个体量不值得引入说不清的评分）。
+
+**改动**
+
+| 层 | 内容 |
+|---|---|
+| 后端 | 列表接口 `sort` 参数（latest 默认 = 现状按 `updated_at`，向后兼容；hot；replies；非法值回退；置顶恒最前）；`tags` 列 + `normalizeTags`（逗号/顿号/空白切分、去空、忽略大小写去重、单个 ≤20 字符、最多 5 个）；`GET /unread`（需登录）；`POST /:id/read`（需登录、幂等 upsert）；两个迁移文件 |
+| Android | 列表页头排序控件（取代原先那个纯装饰、不可点的图标）；发布页「标签」输入框 + 进草稿/回填；详情页 `#chips`；列表项未读蓝点 + 「N 条新回复」；详情打开上报已读并让列表刷新 |
+
+**本地 SQL 验证**（`node:sqlite`，两个脚本用完即删）
+
+```
+# 标签与排序
+BEFORE_MIGRATION_HAS_TAGS=false → AFTER=true（默认 ''）；重复执行报 duplicate column name: tags
+  （deploy_now.py 逐条 try/catch，故幂等）
+三种排序顺序 / 置顶恒首位 / 标签搜索 / INSERT+UPDATE 带 tags → ALL_SQL_VALID
+
+# 未读
+READS_TABLE_CREATED / READS_INDEX_CREATED = true；迁移两遍无异常
+ADMIN_UNREAD = [{"id":1,"n":2}]   ← 3 条评论里「读到第 1 条之后」只算 2 条
+BOB_UNREAD = []                   ← 读在最后一条评论之后
+CAROL_UNREAD = []                 ← 从没读过任何帖（否则新用户满屏红点）
+AFTER_MARK_READ = []；READS_ROW_COUNT = 1（upsert 不重复插入）；CASCADE_OK = true
+```
+
+**生产验证**（已部署两次，迁移均执行成功，pm2 分别 ↺26 / ↺27）
+
+```
+/api/discussions                → 11, 8, 7（按最后活动；向后兼容）
+/api/discussions?sort=hot       → 7, 11, 8（阅读 50/45/36）
+/api/discussions?sort=replies   → 11, 8, 7（回复 16/1/1）
+/api/discussions?sort=bogus     → 回退 latest
+GET  /api/discussions/unread    → 401（路由存在且受保护，未被 /:id 吞掉）
+POST /api/discussions/11/read   → 401
+```
+
+**真机验证**
+
+- 排序：点「最新 ▾」→ 菜单 最新/最热/最多回复；选「最热」后首条变成 50 阅读那条 ✓
+- 标签端到端：发布页填 `test,TEST,#tags,extra1,extra2,extra3,extra4` → 详情页 chips 实际是
+  **`#test #tags #extra1 #extra2 #extra3`** —— 大小写去重、存储去 `#` 显示补 `#`、上限 5
+  全部按设计生效 ✓（测试帖随后删除）
+- 未读：初始无红点（从没读过）→ 打开一帖 → 返回无红点 → 在该帖回一条 → 列表出现
+  **标题前蓝点 +「17 回复 1 条新回复」**（标题 x 108 → 150）→ 删除该回复 → 全部复原 ✓
+- 两次测试数据都已清理：讨论仍为 11/8/7 三条、reply 16/1/1、view 45/36/50 ✓
+
+**⚠️ 验证时抓到并修掉的真 bug**：从详情/发布页返回后排序被重置回「最新」。原因是
+`onViewCreated` 里 `currentSort` 被无条件赋成 `savedInstanceState?…?: 默认值`，而视图重建时
+`savedInstanceState` 可能为 null，于是把用户刚选的排序打回默认。改为「仅在确有存档时覆盖」，
+复测：选「最热」→ 进详情 → 返回，按钮仍是「最热」、顺序仍是 50/45/36 ✓
+
+**⚠️ 过程中的一个操作失误（记下来避免重犯）**：我用 `Get-Content -Raw` + `Set-Content` 改
+`discussions.ts`，把文件写成了系统 ANSI 编码（`Set-Content` 默认编码），导致该文件不再是合法
+UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并全部改用 `edit` 工具重做。
+**这个仓库里不要用 PowerShell 写文件** —— 与之前 `deploy_now.py` 的 GBK 事故同一类。
+
+**门禁**：两批次均 `assembleDebug` 通过；`lintDebug --rerun-tasks` **0 errors**，2353 warnings
+（批次 1 +3 = 新增三条中文硬编码文案；批次 2 持平）。
+
+**部署脚本**：`migrate_discussion_tags.sql` 与 `migrate_discussion_reads.sql` 已登记进
+`deploy_now.py` 的上传清单与 migrate 段落。该脚本被 `.gitignore` 忽略，**这些改动只存在于本机**。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
@@ -1530,7 +1603,10 @@ m3_sys_color_light_background = m3_ref_palette_neutral98   （窗口底色与表
 1. ~~**状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板~~ —— **已修复**，见第二十七批（改的是 `surface_card` 的取值，两个模式都验过）
 2. **工具栏的抬升带**：`liftOnScrollColor` = `?attr/colorSurfaceContainer`（`#211F26`），与内容的 `#141218` 差一档。静止时本应是 `?attr/colorSurface`，但实测出现过 `#211F26`，推断是输入法触发滚动后抬升态残留。**待一次真机确认**；若确认残留，可用 `Widget.SkNote.AppBarLayout` 把 `liftOnScrollColor` 指回 `colorSurface` 抹掉这条带子
 3. **同级列表页的空态/错误态同样被排到底部**：`fragment_share_list.xml`、`fragment_snippet_list.xml`、`fragment_bookmark_list.xml`、`fragment_reading_history.xml` 与讨论页是同一套结构，需做同样的两行移动（见第二十八批）
-4. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
+4. ~~讨论区缺「排序 / 未读 / 标签」~~ —— **已补齐**，见第三十批（排序与标签同一批、未读单独一批）
+5. **未读只做了列表标记**：底部导航「讨论」tab 还没有未读角标（Discourse 有）。后端 `GET /unread` 已返回 `total_unread` / `total_new_replies`，接角标只差一个 `BottomNavigationView` badge
+6. **标签还不能点按筛选**：现在只有输入、存储、显示、搜索；`GET /discussions` 还没有 `tag` 参数
+7. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
 5. **讨论详情的通知入口仍走整页骨架**（其余 5 个入口已改为预填真实页头）：该入口只带 `discussion_id`，没有可预填的数据。若要完全统一，需给 `DiscussionHeaderAdapter` 增加「占位页头」viewType，与评论占位同样作为 item 渲染
 6. ~~文章预填对所有入口都不生效（列表查询没取 `a.content`）~~ —— **已修复**：四条列表查询补上该列并部署，文章预填已生效（见第二十批）
 7. **编辑资料页头与个人资料页头是同款但两处各写各的**（20dp/8dp/16dp、72dp 头像、22sp/14sp/12sp）——改一处必须同步另一处，否则「所见即所得」又断了。要做的话应抽成共享 dimen/style，需同时动两个已被真机验证过的布局
