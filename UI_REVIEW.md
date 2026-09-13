@@ -1385,6 +1385,96 @@ compared 20 labels; differences = 0
 
 ---
 
+### 第二十七批（外壳色带接缝，已修复）
+
+**问题**：全 App 每一页顶部 33dp 是「状态栏一个色、其下内容另一个色」的横向接缝。这是文档里一直挂着的待办（原「已发现待处理」第 1 条）。
+
+**实测（改前，`uiautomator` + 逐点采样）**
+
+| 位置 | 夜间 | 浅色 |
+|---|---|---|
+| 状态栏 / 导航栏 / 底部导航栏（`@color/surface_card`） | `#1E1E2E` | `#FFFFFF` |
+| 内容（M3 `colorSurface`） | `#141218` | `#FEF7FF` |
+
+**两处订正**（都与我先前的判断/说法有关）：
+
+1. **这不是「只有深色有问题」**。此前文档把它写成深色现象，实际浅色也有：`#FFFFFF` vs `#FEF7FF`，Δ=(1,8,0) —— M3 的浅色表面是偏暖的淡紫白而非纯白，33dp 横条上仍是一条带子。
+2. **我上一轮口头汇报把浅色 `colorSurface` 说成 `#FFFBFE`，那是凭记忆写的**。从 `material-1.11.0.aar` 的 `res/values/values.xml` 读出来是：
+
+```
+m3_sys_color_light_surface  = m3_ref_palette_neutral98 = #FEF7FF
+m3_sys_color_dark_surface   = m3_ref_palette_neutral6  = #141218
+m3_sys_color_light_background = m3_ref_palette_neutral98   （窗口底色与表面同源）
+```
+
+**改动：2 个取值 + 注释（结构不动）**
+
+| 资源 | 改前 | 改后 |
+|---|---|---|
+| `values/surface_card` | `#FFFFFF` | **`#FFFEF7FF`** |
+| `values-night/surface_card` | `#FF1E1E2E` | **`#FF141218`** |
+
+状态栏、导航栏、底部导航栏三处**仍引用 `@color/surface_card`**，因此第十一批「底栏与状态栏同色」那层关系保持成立，也没有资源被孤立或删除。
+
+**为什么改「取值」而不是改用 `?attr/colorSurface`**：两者都能消缝。选改值是为了保住项目对外壳配色的控制点 —— 第十一批正是建立在这个控制点上（那一行 `backgroundTint=@color/surface_card` 是刻意从 M3 默认的 `surfaceContainer(#211F26)` 换过来的，有真机采样证据）。代价已写进代码注释：material 升级若改 `colorSurface`，这里要跟着同步（与 `dimens.xml` 里 `bottom_nav_height` ↔ `bottom_nav_content_inset` 同类）。
+
+> **复查抓到我自己的一个错**：本次第一版把底栏改成 `?attr/colorSurfaceContainer` —— 那**正是**第十一批刻意替换掉的 M3 默认值，等于静默回退一个已验证的决定。查文档发现后改为只动取值。
+
+**真机验证（逐点采样 x=600）**
+
+| 模式 | 采样点 | 改后 |
+|---|---|---|
+| 夜间 | y=20/60/95（状态栏）、110/300/700（页头/内容）、2180..2295（底栏） | 全部 **`#141218`** |
+| 浅色 | 同上各点 | 全部 **`#FEF7FF`** |
+
+两个模式下外壳与内容都落在同一个色值上，接缝消失；改前状态栏与底栏分别是 `#1E1E2E` / `#FFFFFF`。验证完已把主题设置改回「跟随系统」。
+
+**未纳入本次的**：工具栏那条抬升带（`liftOnScrollColor` = `?attr/colorSurfaceContainer`，已从 aar 资源确认静止色是 `?attr/colorSurface`、抬升色是 `?attr/colorSurfaceContainer`，`setLiftedState()` 只在 4 处滚动相关回调里被调用）。此前实测到静止时出现过 `#211F26`，推断是「打字唤出输入法触发一次滚动 → 抬升态残留」，**这一条仍是推断**，仍留在待办里。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors**、2350 warnings（与改前一致）。
+
+---
+
+### 第二十八批（讨论页：向其他开发者对齐，已修 3 项）
+
+**背景**：用户要求「优化讨论页UI，向其他开发者对齐」。这类要求容易变成凭感觉改，所以先去找**可引用的参照**再逐项核对。
+
+**调研**
+
+1. **Discourse 的 topic list 解剖**（论坛软件的参考实现）：标题 / 分类标签 / 摘要 / 回复数 / 浏览数 / 活动时间，另有「posters」（参与者头像堆叠）。本次取到的是一手讨论（`meta.discourse.org` 的 topic-list 组件帖与站内「Related topics」表的列结构）。
+2. **本 App 同级列表项**（`item_share.xml` / `item_snippet.xml`）：卡片外壳、内边距、元数据行的写法。
+3. M3 列表规范：`m2.material.io/components/lists` 对程序化抓取只返回空壳（JS 渲染），**没取到正文**，因此没有拿它当依据；改用 aar 里的真实资源定义交叉验证。
+
+**实测后修掉的 3 项**
+
+| # | 问题 | 证据 | 改动 |
+|---|---|---|---|
+| 1 | **空态/错误态被排到整页最底部**，正好贴在右下角「发起讨论」FAB 旁 | `layoutEmpty`/`layoutError` 是加权 `FrameLayout` 的**兄弟**节点，「暂无讨论」bounds y **2199..2256**（内容区 455..2301），截图可见它挤在底部 | 移进列表容器内部并 `layout_gravity="center"` |
+| 2 | **摘要与标题相同时卡片把同一句话显示两遍**（正文为空时还留一行空白） | `DiscussionAdapter` 直接 `tvPreview.text = preview`，无去重、无空值处理；截图第 3 张卡标题=摘要 | 正文为空、或摘要与标题**全等**时整行隐藏（连带隐藏分享类型图标）；只做全等判断 —— 仅前缀相同的往往还带链接等额外信息（实测第 1 张卡就是标题+链接），那种保留 |
+| 3 | **筛选到空分类时页头计数整条消失** | `DiscussionListFragment` 原本 `list.isEmpty()` 时写空字符串 | 始终显示「N 条讨论」，空结果即「0 条讨论」 |
+
+**真机验证**
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| 空态文字 y | 2199..2256 | **1537..1594**（列表区中部，与 FAB 不再相邻） |
+| 页头计数（空分类） | 整条消失 | **「0 条讨论」**（切回「全部」为「3 条讨论」） |
+| 第 3 张卡摘要行 | 与标题重复 | **消失**，卡片高度少 53px（stats 行 1809 → 1756） |
+| 第 1、2 张卡摘要 | — | **保留**（第 1 张带链接，属额外信息） |
+
+**核过但判定「不用改」的 4 项**（这轮调研的另一半产出，避免误改）
+
+1. **时间格式**：`DiscussionAdapter` 早已用 `TimeUtil.formatRelative`，屏幕上看到的 `03-27` 是它对较早日期的输出，不是绝对日期。我一开始把它当成「用了绝对日期」是**错的**。
+2. **chip 行缩进**：讨论页/分享页/片段页的 `HorizontalScrollView` 都是 12dp，一致（先前看到分享页的 14dp 是那张**搜索卡**的内边距，不是 chip 行）。
+3. **chip 取消选中**：每个 chip 的点击监听会先把所有兄弟置为未选中再选中自己，不存在「无选中」状态，不需要 `selectionRequired`。
+4. **卡片外壳**（16dp 圆角 / 1dp `colorOutlineVariant` 描边 / 内边距 16dp / 外边距 4dp）与 `item_share`、`item_snippet` 完全一致 —— 20dp 的卡片左右边距是全 App 约定，不是本页偏差。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors**、2351 warnings（较改前 +1）。**这 +1 已用 A/B 定位**：把本批三个文件临时 `git stash` 后重跑 lint 得 2350，两份报告按 (id,文件,行号) 求差 —— 差异集合里 7 条只是行号位移（同一告警换了行），唯一真正新增的是 `DiscussionListFragment` 计数那行的 `SetTextI18n`：原写法是条件表达式、lint 不报，改成直接插值后报。项目内同类告警已有 20+ 处，且文案全为硬编码中文，故不为此把代码写扭。
+
+**新发现的待办**：同级列表页（分享 / 片段 / 收藏 / 浏览历史）的空态与错误态是**同一套结构**（`fragment_share_list.xml:150-200` 逐行相同），因此同样被排到底部 —— 需要同样的两行移动。本次只改了讨论页。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
@@ -1401,16 +1491,18 @@ compared 20 labels; differences = 0
 
 **已发现待处理**
 
-1. **状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板
-2. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
-3. **讨论详情的通知入口仍走整页骨架**（其余 5 个入口已改为预填真实页头）：该入口只带 `discussion_id`，没有可预填的数据。若要完全统一，需给 `DiscussionHeaderAdapter` 增加「占位页头」viewType，与评论占位同样作为 item 渲染
-4. ~~文章预填对所有入口都不生效（列表查询没取 `a.content`）~~ —— **已修复**：四条列表查询补上该列并部署，文章预填已生效（见第二十批）
-5. **编辑资料页头与个人资料页头是同款但两处各写各的**（20dp/8dp/16dp、72dp 头像、22sp/14sp/12sp）——改一处必须同步另一处，否则「所见即所得」又断了。要做的话应抽成共享 dimen/style，需同时动两个已被真机验证过的布局
+1. ~~**状态栏与内容之间残留接缝**：顶部 33dp 为 `#1E1E2E`（`surface_card`），其下立即变 `#141218`（M3 `colorSurface`）。根因是两者来自不同调色板。消除方式：`statusBarColor` 改用 `?attr/colorSurface`，或把内容底色纳入项目调色板~~ —— **已修复**，见第二十七批（改的是 `surface_card` 的取值，两个模式都验过）
+2. **工具栏的抬升带**：`liftOnScrollColor` = `?attr/colorSurfaceContainer`（`#211F26`），与内容的 `#141218` 差一档。静止时本应是 `?attr/colorSurface`，但实测出现过 `#211F26`，推断是输入法触发滚动后抬升态残留。**待一次真机确认**；若确认残留，可用 `Widget.SkNote.AppBarLayout` 把 `liftOnScrollColor` 指回 `colorSurface` 抹掉这条带子
+3. **同级列表页的空态/错误态同样被排到底部**：`fragment_share_list.xml`、`fragment_snippet_list.xml`、`fragment_bookmark_list.xml`、`fragment_reading_history.xml` 与讨论页是同一套结构，需做同样的两行移动（见第二十八批）
+4. `fragment_create_discussion.xml` 有 8 处 `android:tooltipText`（API 26 起生效，minSdk 24）——在 API 24/25 上静默失效，属原有问题
+5. **讨论详情的通知入口仍走整页骨架**（其余 5 个入口已改为预填真实页头）：该入口只带 `discussion_id`，没有可预填的数据。若要完全统一，需给 `DiscussionHeaderAdapter` 增加「占位页头」viewType，与评论占位同样作为 item 渲染
+6. ~~文章预填对所有入口都不生效（列表查询没取 `a.content`）~~ —— **已修复**：四条列表查询补上该列并部署，文章预填已生效（见第二十批）
+7. **编辑资料页头与个人资料页头是同款但两处各写各的**（20dp/8dp/16dp、72dp 头像、22sp/14sp/12sp）——改一处必须同步另一处，否则「所见即所得」又断了。要做的话应抽成共享 dimen/style，需同时动两个已被真机验证过的布局
 
 **再下一批（体验打磨）**
 1. 处置 `layout_empty_state` / `layout_error_state`（复用或删除）
 2. `ProjectAnalyzerFragment` 的 `containerColors` 6 个固定饱和色改 M3 surface 角色
-3. 启动页 `splash_background` 夜间值、`surface_card` 夜间值与 M3 `colorSurface` 对齐
+3. 启动页 `splash_background` 夜间值与 M3 `colorSurface` 对齐（~~`surface_card` 夜间值~~ 部分**已完成**，见第二十七批；splash 部分仍受夜间文件注释里那条限制：系统启动窗口只读浅色值，单独改夜间值会造成「蓝启动窗口 → 深色启动页」闪变）
 4. 死资源清理（`chip_background_selector.xml`、`ic_abc.xml`、约 297 个零引用 drawable）
 
 **需要产品决策（其他）**
