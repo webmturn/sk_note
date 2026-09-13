@@ -29,6 +29,7 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ShareDetailFragment : Fragment() {
 
@@ -58,7 +59,7 @@ class ShareDetailFragment : Fragment() {
 
         shareId = arguments?.getLong("share_id", 0L) ?: 0L
         if (shareId <= 0L) {
-            Snackbar.make(binding.root, "无效的分享ID", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "无效的分享ID", Snackbar.LENGTH_SHORT).show()
             findNavController().navigateUp()
             return
         }
@@ -77,7 +78,7 @@ class ShareDetailFragment : Fragment() {
         navHandle?.getLiveData<String>("share_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("share_result_message")
                 }
             }
@@ -100,7 +101,7 @@ class ShareDetailFragment : Fragment() {
                         if (uri != null) {
                             openUri(uri)
                         } else {
-                            Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+                            AppSnackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
                         }
                     }
                     true
@@ -117,12 +118,12 @@ class ShareDetailFragment : Fragment() {
             currentShare?.let { share ->
                 val downloadUrl = normalizedDownloadUrl(share)
                 if (downloadUrl.isEmpty()) {
-                    Snackbar.make(binding.root, "暂无可复制的链接", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "暂无可复制的链接", Snackbar.LENGTH_SHORT).show()
                     return@let
                 }
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("url", downloadUrl))
-                Snackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -130,7 +131,7 @@ class ShareDetailFragment : Fragment() {
             currentShare?.let { share ->
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("password", share.downloadPwd.orEmpty()))
-                Snackbar.make(binding.root, "密码已复制", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "密码已复制", Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -178,12 +179,12 @@ class ShareDetailFragment : Fragment() {
                     if (response.isSuccessful) {
                         val body = response.body()
                         val liked = body?.liked ?: false
-                        Snackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
                         loadShare(showProgress = false)
                     }
                 } catch (e: Exception) {
                     if (!isFragmentUsable()) return@launch
-                    Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
                 } finally {
                     isLiking = false
                     _binding?.btnLike?.isEnabled = true
@@ -207,11 +208,11 @@ class ShareDetailFragment : Fragment() {
                     revealContent()
                     renderShare(share)
                 } else {
-                    Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (!isFragmentUsable()) return@launch
-                Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
                 if (isFragmentUsable() && contentShown) binding.progressBar.visibility = View.GONE
             }
@@ -281,7 +282,7 @@ class ShareDetailFragment : Fragment() {
         val downloadUrl = normalizedDownloadUrl(share)
         val browsableUri = buildBrowsableUri(downloadUrl)
         if (browsableUri == null) {
-            Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -337,7 +338,7 @@ class ShareDetailFragment : Fragment() {
                 if (uri != null) {
                     openUri(uri)
                 } else {
-                    Snackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "下载链接无效", Snackbar.LENGTH_SHORT).show()
                 }
             }
             .setNeutralButton("复制链接") { _, _ ->
@@ -349,7 +350,7 @@ class ShareDetailFragment : Fragment() {
                     share.downloadUrl.orEmpty()
                 }
                 clipboard.setPrimaryClip(ClipData.newPlainText("download_url", text))
-                Snackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "链接已复制", Snackbar.LENGTH_SHORT).show()
             }
             .setNegativeButton("取消", null)
             .show()
@@ -363,7 +364,7 @@ class ShareDetailFragment : Fragment() {
             share.downloadUrl.orEmpty()
         }
         clipboard.setPrimaryClip(ClipData.newPlainText("share_url", text))
-        Snackbar.make(binding.root, "链接已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "链接已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
     }
 
     private fun normalizedDownloadUrl(share: Share): String {
@@ -384,7 +385,7 @@ class ShareDetailFragment : Fragment() {
         if (intent.resolveActivity(packageManager) != null) {
             startActivity(intent)
         } else if (isFragmentUsable()) {
-            Snackbar.make(binding.root, "没有可用的应用打开该链接", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有可用的应用打开该链接", Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -407,11 +408,11 @@ class ShareDetailFragment : Fragment() {
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_shares", true)
                     findNavController().navigateUp()
                 } else {
-                    Snackbar.make(binding.root, "删除失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "删除失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (!isFragmentUsable()) return@launch
-                Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             }
         }
     }

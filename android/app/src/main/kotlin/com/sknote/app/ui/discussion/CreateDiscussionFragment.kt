@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
+import com.sknote.app.util.AppSnackbar
 
 class CreateDiscussionFragment : Fragment() {
 
@@ -445,7 +446,7 @@ class CreateDiscussionFragment : Fragment() {
 
         binding.btnAddImage.setOnClickListener {
             if (imageAdapter.size() >= maxImages) {
-                Snackbar.make(binding.root, "最多只能添加 $maxImages 张图片", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "最多只能添加 $maxImages 张图片", Snackbar.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             pickMultipleImages.launch(
@@ -515,7 +516,7 @@ class CreateDiscussionFragment : Fragment() {
                 val bytes = result.bytes
                 if (bytes == null) {
                     val reason = result.error ?: "图片处理失败"
-                    Snackbar.make(binding.root, reason, Snackbar.LENGTH_LONG).show()
+                    AppSnackbar.make(binding.root, reason, Snackbar.LENGTH_LONG).show()
                     val p = imageAdapter.indexOfUri(uri)
                     if (p >= 0) { imageAdapter.removeAt(p); updateImageUI() }
                     return@launch
@@ -530,12 +531,12 @@ class CreateDiscussionFragment : Fragment() {
                     imageAdapter.setUploadedUrl(p, uploadResult.url)
                     updateFormState()
                 } else {
-                    Snackbar.make(binding.root, uploadResult.error ?: "上传失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, uploadResult.error ?: "上传失败", Snackbar.LENGTH_SHORT).show()
                     imageAdapter.removeAt(p)
                     updateImageUI()
                 }
             } catch (e: Exception) {
-                Snackbar.make(binding.root, "上传失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "上传失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 val p = imageAdapter.indexOfUri(uri)
                 if (p >= 0) { imageAdapter.removeAt(p); updateImageUI() }
             }
@@ -737,7 +738,7 @@ class CreateDiscussionFragment : Fragment() {
         if (!validateBeforeSubmit(title, content)) return
 
         if (imageAdapter.size() > 0 && !imageAdapter.allUploaded()) {
-            Snackbar.make(binding.root, "图片正在上传中，请稍候...", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "图片正在上传中，请稍候...", Snackbar.LENGTH_SHORT).show()
             updateFormState()
             return
         }
@@ -773,7 +774,7 @@ class CreateDiscussionFragment : Fragment() {
         }
 
         if (selectedCategory.isBlank()) {
-            Snackbar.make(binding.root, "请选择讨论分类", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "请选择讨论分类", Snackbar.LENGTH_SHORT).show()
             isValid = false
         }
 
@@ -884,7 +885,7 @@ class CreateDiscussionFragment : Fragment() {
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
                 viewModel.onErrorHandled()
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -982,7 +983,7 @@ class CreateDiscussionFragment : Fragment() {
                 draftRestored = true
                 captureInitialDraftState()
                 updateFormState()
-                Snackbar.make(binding.root, "已载入草稿", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "已载入草稿", Snackbar.LENGTH_SHORT).show()
             }
             .setNegativeButton("丢弃草稿") { _, _ ->
                 clearDraft()

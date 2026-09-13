@@ -19,6 +19,7 @@ import com.sknote.app.databinding.FragmentComponentEditorBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class ComponentEditorFragment : Fragment() {
 
@@ -140,7 +141,7 @@ class ComponentEditorFragment : Fragment() {
     private fun save() {
         val name = binding.componentName.text?.toString()?.trim() ?: ""
         if (name.isEmpty()) {
-            Snackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -173,7 +174,7 @@ class ComponentEditorFragment : Fragment() {
         componentFile.parentFile?.mkdirs()
         componentFile.writeText(arr.toString())
 
-        Snackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
         findNavController().navigateUp()
     }
 

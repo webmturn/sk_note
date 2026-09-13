@@ -14,6 +14,7 @@ import com.sknote.app.BuildConfig
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentAboutBinding
 import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.AppSnackbar
 
 class AboutFragment : Fragment() {
 
@@ -95,7 +96,7 @@ class AboutFragment : Fragment() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
-            Snackbar.make(binding.root, "无法打开链接", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "无法打开链接", Snackbar.LENGTH_SHORT).show()
         }
     }
 

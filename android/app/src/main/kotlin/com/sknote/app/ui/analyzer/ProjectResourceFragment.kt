@@ -35,6 +35,7 @@ import com.sknote.app.R
 import com.sknote.app.databinding.FragmentProjectResourceBinding
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class ProjectResourceFragment : Fragment() {
 
@@ -296,7 +297,7 @@ class ProjectResourceFragment : Fragment() {
                 writeFile(uri, targetFile)
             }
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "导入失败: ${e.message}", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(binding.root, "导入失败: ${e.message}", Snackbar.LENGTH_LONG).show()
         }
     }
 
@@ -307,11 +308,11 @@ class ProjectResourceFragment : Fragment() {
                     input.copyTo(output)
                 }
             }
-            Snackbar.make(binding.root, "已导入: ${targetFile.name}", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "已导入: ${targetFile.name}", Snackbar.LENGTH_SHORT).show()
             refreshTabCounts()
             loadResources()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "写入失败: ${e.message}", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(binding.root, "写入失败: ${e.message}", Snackbar.LENGTH_LONG).show()
         }
     }
 
@@ -324,14 +325,14 @@ class ProjectResourceFragment : Fragment() {
             .setPositiveButton("删除") { _, _ ->
                 try {
                     if (item.file.delete()) {
-                        Snackbar.make(binding.root, "已删除: ${item.name}", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "已删除: ${item.name}", Snackbar.LENGTH_SHORT).show()
                         refreshTabCounts()
                         loadResources()
                     } else {
-                        Snackbar.make(binding.root, "删除失败", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "删除失败", Snackbar.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Snackbar.make(binding.root, "删除失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "删除失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("取消", null)
@@ -456,15 +457,15 @@ class ProjectResourceFragment : Fragment() {
                 start()
                 setOnCompletionListener {
                     _binding?.let { b ->
-                        Snackbar.make(b.root, "播放完成", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(b.root, "播放完成", Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }
-            Snackbar.make(binding.root, "正在播放: ${item.name}", Snackbar.LENGTH_LONG)
+            AppSnackbar.make(binding.root, "正在播放: ${item.name}", Snackbar.LENGTH_LONG)
                 .setAction("停止") { stopPlayback() }
                 .show()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "播放失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "播放失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
         }
     }
 

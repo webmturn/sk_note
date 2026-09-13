@@ -23,6 +23,7 @@ import com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageAdapt
 import com.sknote.app.ui.manage.discussioncategory.DiscussionCategoryManageViewModel
 import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class CategoryManageFragment : Fragment() {
 
@@ -131,7 +132,7 @@ class CategoryManageFragment : Fragment() {
         navHandle?.getLiveData<String>(CategoryEditorFragment.RESULT_MESSAGE_KEY)
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>(CategoryEditorFragment.RESULT_MESSAGE_KEY)
                 }
             }
@@ -147,7 +148,7 @@ class CategoryManageFragment : Fragment() {
         navHandle?.getLiveData<String>(DiscussionCategoryEditorFragment.RESULT_MESSAGE_KEY)
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>(DiscussionCategoryEditorFragment.RESULT_MESSAGE_KEY)
                 }
             }
@@ -158,7 +159,7 @@ class CategoryManageFragment : Fragment() {
             if (currentTab == 0) updateArticleEmpty(list)
         }
         articleVm.message.observe(viewLifecycleOwner) { msg ->
-            msg?.let { Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show(); articleVm.clearMessage() }
+            msg?.let { AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show(); articleVm.clearMessage() }
         }
 
         // discussion list
@@ -167,7 +168,7 @@ class CategoryManageFragment : Fragment() {
             if (currentTab == 1) updateDiscussionEmpty(list)
         }
         discussionVm.message.observe(viewLifecycleOwner) { msg ->
-            msg?.let { Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show(); discussionVm.clearMessage() }
+            msg?.let { AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show(); discussionVm.clearMessage() }
         }
     }
 

@@ -24,6 +24,7 @@ import com.sknote.app.databinding.FragmentComponentManageBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class CustomComponentsFragment : Fragment() {
 
@@ -171,9 +172,9 @@ class CustomComponentsFragment : Fragment() {
             val file = File(exportDir, "$name.json")
             val arr = JSONArray().put(comp)
             file.writeText(arr.toString())
-            Snackbar.make(binding.root, "已导出到 ${file.absolutePath}", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(binding.root, "已导出到 ${file.absolutePath}", Snackbar.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "导出失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "导出失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -181,7 +182,7 @@ class CustomComponentsFragment : Fragment() {
         val json = allComponents[index].toString(2)
         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("component_json", json))
-        Snackbar.make(binding.root, "JSON 已复制", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "JSON 已复制", Snackbar.LENGTH_SHORT).show()
     }
 
     private fun confirmDelete(index: Int) {

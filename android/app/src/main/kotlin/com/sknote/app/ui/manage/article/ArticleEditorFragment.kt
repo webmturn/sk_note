@@ -17,6 +17,7 @@ import com.sknote.app.data.model.CreateArticleRequest
 import com.sknote.app.data.model.UpdateArticleRequest
 import com.sknote.app.databinding.FragmentArticleEditorBinding
 import io.noties.markwon.Markwon
+import com.sknote.app.util.AppSnackbar
 
 class ArticleEditorFragment : Fragment() {
 
@@ -196,7 +197,7 @@ class ArticleEditorFragment : Fragment() {
         viewModel.error.observe(viewLifecycleOwner) { error ->
             error?.let {
                 viewModel.onErrorHandled()
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
 

@@ -17,6 +17,7 @@ import com.sknote.app.databinding.FragmentReleaseManageBinding
 import com.sknote.app.util.requireRolesOrExit
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ReleaseManageFragment : Fragment() {
 
@@ -84,7 +85,7 @@ class ReleaseManageFragment : Fragment() {
 
         viewModel.message.observe(viewLifecycleOwner) { msg ->
             msg?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
                 viewModel.clearMessage()
             }
         }

@@ -14,6 +14,7 @@ import com.sknote.app.data.model.CreateAppReleaseRequest
 import com.sknote.app.databinding.FragmentReleaseEditorBinding
 import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ReleaseEditorFragment : Fragment() {
 
@@ -113,7 +114,7 @@ class ReleaseEditorFragment : Fragment() {
             error?.let {
                 viewModel.onErrorHandled()
                 binding.btnSave.isEnabled = true
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
             }
         }
     }

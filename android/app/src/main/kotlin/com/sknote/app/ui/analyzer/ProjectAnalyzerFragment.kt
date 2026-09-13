@@ -39,6 +39,7 @@ import com.sknote.app.util.slideNavOptions
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class ProjectAnalyzerFragment : Fragment() {
 
@@ -1505,7 +1506,7 @@ class ProjectAnalyzerFragment : Fragment() {
 
     private fun showCrossProjectStats(restoreState: Boolean = false) {
         if (allProjects.isEmpty()) {
-            Snackbar.make(binding.root, "没有找到项目", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有找到项目", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -1715,12 +1716,12 @@ class ProjectAnalyzerFragment : Fragment() {
                 return
             }
         }
-        Snackbar.make(binding.root, "未找到 Sketchware Pro", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "未找到 Sketchware Pro", Snackbar.LENGTH_SHORT).show()
     }
 
     private fun showBackupDialog() {
         if (allProjects.isEmpty()) {
-            Snackbar.make(binding.root, "没有找到项目", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有找到项目", Snackbar.LENGTH_SHORT).show()
             return
         }
         val names = allProjects.map { "${it.name} (${it.id})" }.toTypedArray()
@@ -1732,7 +1733,7 @@ class ProjectAnalyzerFragment : Fragment() {
             .setPositiveButton("备份") { _, _ ->
                 val selected = allProjects.filterIndexed { idx, _ -> checked[idx] }
                 if (selected.isEmpty()) {
-                    Snackbar.make(binding.root, "未选择任何项目", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "未选择任何项目", Snackbar.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 backupProjects(selected)
@@ -1741,7 +1742,7 @@ class ProjectAnalyzerFragment : Fragment() {
     }
 
     private fun backupProjects(projects: List<SkProject>) {
-        Snackbar.make(binding.root, "正在备份...", Snackbar.LENGTH_INDEFINITE).show()
+        AppSnackbar.make(binding.root, "正在备份...", Snackbar.LENGTH_INDEFINITE).show()
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val count = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1779,9 +1780,9 @@ class ProjectAnalyzerFragment : Fragment() {
                     }
                     c
                 }
-                Snackbar.make(binding.root, "已备份 $count 个项目到 SkNote_Backup/", Snackbar.LENGTH_LONG).show()
+                AppSnackbar.make(binding.root, "已备份 $count 个项目到 SkNote_Backup/", Snackbar.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Snackbar.make(binding.root, "备份失败: ${e.message}", Snackbar.LENGTH_LONG).show()
+                AppSnackbar.make(binding.root, "备份失败: ${e.message}", Snackbar.LENGTH_LONG).show()
             }
         }
     }

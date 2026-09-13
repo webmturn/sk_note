@@ -29,6 +29,7 @@ import com.sknote.app.util.SyntaxHighlightUtil
 import com.sknote.app.util.TimeUtil
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class SnippetDetailFragment : Fragment() {
 
@@ -75,7 +76,7 @@ class SnippetDetailFragment : Fragment() {
         navHandle?.getLiveData<String>("snippet_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("snippet_result_message")
                 }
             }
@@ -132,12 +133,12 @@ class SnippetDetailFragment : Fragment() {
                     if (response.isSuccessful) {
                         val body = response.body()
                         val liked = body?.liked ?: false
-                        Snackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
                         loadSnippet(showProgress = false)
                     }
                 } catch (e: Exception) {
                     if (_binding == null) return@launch
-                    Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
                 } finally {
                     isLiking = false
                     _binding?.btnLike?.isEnabled = true
@@ -158,11 +159,11 @@ class SnippetDetailFragment : Fragment() {
                     revealContent()
                     renderSnippet(snippet)
                 } else {
-                    Snackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "加载失败", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (_binding == null) return@launch
-                Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
                 _binding?.progressBar?.visibility = View.GONE
             }
@@ -255,12 +256,12 @@ class SnippetDetailFragment : Fragment() {
 
     private fun copyCode() {
         if (codeText.isEmpty()) {
-            Snackbar.make(binding.root, "暂无可复制内容", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "暂无可复制内容", Snackbar.LENGTH_SHORT).show()
             return
         }
         val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("code", codeText))
-        Snackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {

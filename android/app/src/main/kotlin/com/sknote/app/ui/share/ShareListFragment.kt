@@ -29,6 +29,7 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ShareListFragment : Fragment() {
 
@@ -93,7 +94,7 @@ class ShareListFragment : Fragment() {
                 if (isLoggedIn) {
                     navController.navigate(R.id.action_shares_to_create)
                 } else {
-                    Snackbar.make(binding.root, "请先登录后再分享文件", Snackbar.LENGTH_SHORT)
+                    AppSnackbar.make(binding.root, "请先登录后再分享文件", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { navController.navigate(R.id.loginFragment, null, navOptions) }
                         .show()
                 }
@@ -150,7 +151,7 @@ class ShareListFragment : Fragment() {
             ?.getLiveData<String>("share_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navController.currentBackStackEntry?.savedStateHandle?.remove<String>("share_result_message")
                 }
             }

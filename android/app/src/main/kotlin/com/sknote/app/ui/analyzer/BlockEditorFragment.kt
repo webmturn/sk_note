@@ -21,6 +21,7 @@ import com.sknote.app.databinding.FragmentBlockEditorBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class BlockEditorFragment : Fragment() {
 
@@ -229,7 +230,7 @@ class BlockEditorFragment : Fragment() {
     private fun saveBlock() {
         val name = binding.etName.text?.toString()?.trim() ?: ""
         if (name.isEmpty()) {
-            Snackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -266,10 +267,10 @@ class BlockEditorFragment : Fragment() {
             blocksFile.parentFile?.mkdirs()
             blocksFile.writeText(arr.toString())
 
-            Snackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
             findNavController().navigateUp()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "保存失败: ${e.message}", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(binding.root, "保存失败: ${e.message}", Snackbar.LENGTH_LONG).show()
         }
     }
 

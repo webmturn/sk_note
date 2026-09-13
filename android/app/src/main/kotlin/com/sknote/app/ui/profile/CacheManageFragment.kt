@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class CacheManageFragment : Fragment() {
 
@@ -129,7 +130,7 @@ class CacheManageFragment : Fragment() {
                     "图片缓存已清理"
                 }
             )
-            Snackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "图片缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
 
@@ -155,7 +156,7 @@ class CacheManageFragment : Fragment() {
                     "全部缓存已清理"
                 }
             )
-            Snackbar.make(binding.root, "全部缓存已清除", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "全部缓存已清除", Snackbar.LENGTH_SHORT).show()
         }
     }
 

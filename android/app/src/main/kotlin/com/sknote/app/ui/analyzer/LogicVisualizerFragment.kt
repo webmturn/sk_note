@@ -40,6 +40,7 @@ import com.sknote.app.ui.reference.ReferenceData
 import com.sknote.app.util.slideNavOptions
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 private typealias LogicBlock = SkProjectParser.LogicBlock
 
@@ -453,7 +454,7 @@ class LogicVisualizerFragment : Fragment() {
         val logicFile = File(project.path, "logic")
         val viewFile = File(project.path, "view")
         if (!logicFile.exists()) {
-            Snackbar.make(binding.root, "未找到逻辑文件", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "未找到逻辑文件", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -467,7 +468,7 @@ class LogicVisualizerFragment : Fragment() {
 
         allEvents = buildLogicEventsFromActivities(activityLogics)
         if (allEvents.isEmpty() && activityLogics.isEmpty()) {
-            Snackbar.make(binding.root, "没有找到逻辑事件", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有找到逻辑事件", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -476,7 +477,7 @@ class LogicVisualizerFragment : Fragment() {
         activityLogics.values.forEach { orderedActivities.add(it.activityName) }
         layoutTrees.values.forEach { if (it.activityName.isNotEmpty()) orderedActivities.add(it.activityName) }
         if (orderedActivities.isEmpty()) {
-            Snackbar.make(binding.root, "未找到任何 Activity", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "未找到任何 Activity", Snackbar.LENGTH_SHORT).show()
             return
         }
         activities = orderedActivities.toList()
@@ -570,7 +571,7 @@ class LogicVisualizerFragment : Fragment() {
             }
         }
         if (results.isEmpty()) {
-            Snackbar.make(binding.root, "未找到匹配的积木块", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "未找到匹配的积木块", Snackbar.LENGTH_SHORT).show()
             return
         }
         // Show results as a dialog list
@@ -914,7 +915,7 @@ class LogicVisualizerFragment : Fragment() {
             }
         }
         if (hits.isEmpty()) {
-            Snackbar.make(binding.root, "${node.typeName} $viewId 未在逻辑里被引用", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "${node.typeName} $viewId 未在逻辑里被引用", Snackbar.LENGTH_SHORT).show()
             return
         }
         val items = hits.take(30).map {
@@ -1270,7 +1271,7 @@ class LogicVisualizerFragment : Fragment() {
     private fun showCodePreview(event: LogicEvent) {
         val code = generatePseudoCode(event.blocks, event.rootId)
         if (code.isBlank()) {
-            Snackbar.make(binding.root, "此事件没有积木块", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "此事件没有积木块", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -1300,7 +1301,7 @@ class LogicVisualizerFragment : Fragment() {
             .setPositiveButton("复制") { _, _ ->
                 val clipboard = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("pseudo_code", code))
-                Snackbar.make(binding.root, "已复制伪代码", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "已复制伪代码", Snackbar.LENGTH_SHORT).show()
             }
             .setNegativeButton("关闭", null)
             .show()
@@ -1370,7 +1371,7 @@ class LogicVisualizerFragment : Fragment() {
         val ctx = requireContext()
         val targetProjects = allProjects.filter { it.id != currentProject?.id }
         if (targetProjects.isEmpty()) {
-            Snackbar.make(binding.root, "没有其他项目可复制到", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有其他项目可复制到", Snackbar.LENGTH_SHORT).show()
             return
         }
         val items = targetProjects.map { "${it.name} (ID: ${it.id})" }.toTypedArray()
@@ -1577,14 +1578,14 @@ class LogicVisualizerFragment : Fragment() {
                 targetLogicFile.writeText(sb.toString())
             }
 
-            Snackbar.make(
+            AppSnackbar.make(
                 binding.root,
                 "已复制 ${remappedLines.size} 个积木块到 ${targetProject.name}（已备份原文件）",
                 Snackbar.LENGTH_LONG
             ).show()
 
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "复制失败: ${e.message}", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(binding.root, "复制失败: ${e.message}", Snackbar.LENGTH_LONG).show()
             e.printStackTrace()
         }
     }

@@ -38,6 +38,7 @@ import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class DiscussionDetailFragment : Fragment() {
 
@@ -201,7 +202,7 @@ class DiscussionDetailFragment : Fragment() {
         navHandle?.getLiveData<String>("discussion_result_message")
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("discussion_result_message")
                 }
             }
@@ -227,7 +228,7 @@ class DiscussionDetailFragment : Fragment() {
                         .setNegativeButton("取消", null)
                         .show()
                 } else {
-                    Snackbar.make(binding.root, "你没有权限删除这条评论", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "你没有权限删除这条评论", Snackbar.LENGTH_SHORT).show()
                 }
             },
             onLikeClick = { comment ->
@@ -246,7 +247,7 @@ class DiscussionDetailFragment : Fragment() {
                 if (comment.authorId == cachedUserId || cachedRole == "admin") {
                     showEditCommentDialog(comment)
                 } else {
-                    Snackbar.make(binding.root, "你没有权限编辑这条评论", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "你没有权限编辑这条评论", Snackbar.LENGTH_SHORT).show()
                 }
             }
         )
@@ -281,7 +282,7 @@ class DiscussionDetailFragment : Fragment() {
                 }
                 val content = binding.etReply.text.toString().trim()
                 if (content.isEmpty()) {
-                    Snackbar.make(binding.root, "请输入评论内容", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "请输入评论内容", Snackbar.LENGTH_SHORT).show()
                     return@launch
                 }
                 binding.btnSend.isEnabled = false
@@ -396,7 +397,7 @@ class DiscussionDetailFragment : Fragment() {
                         val newPinned = discussion.isPinned != 1
                         viewModel.togglePin(discussionId, newPinned) { ok, msg ->
                             if (_binding == null) return@togglePin
-                            Snackbar.make(
+                            AppSnackbar.make(
                                 binding.root,
                                 if (ok) (if (newPinned) "已置顶" else "已取消置顶") else (msg ?: "操作失败"),
                                 Snackbar.LENGTH_SHORT
@@ -418,7 +419,7 @@ class DiscussionDetailFragment : Fragment() {
                             .setPositiveButton("确定") { _, _ ->
                                 viewModel.toggleClose(discussionId, newClosed) { ok, msg ->
                                     if (_binding == null) return@toggleClose
-                                    Snackbar.make(
+                                    AppSnackbar.make(
                                         binding.root,
                                         if (ok) (if (newClosed) "已锁定" else "已解锁") else (msg ?: "操作失败"),
                                         Snackbar.LENGTH_SHORT
@@ -454,7 +455,7 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.deleted.observe(viewLifecycleOwner) { deleted ->
             if (deleted == true) {
                 viewModel.onDeletedHandled()
-                Snackbar.make(binding.root, "已删除", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "已删除", Snackbar.LENGTH_SHORT).show()
                 findNavController().previousBackStackEntry?.savedStateHandle?.set("refresh_discussions", true)
                 findNavController().navigateUp()
             }
@@ -506,7 +507,7 @@ class DiscussionDetailFragment : Fragment() {
                 // 隐藏键盘
                 val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                 imm.hideSoftInputFromWindow(binding.etReply.windowToken, 0)
-                Snackbar.make(binding.root, "评论成功", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "评论成功", Snackbar.LENGTH_SHORT).show()
             }
         }
     }
@@ -575,7 +576,7 @@ class DiscussionDetailFragment : Fragment() {
         val clipboard = requireContext().getSystemService(ClipboardManager::class.java)
         val clip = ClipData.newPlainText("comment", content)
         clipboard.setPrimaryClip(clip)
-        Snackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "评论内容已复制", Snackbar.LENGTH_SHORT).show()
     }
 
     private fun showEditCommentDialog(comment: Comment) {
@@ -635,9 +636,9 @@ class DiscussionDetailFragment : Fragment() {
                     saveButton.isEnabled = true
                     if (success) {
                         dialog.dismiss()
-                        Snackbar.make(binding.root, "评论已更新", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "评论已更新", Snackbar.LENGTH_SHORT).show()
                     } else {
-                        Snackbar.make(binding.root, message ?: "更新失败", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, message ?: "更新失败", Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }

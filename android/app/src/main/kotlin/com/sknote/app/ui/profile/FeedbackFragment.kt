@@ -21,6 +21,7 @@ import com.sknote.app.ui.discussion.putPrefillDiscussion
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class FeedbackFragment : Fragment() {
 
@@ -103,7 +104,7 @@ class FeedbackFragment : Fragment() {
 
     private fun submitFeedback() {
         if (!isLoggedIn) {
-            Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
+            AppSnackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
                 .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
                 .show()
             return
@@ -143,7 +144,7 @@ class FeedbackFragment : Fragment() {
                 isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
                 if (!isLoggedIn) {
                     renderLoginState()
-                    Snackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
+                    AppSnackbar.make(binding.root, "请先登录后再提交反馈", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
                     .show()
                     return@launch
@@ -196,20 +197,20 @@ class FeedbackFragment : Fragment() {
                         }
                         findNavController().navigate(R.id.discussionDetailFragment, bundle, slideNavOptions())
                     } else {
-                        Snackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "反馈已提交，感谢你的反馈！", Snackbar.LENGTH_SHORT).show()
                         binding.etTitle.text?.clear()
                         binding.etContent.text?.clear()
                         binding.etContact.text?.clear()
                     }
                 } else {
-                    Snackbar.make(
+                    AppSnackbar.make(
                         binding.root,
                         response.body()?.error ?: "提交失败: ${response.message()}",
                         Snackbar.LENGTH_SHORT
                     ).show()
                 }
             } catch (e: Exception) {
-                Snackbar.make(binding.root, "提交失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "提交失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
                 if (_binding != null) {
                     binding.progressSubmit.visibility = View.GONE
@@ -224,7 +225,7 @@ class FeedbackFragment : Fragment() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
-            Snackbar.make(binding.root, "无法打开链接", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "无法打开链接", Snackbar.LENGTH_SHORT).show()
         }
     }
 

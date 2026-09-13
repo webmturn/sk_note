@@ -23,7 +23,7 @@ suspend fun Fragment.requireLoggedIn(anchorView: View, message: String = "请先
     val isLoggedIn = ApiClient.getTokenManager().isLoggedIn().first()
     if (isLoggedIn) return true
 
-    Snackbar.make(anchorView, message, Snackbar.LENGTH_SHORT)
+    AppSnackbar.make(anchorView, message, Snackbar.LENGTH_SHORT)
         .setAction("去登录") {
             if (isAdded) {
                 findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
@@ -60,7 +60,7 @@ suspend fun Fragment.requireRolesOrExit(
  */
 private fun Fragment.notifyAndExit(message: String, anchorView: View?) {
     if (anchorView != null) {
-        Snackbar.make(anchorView, message, Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(anchorView, message, Snackbar.LENGTH_SHORT).show()
     } else {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }

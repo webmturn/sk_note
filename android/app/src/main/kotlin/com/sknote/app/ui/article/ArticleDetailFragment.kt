@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import com.sknote.app.util.TimeUtil
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
+import com.sknote.app.util.AppSnackbar
 
 class ArticleDetailFragment : Fragment() {
 
@@ -80,7 +81,7 @@ class ArticleDetailFragment : Fragment() {
         navHandle?.getLiveData<String>("article_manage_message")
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("article_manage_message")
                 }
             }
@@ -202,11 +203,11 @@ class ArticleDetailFragment : Fragment() {
                     val response = ApiClient.getService().likeArticle(articleId)
                     if (response.isSuccessful) {
                         val liked = response.body()?.liked ?: false
-                        Snackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, if (liked) "已点赞" else "已取消点赞", Snackbar.LENGTH_SHORT).show()
                         viewModel.loadArticle(articleId)
                     }
                 } catch (e: Exception) {
-                    Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
                 } finally {
                     isLiking = false
                     _binding?.btnLike?.isEnabled = true
@@ -248,10 +249,10 @@ class ArticleDetailFragment : Fragment() {
                     if (response.isSuccessful) {
                         isBookmarked = response.body()?.bookmarked ?: false
                         updateBookmarkUI()
-                        Snackbar.make(binding.root, if (isBookmarked) "已收藏" else "已取消收藏", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, if (isBookmarked) "已收藏" else "已取消收藏", Snackbar.LENGTH_SHORT).show()
                     }
                 } catch (_: Exception) {
-                    Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
                 } finally {
                     isBookmarking = false
                     _binding?.btnBookmark?.isEnabled = true

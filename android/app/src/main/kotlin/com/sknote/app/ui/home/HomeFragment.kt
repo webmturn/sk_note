@@ -21,6 +21,7 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class HomeFragment : Fragment() {
 
@@ -66,7 +67,7 @@ class HomeFragment : Fragment() {
         navHandle?.getLiveData<String>("share_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("share_result_message")
                 }
             }

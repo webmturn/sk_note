@@ -19,6 +19,7 @@ import com.sknote.app.ui.reference.BlockShapeView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 object BlockShareHelper {
 
@@ -180,7 +181,7 @@ object BlockShareHelper {
                     append(code)
                 }
                 clipboard.setPrimaryClip(ClipData.newPlainText("block_code", copyText))
-                Snackbar.make(view, "代码已复制", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(view, "代码已复制", Snackbar.LENGTH_SHORT).show()
             }
 
             view.findViewById<MaterialButton>(R.id.btnImportBlock).setOnClickListener {
@@ -382,9 +383,9 @@ object BlockShareHelper {
                     blocksFile.parentFile?.mkdirs()
                     blocksFile.writeText(blockArr.toString())
 
-                    Snackbar.make(anchor, "已导入 \"$palName\" (${blocksArr.length()} 个积木块)", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(anchor, "已导入 \"$palName\" (${blocksArr.length()} 个积木块)", Snackbar.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Snackbar.make(anchor, "导入失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(anchor, "导入失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("取消", null)
@@ -408,7 +409,7 @@ object BlockShareHelper {
         } catch (_: Exception) {}
 
         if (palettes.isEmpty()) {
-            Snackbar.make(anchor, "没有调色板，请先创建一个调色板", Snackbar.LENGTH_LONG).show()
+            AppSnackbar.make(anchor, "没有调色板，请先创建一个调色板", Snackbar.LENGTH_LONG).show()
             return
         }
 
@@ -432,9 +433,9 @@ object BlockShareHelper {
                     blocksFile.parentFile?.mkdirs()
                     blocksFile.writeText(arr.toString())
 
-                    Snackbar.make(anchor, "已导入到 \"${names[which]}\"", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(anchor, "已导入到 \"${names[which]}\"", Snackbar.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Snackbar.make(anchor, "导入失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(anchor, "导入失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("取消", null)

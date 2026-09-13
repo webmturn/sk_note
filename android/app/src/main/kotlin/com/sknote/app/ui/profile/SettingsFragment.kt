@@ -21,6 +21,7 @@ import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class SettingsFragment : Fragment() {
 
@@ -132,7 +133,7 @@ class SettingsFragment : Fragment() {
             if (result.error != null) {
                 binding.tvUpdateStatus.text = "检查失败，请稍后重试"
                 if (manual) {
-                    Snackbar.make(binding.root, "检查更新失败: ${result.error}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "检查更新失败: ${result.error}", Snackbar.LENGTH_SHORT).show()
                 }
                 return@launch
             }
@@ -174,7 +175,7 @@ class SettingsFragment : Fragment() {
                         startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(info.htmlUrl)))
                     }.onFailure {
                         if (isFragmentUsable()) {
-                            Snackbar.make(binding.root, "无法打开下载页面", Snackbar.LENGTH_SHORT).show()
+                            AppSnackbar.make(binding.root, "无法打开下载页面", Snackbar.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -206,12 +207,12 @@ class SettingsFragment : Fragment() {
                     AppUpdateManager.installApk(requireContext(), file)
                 } else {
                     binding.tvUpdateStatus.text = "下载失败"
-                    Snackbar.make(binding.root, "下载失败，请重试", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "下载失败，请重试", Snackbar.LENGTH_SHORT).show()
                 }
             }
         }
 
-        Snackbar.make(binding.root, "正在后台下载更新...", Snackbar.LENGTH_LONG).show()
+        AppSnackbar.make(binding.root, "正在后台下载更新...", Snackbar.LENGTH_LONG).show()
     }
 
     private fun getCacheSize(): String {

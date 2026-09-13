@@ -26,6 +26,7 @@ import com.sknote.app.databinding.FragmentEventManageBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class CustomEventsFragment : Fragment() {
 
@@ -346,7 +347,7 @@ class CustomEventsFragment : Fragment() {
             .setPositiveButton("保存") { _, _ ->
                 val name = etName.text.toString().trim()
                 if (name.isEmpty()) {
-                    Snackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 val obj = if (isEdit) allListeners[index] else JSONObject()
@@ -379,7 +380,7 @@ class CustomEventsFragment : Fragment() {
             file.writeText("$listenerArr\n$eventsArr")
             Toast.makeText(requireContext(), "已导出到 ${file.absolutePath}", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, "导出失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "导出失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
         }
     }
 

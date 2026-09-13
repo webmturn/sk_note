@@ -19,6 +19,7 @@ import com.sknote.app.databinding.FragmentArticleManageBinding
 import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ArticleManageFragment : Fragment() {
 
@@ -92,7 +93,7 @@ class ArticleManageFragment : Fragment() {
         navHandle?.getLiveData<String>(ArticleEditorFragment.RESULT_MESSAGE_KEY)
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>(ArticleEditorFragment.RESULT_MESSAGE_KEY)
                 }
             }
@@ -108,7 +109,7 @@ class ArticleManageFragment : Fragment() {
 
         viewModel.message.observe(viewLifecycleOwner) { msg ->
             msg?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
                 viewModel.clearMessage()
             }
         }

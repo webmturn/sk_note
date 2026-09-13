@@ -27,6 +27,7 @@ import com.sknote.app.util.TimeUtil
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class PublicProfileFragment : Fragment() {
 
@@ -97,7 +98,7 @@ class PublicProfileFragment : Fragment() {
         navHandle?.getLiveData<String>("share_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("share_result_message")
                 }
             }
@@ -105,7 +106,7 @@ class PublicProfileFragment : Fragment() {
         navHandle?.getLiveData<String>("snippet_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("snippet_result_message")
                 }
             }
@@ -215,7 +216,7 @@ class PublicProfileFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 if (_binding != null) {
-                    Snackbar.make(binding.root, "加载失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "加载失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 }
             }
         }
@@ -254,7 +255,7 @@ class PublicProfileFragment : Fragment() {
                 val loggedIn = ApiClient.getTokenManager().isLoggedIn().first()
                 if (_binding == null) return@launch
                 if (!loggedIn) {
-                    Snackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
+                    AppSnackbar.make(binding.root, "请先登录", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, slideNavOptions()) }
                         .show()
                     return@launch
@@ -268,11 +269,11 @@ class PublicProfileFragment : Fragment() {
                     updateFollowButton()
                     loadProfile()
                 } else {
-                    Snackbar.make(binding.root, "操作失败: ${response.message()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败: ${response.message()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (_binding != null) {
-                    Snackbar.make(binding.root, "操作失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "操作失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 }
             } finally {
                 if (_binding != null) binding.btnFollow.isEnabled = true

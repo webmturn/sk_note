@@ -16,6 +16,7 @@ import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentLoginBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class LoginFragment : Fragment() {
 
@@ -177,7 +178,7 @@ class LoginFragment : Fragment() {
         viewModel.authResult.observe(viewLifecycleOwner) { result ->
             result ?: return@observe
             if (result.token != null && result.user != null) {
-                Snackbar.make(
+                AppSnackbar.make(
                     binding.root,
                     if (pendingAuthAction == "register") "注册成功" else "登录成功",
                     Snackbar.LENGTH_SHORT
@@ -185,7 +186,7 @@ class LoginFragment : Fragment() {
                 pendingAuthAction = null
                 findNavController().popBackStack()
             } else if (result.error != null) {
-                Snackbar.make(binding.root, result.error, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, result.error, Snackbar.LENGTH_SHORT).show()
             }
         }
 
@@ -199,7 +200,7 @@ class LoginFragment : Fragment() {
         viewModel.loggedOut.observe(viewLifecycleOwner) { loggedOut ->
             if (loggedOut) {
                 showLoggedOutState()
-                Snackbar.make(binding.root, "已退出登录", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "已退出登录", Snackbar.LENGTH_SHORT).show()
             }
         }
     }

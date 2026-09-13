@@ -21,6 +21,7 @@ import com.sknote.app.data.model.ReferenceItem
 import com.sknote.app.databinding.FragmentReferenceDetailBinding
 import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
+import com.sknote.app.util.AppSnackbar
 
 class ReferenceDetailFragment : Fragment() {
 
@@ -120,7 +121,7 @@ class ReferenceDetailFragment : Fragment() {
                 break
             }
         }
-        Snackbar.make(binding.root,
+        AppSnackbar.make(binding.root,
             if (launched) "代码已复制，已打开 Sketchware" else "代码已复制到剪贴板",
             Snackbar.LENGTH_LONG).show()
     }
@@ -129,10 +130,10 @@ class ReferenceDetailFragment : Fragment() {
         val ids = getBookmarkedIds().toMutableSet()
         if (ids.contains(referenceId)) {
             ids.remove(referenceId)
-            Snackbar.make(binding.root, "已取消收藏", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "已取消收藏", Snackbar.LENGTH_SHORT).show()
         } else {
             ids.add(referenceId)
-            Snackbar.make(binding.root, "已收藏", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "已收藏", Snackbar.LENGTH_SHORT).show()
         }
         bookmarkPrefs.edit().putStringSet("ids", ids.map { it.toString() }.toSet()).apply()
         updateBookmarkIcon()
@@ -353,7 +354,7 @@ class ReferenceDetailFragment : Fragment() {
                 binding.btnCopyCode.setOnClickListener {
                     val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("示例代码", ref.example.orEmpty()))
-                    Snackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "代码已复制到剪贴板", Snackbar.LENGTH_SHORT).show()
                 }
             }
 

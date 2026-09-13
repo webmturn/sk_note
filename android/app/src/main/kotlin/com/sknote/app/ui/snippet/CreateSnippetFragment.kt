@@ -21,6 +21,7 @@ import com.sknote.app.databinding.FragmentCreateSnippetBinding
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class CreateSnippetFragment : Fragment() {
 
@@ -213,11 +214,11 @@ class CreateSnippetFragment : Fragment() {
                     hasLoadedInitialData = true
                     captureInitialDraftState()
                 } else {
-                    Snackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (!isFragmentUsable()) return@launch
-                Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
                 isLoadingInitialData = false
                 _binding?.btnSubmit?.isEnabled = true
@@ -274,11 +275,11 @@ class CreateSnippetFragment : Fragment() {
                     findNavController().previousBackStackEntry?.savedStateHandle?.set("snippet_result_message", message)
                     findNavController().navigateUp()
                 } else {
-                    Snackbar.make(binding.root, if (editingId == null) "发布失败: ${response.code()}" else "保存失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, if (editingId == null) "发布失败: ${response.code()}" else "保存失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 if (!isFragmentUsable()) return@launch
-                Snackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "网络错误: ${e.message}", Snackbar.LENGTH_SHORT).show()
             } finally {
                 _binding?.btnSubmit?.isEnabled = true
                 _binding?.btnSubmit?.text = if (snippetId == null) "发布代码片段" else "保存修改"

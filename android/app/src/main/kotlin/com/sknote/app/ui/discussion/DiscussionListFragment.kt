@@ -24,6 +24,7 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class DiscussionListFragment : Fragment() {
 
@@ -89,7 +90,7 @@ class DiscussionListFragment : Fragment() {
                     }
                     findNavController().navigate(R.id.action_discussions_to_create, bundle)
                 } else {
-                    Snackbar.make(binding.root, "请先登录后再发帖", Snackbar.LENGTH_SHORT)
+                    AppSnackbar.make(binding.root, "请先登录后再发帖", Snackbar.LENGTH_SHORT)
                         .setAction("去登录") { findNavController().navigate(R.id.loginFragment, null, navOptions) }
                         .show()
                 }
@@ -118,7 +119,7 @@ class DiscussionListFragment : Fragment() {
             ?.getLiveData<String>("discussion_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     findNavController().currentBackStackEntry?.savedStateHandle?.remove<String>("discussion_result_message")
                 }
             }

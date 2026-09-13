@@ -29,6 +29,7 @@ import com.sknote.app.ui.reference.BlockShapeView
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class CustomBlocksFragment : Fragment() {
 
@@ -369,7 +370,7 @@ class CustomBlocksFragment : Fragment() {
                     val code = allBlocks[blockIndex].optString("code", "")
                     val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     clipboard.setPrimaryClip(ClipData.newPlainText("block_code", code))
-                    Snackbar.make(binding.root, "代码已复制", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "代码已复制", Snackbar.LENGTH_SHORT).show()
                 }
                 3 -> duplicateBlock(blockIndex)
                 4 -> showMoveToPaletteDialog(blockIndex)
@@ -423,7 +424,7 @@ class CustomBlocksFragment : Fragment() {
         }
 
         if (blocksInPalette.isEmpty()) {
-            Snackbar.make(binding.root, "该调色板没有积木块", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "该调色板没有积木块", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -495,7 +496,7 @@ class CustomBlocksFragment : Fragment() {
 
     private fun showMoveToPaletteDialog(blockIndex: Int) {
         if (palettes.isEmpty()) {
-            Snackbar.make(binding.root, "没有调色板", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "没有调色板", Snackbar.LENGTH_SHORT).show()
             return
         }
         val names = palettes.map { it.optString("name", "") }.toTypedArray()
@@ -532,7 +533,7 @@ class CustomBlocksFragment : Fragment() {
             .setPositiveButton("保存") { _, _ ->
                 val name = etName.text.toString().trim()
                 if (name.isEmpty()) {
-                    Snackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 val obj = JSONObject().apply {

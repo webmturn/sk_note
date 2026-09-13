@@ -1152,11 +1152,28 @@ Error: Cannot find module '../clientIp'
 
 门禁：`:app:assembleDebug` 通过、`:app:lintDebug` **0 errors**、2356 warnings（无新增）。
 
-**同批发现、尚未修的位置问题**
+**同批修掉的位置问题**
 
-1. **实测**：提示条贴着屏幕最底部 —— 占 `y=2236..2372`，而 App 内容区只到 `y=2301`（其下 99px 是系统手势导航条），**下沿伸进系统导航区 71px**。原因是 Material 的 `findSuitableParent` 会一路向上找父容器：页面根不是 `CoordinatorLayout` 时它落到 `android.R.id.content`，而那一层没有 `fitsSystemWindows`，于是完全无视系统 inset。
-2. **推导（未实测）**：顶层四页的应用底部导航栏占 `y=2157..2301`，而 App 内容区延伸到导航栏之下（所以顶层页才需要 104dp 让位内边距），因此这些页面上的提示条还会与应用底栏重叠。顶层页的提示条只有 **6 处**（首页 1、讨论区 2、片段列表 2、我的 1）加 MainActivity 3 处，其余约 170 处都在压栈页上。
-   **未实测的原因**：顶层页触发提示条需要「退出登录」或一次写操作，我没有为了观察去写生产数据或登出（登出后没有密码可登回）。
+**观测**：提示条被压在应用自己的底部导航栏上。顶层四页的内容区延伸到导航栏之下（正因如此这些页面才需要 `bottom_nav_content_inset` 让位内边距），而提示条默认贴在对齐底部的位置 —— 实测其文本下沿正好落在内容区下沿 `y=2301`，而底部导航栏占 `y=2157..2301`，于是整条压在上面。顶层页的提示条只有 **6 处**（首页 1、讨论区 2、片段列表 2、我的 1）加 MainActivity 3 处，其余约 170 处都在压栈页上。
+
+**修法**：新增 `util/AppSnackbar`，用 Material 自己的 `setAnchorView(bottom_nav)` 把提示条抬到导航栏之上 —— 它内部按锚点高度维护 `bottomMargin` 并在锚点布局变化时自动更新；压栈页导航栏为 `GONE`（高度按 0 计）等价于不偏移。然后把全部 **179 处 `Snackbar.make` 调用**（47 个文件）机械替换为 `AppSnackbar.make`，集中到一处，避免以后新增调用点又退回原样。
+
+**两条走不通的路（写进注释里，免得重蹈）**
+
+1. **自己设 `bottomMargin`**：`snackbar.view.layoutParams` 在 `show()` 之前是基类 `ViewGroup.LayoutParams`，**不是** `MarginLayoutParams`，`is ViewGroup.MarginLayoutParams` 判断为假，设 margin 的代码根本不执行（实测提示条位置毫无变化）。
+2. **自己读系统 inset**：`ViewCompat.getRootWindowInsets(...)` 返回的底部 inset 是 **0** —— Activity 根有 `fitsSystemWindows="true"`，inset 已被它消费，子视图读到的是 0，因此算不出该偏移多少。
+
+这两点是用「把中间量打进提示条文字再从屏幕读回来」的办法测出来的：`inset=0 nav=-2 act=true lp=LayoutParams`。
+
+**踩到的第三个坑**：`setAnchorView` 必须判 `isShown`。底部导航在压栈页被置为 `GONE`，但 `getHeight()` 仍保留上次布局的旧值，Material 会拿它当锚点高度 —— 实测提示条被无故抬高 165px（`[72,2163][1104,2301]` → `[72,1995][1104,2136]`）。加上 `isShown` 判断后回到 `[72,2235][1104,2301]`，下沿正好是内容区下沿，**与改动前一致、无回归**。
+
+**验证**（LIO-AN00，夜间）：
+
+- 片段详情「复制」→ 提示条 `[72,2235][1104,2301]`，下沿 = 内容区下沿，无偏移 ✓（压栈页不回归）
+- 参考详情「复制」→ 同上 ✓（冒烟：确认 47 个文件的替换没有破坏调用）
+- 顶层页（导航栏可见时抬升）**只做了机制确认，未真机实测** —— 顶层页触发提示条需要「退出登录」或一次写操作，我没有为了观察去写生产数据或登出（登出后没有密码可登回）。抬升量由 `setAnchorView` 按导航栏实际高度算出，与导航栏自身几何自洽。
+
+门禁：`:app:assembleDebug` 通过、`:app:lintDebug` **0 errors**、2356 warnings（无新增）。中途一次 `Unresolved reference: R`（新文件漏 import）与一次 `uiautomator` 的 `could not get idle state`（界面在动画中导致 dump 为空）都已处理。
 
 ---
 

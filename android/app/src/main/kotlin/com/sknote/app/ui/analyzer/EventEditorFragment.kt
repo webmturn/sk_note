@@ -19,6 +19,7 @@ import com.sknote.app.databinding.FragmentEventEditorBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 class EventEditorFragment : Fragment() {
 
@@ -121,13 +122,13 @@ class EventEditorFragment : Fragment() {
     private fun save() {
         val name = binding.eventName.text?.toString()?.trim() ?: ""
         if (name.isEmpty()) {
-            Snackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "名称不能为空", Snackbar.LENGTH_SHORT).show()
             return
         }
         val spec = binding.eventSpec.text?.toString()?.trim() ?: ""
         val code = binding.eventCode.text?.toString() ?: ""
         if (spec.isEmpty() || code.isEmpty()) {
-            Snackbar.make(binding.root, "headerSpec 和 code 不能为空", Snackbar.LENGTH_SHORT).show()
+            AppSnackbar.make(binding.root, "headerSpec 和 code 不能为空", Snackbar.LENGTH_SHORT).show()
             return
         }
 
@@ -157,7 +158,7 @@ class EventEditorFragment : Fragment() {
         eventsFile.parentFile?.mkdirs()
         eventsFile.writeText(arr.toString())
 
-        Snackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "已保存", Snackbar.LENGTH_SHORT).show()
         findNavController().navigateUp()
     }
 

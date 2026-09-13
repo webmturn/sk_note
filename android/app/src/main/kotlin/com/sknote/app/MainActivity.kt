@@ -18,6 +18,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.databinding.ActivityMainBinding
 import com.sknote.app.util.AppUpdateManager
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class MainActivity : AppCompatActivity() {
 
@@ -197,7 +198,7 @@ class MainActivity : AppCompatActivity() {
                     runCatching {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.htmlUrl)))
                     }.onFailure {
-                        Snackbar.make(binding.root, "无法打开下载页面", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "无法打开下载页面", Snackbar.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -214,7 +215,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownload(info: AppUpdateManager.UpdateInfo) {
-        Snackbar.make(binding.root, "正在后台下载更新...", Snackbar.LENGTH_LONG).show()
+        AppSnackbar.make(binding.root, "正在后台下载更新...", Snackbar.LENGTH_LONG).show()
 
         AppUpdateManager.startDownload(this, info.downloadUrl, info.versionName) { file ->
             runOnUiThread {
@@ -222,7 +223,7 @@ class MainActivity : AppCompatActivity() {
                 if (file != null && file.exists()) {
                     AppUpdateManager.installApk(this@MainActivity, file)
                 } else {
-                    Snackbar.make(binding.root, "下载失败，请稍后重试", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "下载失败，请稍后重试", Snackbar.LENGTH_SHORT).show()
                 }
             }
         }

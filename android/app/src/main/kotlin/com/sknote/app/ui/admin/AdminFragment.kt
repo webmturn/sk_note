@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.io.File
+import com.sknote.app.util.AppSnackbar
 
 private const val TAG = "FLICKER_DBG"
 
@@ -97,7 +98,7 @@ class AdminFragment : Fragment() {
                 .setPositiveButton("退出") { _, _ ->
                     viewLifecycleOwner.lifecycleScope.launch {
                         ApiClient.getTokenManager().clearAuth()
-                        Snackbar.make(binding.root, "已退出登录", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "已退出登录", Snackbar.LENGTH_SHORT).show()
                         refreshLoginState()
                     }
                 }

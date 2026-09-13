@@ -23,6 +23,7 @@ import com.sknote.app.ui.manage.category.CategoryManageFragment
 import com.sknote.app.util.requireRolesOrExit
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class DiscussionManageFragment : Fragment() {
 
@@ -108,7 +109,7 @@ class DiscussionManageFragment : Fragment() {
         navHandle?.getLiveData<String>("discussion_result_message")
             ?.observe(viewLifecycleOwner) { msg ->
                 if (!msg.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("discussion_result_message")
                 }
             }
@@ -124,7 +125,7 @@ class DiscussionManageFragment : Fragment() {
 
         viewModel.message.observe(viewLifecycleOwner) { msg ->
             msg?.let {
-                Snackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, it, Snackbar.LENGTH_SHORT).show()
                 viewModel.clearMessage()
             }
         }

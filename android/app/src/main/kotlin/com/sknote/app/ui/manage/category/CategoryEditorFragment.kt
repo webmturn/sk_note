@@ -17,6 +17,7 @@ import com.sknote.app.ui.manage.iconpicker.CategoryIconPickerFragment
 import com.sknote.app.util.CategoryIconCatalog
 import com.sknote.app.util.ErrorUtil
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class CategoryEditorFragment : Fragment() {
 
@@ -81,7 +82,7 @@ class CategoryEditorFragment : Fragment() {
                 if (response.isSuccessful) {
                     val category = response.body()?.category
                     if (category == null) {
-                        Snackbar.make(binding.root, "分类不存在", Snackbar.LENGTH_SHORT).show()
+                        AppSnackbar.make(binding.root, "分类不存在", Snackbar.LENGTH_SHORT).show()
                         findNavController().navigateUp()
                         return@launch
                     }
@@ -93,11 +94,11 @@ class CategoryEditorFragment : Fragment() {
                     hasLoadedInitialData = true
                     updateIconPreview()
                 } else {
-                    Snackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "加载失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 }
             } catch (e: Exception) {
-                Snackbar.make(binding.root, ErrorUtil.friendlyMessage(e), Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, ErrorUtil.friendlyMessage(e), Snackbar.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             } finally {
                 binding.btnSave.isEnabled = true
@@ -140,10 +141,10 @@ class CategoryEditorFragment : Fragment() {
                     )
                     findNavController().navigateUp()
                 } else {
-                    Snackbar.make(binding.root, "保存失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "保存失败: ${response.code()}", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Snackbar.make(binding.root, ErrorUtil.friendlyMessage(e), Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, ErrorUtil.friendlyMessage(e), Snackbar.LENGTH_SHORT).show()
             } finally {
                 binding.btnSave.isEnabled = true
             }

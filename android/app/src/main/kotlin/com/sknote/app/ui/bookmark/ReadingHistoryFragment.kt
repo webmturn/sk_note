@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class ReadingHistoryFragment : Fragment() {
 
@@ -97,10 +98,10 @@ class ReadingHistoryFragment : Fragment() {
                 if (response.isSuccessful) {
                     adapter.submitList(emptyList())
                     binding.layoutEmpty.fadeIn()
-                    Snackbar.make(binding.root, "已清空", Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, "已清空", Snackbar.LENGTH_SHORT).show()
                 }
             } catch (_: Exception) {
-                Snackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "操作失败", Snackbar.LENGTH_SHORT).show()
             }
         }
     }

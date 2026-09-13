@@ -10,6 +10,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentSwToolsBinding
 import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.AppSnackbar
 
 class SwToolsFragment : Fragment() {
 
@@ -79,7 +80,7 @@ class SwToolsFragment : Fragment() {
                 return
             }
         }
-        Snackbar.make(binding.root, "未找到 Sketchware Pro", Snackbar.LENGTH_SHORT).show()
+        AppSnackbar.make(binding.root, "未找到 Sketchware Pro", Snackbar.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {

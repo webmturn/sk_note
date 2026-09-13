@@ -25,6 +25,7 @@ import com.sknote.app.databinding.FragmentUserProfileBinding
 import com.sknote.app.util.TimeUtil
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.sknote.app.util.AppSnackbar
 
 class UserProfileFragment : Fragment() {
 
@@ -121,7 +122,7 @@ class UserProfileFragment : Fragment() {
         navHandle?.getLiveData<String>("share_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("share_result_message")
                 }
             }
@@ -129,7 +130,7 @@ class UserProfileFragment : Fragment() {
         navHandle?.getLiveData<String>("snippet_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("snippet_result_message")
                 }
             }
@@ -145,7 +146,7 @@ class UserProfileFragment : Fragment() {
         navHandle?.getLiveData<String>("profile_result_message")
             ?.observe(viewLifecycleOwner) { message ->
                 if (!message.isNullOrEmpty()) {
-                    Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+                    AppSnackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
                     navHandle.remove<String>("profile_result_message")
                 }
             }

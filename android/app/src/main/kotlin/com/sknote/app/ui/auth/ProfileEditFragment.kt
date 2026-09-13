@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import com.sknote.app.util.AppSnackbar
 
 class ProfileEditFragment : Fragment() {
 
@@ -135,7 +136,7 @@ class ProfileEditFragment : Fragment() {
 
         viewModel.message.observe(viewLifecycleOwner) { msg ->
             if (msg != null) {
-                Snackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, msg, Snackbar.LENGTH_SHORT).show()
                 if (msg.contains("资料更新成功")) {
                     captureInitialDraftState()
                     syncHeaderPreview()
@@ -159,7 +160,7 @@ class ProfileEditFragment : Fragment() {
                     error.contains("头像") -> binding.layoutAvatarUrl.error = error
                     error.contains("旧密码") -> binding.layoutOldPassword.error = error
                     error.contains("新密码") -> binding.layoutNewPassword.error = error
-                    else -> Snackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
+                    else -> AppSnackbar.make(binding.root, error, Snackbar.LENGTH_SHORT).show()
                 }
                 viewModel.clearError()
             }
@@ -361,7 +362,7 @@ class ProfileEditFragment : Fragment() {
                 compressAvatarImage(uri, resolver)
             }
             if (imageBytes == null) {
-                Snackbar.make(binding.root, "头像图片处理失败", Snackbar.LENGTH_SHORT).show()
+                AppSnackbar.make(binding.root, "头像图片处理失败", Snackbar.LENGTH_SHORT).show()
                 return@launch
             }
             viewModel.uploadAvatar(

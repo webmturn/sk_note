@@ -15,6 +15,7 @@ import com.sknote.app.databinding.FragmentNotificationsBinding
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.util.fadeIn
 import com.sknote.app.util.fadeOut
+import com.sknote.app.util.AppSnackbar
 
 class NotificationFragment : Fragment() {
 
@@ -107,7 +108,7 @@ class NotificationFragment : Fragment() {
 
         viewModel.actionEvent.observe(viewLifecycleOwner) { event ->
             event ?: return@observe
-            Snackbar.make(
+            AppSnackbar.make(
                 binding.root,
                 event.message,
                 if (event.isError) Snackbar.LENGTH_LONG else Snackbar.LENGTH_SHORT
