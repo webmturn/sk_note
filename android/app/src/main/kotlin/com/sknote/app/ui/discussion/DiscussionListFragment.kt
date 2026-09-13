@@ -196,7 +196,9 @@ class DiscussionListFragment : Fragment() {
                 }
             }
             binding.layoutEmpty.visibility = if (list.isEmpty() && binding.layoutError.visibility == View.GONE) View.VISIBLE else View.GONE
-            binding.tvDiscussionCount.text = if (list.isNotEmpty()) "${list.size} 条讨论" else ""
+            // 空结果也报「0 条讨论」：此前这里留空字符串，筛选到没有内容的分类时
+            // 页头那行计数会整条消失，读起来像「没加载出来」。
+            binding.tvDiscussionCount.text = "${list.size} 条讨论"
         }
         viewModel.categories.observe(viewLifecycleOwner) { renderCategoryChips(it) }
         viewModel.isLoading.observe(viewLifecycleOwner) {

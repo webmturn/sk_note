@@ -50,7 +50,14 @@ class DiscussionAdapter(
             } else {
                 discussion.content.orEmpty().take(120)
             }
-            if (hasShare) {
+            // 摘要与标题完全相同、或正文本来就空时，整行隐藏：
+            // 否则卡片会把同一句话显示两遍（真机上 10 条里有 1 条如此），
+            // 或者留一行空白。只做「全等」判断 —— 只是前缀相同的情况往往还带着
+            // 链接等额外信息（如标题是摘要的第一句），那种要保留。
+            val showPreview = preview.isNotBlank() && preview.trim() != discussion.title.trim()
+            binding.tvPreview.text = if (showPreview) preview else ""
+            binding.tvPreview.visibility = if (showPreview) View.VISIBLE else View.GONE
+            if (hasShare && showPreview) {
                 binding.ivPreviewType.visibility = View.VISIBLE
                 binding.ivPreviewType.setImageResource(
                     DiscussionIconResolver.sharePreview(
@@ -60,7 +67,6 @@ class DiscussionAdapter(
             } else {
                 binding.ivPreviewType.visibility = View.GONE
             }
-            binding.tvPreview.text = preview
             binding.tvAuthor.text = discussion.authorName ?: "Anonymous"
             if (!discussion.authorAvatar.isNullOrEmpty()) {
                 Glide.with(binding.root.context)
