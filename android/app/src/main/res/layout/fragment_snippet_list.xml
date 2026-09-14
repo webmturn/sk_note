@@ -36,6 +36,7 @@
             </LinearLayout>
 
             <com.sknote.app.util.NestedScrollableHost
+                android:id="@+id/layoutFilterRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 

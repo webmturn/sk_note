@@ -16,6 +16,7 @@ import com.google.android.material.chip.Chip
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentReferenceBinding
 import com.sknote.app.util.slideNavOptions
+import com.sknote.app.util.hideOnScroll
 
 class ReferenceFragment : Fragment() {
 
@@ -76,6 +77,8 @@ class ReferenceFragment : Fragment() {
         binding.rvReferences.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@ReferenceFragment.adapter
+            // 向下滚动时收起筛选行（分类 chip + 排序），向上滚回时展开
+            hideOnScroll(binding.layoutFilterRow)
         }
 
         binding.swipeRefresh.setOnRefreshListener {

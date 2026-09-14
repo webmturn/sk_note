@@ -26,6 +26,7 @@ import com.sknote.app.util.slideNavOptions
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.AppSnackbar
+import com.sknote.app.util.hideOnScroll
 
 class SnippetListFragment : Fragment() {
 
@@ -89,6 +90,9 @@ class SnippetListFragment : Fragment() {
             viewModel.loadSnippets(currentCategory, currentSearchQuery().ifEmpty { null }, force = true)
             viewModel.loadCategories()
         }
+
+        // 向下滚动时收起分类 chip 行，向上滚回时展开（与参考手册 tab 同一套行为）
+        binding.rvSnippets.hideOnScroll(binding.layoutFilterRow)
 
         binding.fabAddSnippet.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {

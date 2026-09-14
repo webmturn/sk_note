@@ -183,6 +183,7 @@
       卡片随之删掉；排序属于这个列表，就并到已有的这行 chip 里，不再单独占一行高度。
     -->
     <LinearLayout
+        android:id="@+id/layoutFilterRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
