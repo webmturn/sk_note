@@ -1749,6 +1749,82 @@ Material 库里的实证（解包 `material-1.11.0.aar` 的 `res/values/values.x
 2. 条的视觉下沿即屏幕底（内容画进手势条区域），与知乎同款做法；本机手势条不可见，所以观感成立。
    若将来遇到手势条可见的机型，可再评估是否给条目加底部 inset。
 
+### 第三十三批（学习资源页统一搜索入口：标题行一个图标）
+
+**起因**：用户提出「参考手册和代码片段都有搜索功能，是否可以合并搜索框，放到『学习资源』同一行，
+平时只显示搜索图标」。
+
+**调研先于动手，结论是两边根本不是同一种搜索**：
+
+| | 参考手册 tab | 代码片段 tab |
+|---|---|---|
+| 形态 | 56dp 的**假搜索框**（整块可点，点了跳页） | 真输入框 + 搜索/清除按钮 |
+| 数据源 | **纯本地** `ReferenceData.search()`（510 条离线） | **网络** `getSnippets(search=)` |
+| 目标 | `ReferenceSearchFragment`：历史 + 热门标签 + 建议 + 结果 | 无（原地过滤列表） |
+| 实测占高 | **204px = 68dp** | **184px ≈ 61dp** |
+
+三者同处一个容器（`ReferenceContainerFragment`：标题行 + TabLayout + ViewPager2），标题行右半边
+本来就是空的。另查了库：Material 1.11 有 `SearchBar`/`SearchView`（原地展开的官方实现），
+所以「平时一个图标、点开变输入框」不必手写动画。
+
+**用户拍板的形态（混合）**：图标只放**一个**（标题行右端），行为按当前 tab 分 ——
+参考手册 tab 点了**跳搜索页**（与旧假框同一目的地，内容不变），代码片段 tab 点了**原地展开成输入框、
+输入即过滤下方列表**。旧的两处入口都删。
+
+**动手时发现的一处牵连**：参考页那张卡片里**不只是搜索** —— 右边还挂着排序按钮
+（`tvSortMode` + `btnSort`）。删卡片就得给排序找新家：并进了**已有的筛选 chip 行右端**
+（把 chip 的 `NestedScrollableHost` 包进一层横向 LinearLayout，排序固定在右侧不随 chip 滚动），
+零额外高度。
+
+**改动（7 个文件，290 增 187 删）**
+
+- `fragment_reference_container.xml`：标题行拆成收起态（标题 + 48dp 搜索图标）与展开态
+  （返回箭头 + `etHeaderSearch` + 清除），**两态同为 48dp**，切换时 TabLayout 与内容不跳；
+- `ReferenceContainerFragment.kt`：按 tab 分发点击、展开/收起、300ms 防抖后下发关键词、
+  IME 搜索键立即搜、展开态接返回键先收键盘再退出页面、tab 切换自动收起并清空；
+- **新增** `LearningSearchViewModel.kt`：容器与 ViewPager2 里的片段没有直接引用关系，
+  用作用域挂在容器上的 ViewModel 传关键词（`by viewModels()` vs `by viewModels({ requireParentFragment() })`），
+  顺带扛住旋转重建；
+- `SnippetListFragment.kt`：删掉输入框相关的一切（TextWatcher/performSearch/updateSearchActionState），
+  改为观察共享关键词；进程被杀重建时把关键词回灌给容器；
+- `fragment_reference.xml`：删掉那条 68dp 假搜索卡，排序并入 chip 行；
+- `fragment_snippet_list.xml`：删掉行内搜索卡；
+- `ReferenceFragment.kt`：移除 `layoutSearchBar` 的点击跳转。
+
+**真机验证（LIO-AN00）**
+
+| 项 | 改前 | 改后 |
+|---|---|---|
+| 参考手册 tab 列表顶边 | `rvReferences` y=936 | **y=740（+65dp 可视区）** |
+| 代码片段 tab 列表顶边 | `rvSnippets` y=804 | **y=620（+61dp 可视区）** |
+| 参考页假搜索框 | `layoutSearchBar [48,502][1128,706]` | **节点已不存在** |
+| 参考页排序 | 卡片内 | `btnSort [1032,519][1176,663]`，与 `chipAll` 同一行 |
+| 标题行 | 仅有标题 | `btnSearchToggle [1008,99][1152,243]` |
+
+行为逐条验过：参考手册 tab 点图标 → 进搜索页（`etSearch` 提示「搜索积木、组件、控件...」+ 历史
++ 热门标签）✓；代码片段 tab 点图标 → `layoutHeaderSearch [0,99][1176,243]` 原地展开（与标题行
+等高，无跳动），输入框 hint「搜索代码片段...」✓；输入 `toast` → **「找到 1 个结果」** 且列表只剩
+「Toast 显示消息」✓；点返回箭头收起 → **过滤结果保留**（仍「找到 1 个结果」）✓；再次展开 →
+输入框**回填 toast** ✓；点清除 → 回到「20 个片段」✓；切到参考手册 tab → 自动收起 ✓；切回 →
+**关键词已清空**（回到 20 个片段）✓。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 2353 warnings**（与改前逐位相同 ——
+删掉两条中文硬编码、新增两条，正好相抵）。
+
+**行尾（按第三十二批定的判据走，这次先查后提交）**：`git ls-files --eol` 七个文件全是 `i/lf`，
+提交后复核四个代表文件的 blob 风格 parent/new 均为 LF ✓，`git diff --stat HEAD^ HEAD` =
+**290 增 187 删** = 实际改动。**commit 自己打印的「1663 增 1560 删」仍是那个假象**，
+再一次印证：以事后 raw diff 为准。
+
+**残留**
+
+1. **首页的「搜索文章…」是第三套搜索入口**，这次没动。若要做全站搜索（文章 + 参考 + 片段 + 讨论），
+   是另一个量级的事，建议单独排一批。
+2. 按用户选择，**没做跨类合并**：参考手册的搜索页仍只搜参考内容，片段搜索仍只搜片段。
+   `LearningSearchViewModel` 目前只有一个关键词字段，将来要合并也从这个类扩展。
+3. 展开态是**代码片段 tab 专有**：切 tab 会收起并清空关键词（刻意如此，避免带着片段关键词看参考
+   列表时列表莫名变短）。若希望切回来还记得关键词，改 `collapseSearch(clearQuery = true)` 一处即可。
+
 ---
 
 ## 九、剩余待办
