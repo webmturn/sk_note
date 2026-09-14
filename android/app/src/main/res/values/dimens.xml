@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      底部导航栏高度。M3 规范值为 80dp（m3_comp_navigation_bar_container_height），
-      此处显式声明，是为了让它与下方的内容让位量有一处共同的来源。
+      底部导航栏高度。M3 规范值是 80dp（m3_comp_navigation_bar_container_height），
+      我们按「主流紧凑栏」取 64dp —— 用户反馈 80dp 占地方，实测知乎在同一台机器上是 59dp、
+      Material 2 的默认是 56dp。
+      这里只是数值来源；真正生效要靠 Widget.SkNote.BottomNavigation 里的
+      android:minHeight（父样式把它设成 80dp，光改 layout_height 压不下去），
+      以及与之配套的 itemPaddingTop/Bottom=8dp：8 + 指示条 32 + 标签 16 + 8 = 64dp。
+      三者是一组，改一个必须改另外两个。
     -->
-    <dimen name="bottom_nav_height">80dp</dimen>
+    <dimen name="bottom_nav_height">64dp</dimen>
 
     <!--
       顶层页面为底部导航栏让出的底部空间 = bottom_nav_height + 24dp 呼吸余量。
@@ -12,7 +17,7 @@
       非滚动页面直接用它作 layout_marginBottom。
       改动 bottom_nav_height 时必须同步此处。
     -->
-    <dimen name="bottom_nav_content_inset">104dp</dimen>
+    <dimen name="bottom_nav_content_inset">88dp</dimen>
 
     <!--
       评论卡的水平内缩量。必须在 XML 与 CommentAdapter 之间共用：

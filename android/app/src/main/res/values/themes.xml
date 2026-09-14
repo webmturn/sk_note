@@ -66,15 +66,23 @@
     </style>
 
     <!--
-      底部导航栏。高度与上下内边距一律交给 M3 父样式（80dp / 12dp / 16dp）：
-      此前这里写的 itemPaddingTop/Bottom=8dp 是为旧的 64dp 紧凑栏配的，
-      在 80dp 标准高度下会与 M3 的 12/16 打架。
+      底部导航栏。尺寸是「64dp 紧凑栏」，三个值必须成组看：
+        android:minHeight = bottom_nav_height(64dp)
+        itemPaddingTop/Bottom = 8dp
+        内容 = 8 + 指示条 32 + 标签 16 + 8 = 64dp
+      为什么必须写 android:minHeight：Material 库把
+      m3_comp_navigation_bar_container_height(80dp) 用作父样式的 android:minHeight，
+      它是下限而不是建议值 —— 只把 layout_height 写成 64dp 会被它顶回 80dp。
+      （两天前那次「64dp 失败」就是把内边距压到 2dp 硬塞，而不是覆盖 minHeight。）
       配色走项目自己的定义：底栏与状态栏同色（surface_card），选中图标用 colorPrimary。
       第十一批把这一行从 M3 默认的 surfaceContainer(#211F26) 改到 surface_card，是刻意的
       （「底栏与状态栏一致」）；本次修色带接缝改的是 surface_card 的取值而不是这里，
       所以那层关系保持成立，两个模式也一致。
     -->
     <style name="Widget.SkNote.BottomNavigation" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:minHeight">@dimen/bottom_nav_height</item>
+        <item name="itemPaddingTop">8dp</item>
+        <item name="itemPaddingBottom">8dp</item>
         <item name="backgroundTint">@color/surface_card</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.SkNote.BottomNavigation.ActiveIndicator</item>
         <item name="itemIconTint">@color/bottom_nav_icon_color</item>
