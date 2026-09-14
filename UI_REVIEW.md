@@ -1939,6 +1939,45 @@ Material 库里的实证（解包 `material-1.11.0.aar` 的 `res/values/values.x
 2. 另一类「简陋」是**图标字形家族不统一**（旧版 Material Icons 的直角实心 vs 新的圆角细笔画）。
    本次只统一了搜索与排序两枚；全项目统一需整批替换 + 逐页真机验证，建议单开一批。
 
+### 第三十六批（选择类弹窗全部收编到 OptionsSheet）
+
+**起因**：用户指着设备上正开着的一个弹窗问「当前页面的菜单呢」——那是参考详情页的
+**快速跳转**（`ReferenceDetailFragment.showQuickJumpDialog()`），用的是
+`MaterialAlertDialogBuilder#setSingleChoiceItems`：系统默认单选列表，一列「Number / String /
+Boolean / Map / set / increase / decrease / put key / get key…」的小字墙。
+
+**先定判据，再普查**（避免把动作菜单也一起改了）：
+**「这列选项里有没有一个『当前值』」** —— 有 = 选择类（该用弹层），没有 = 动作类（对话框更轻）。
+
+全项目 `setItems` / `setSingleChoiceItems` 共 11 处：
+
+| 归类 | 处 | 处理 |
+|---|---|---|
+| **选择类**（有当前值） | 参考快速跳转、积木块**类型**选择、**移动到调色板** | **本次换 OptionsSheet** |
+| 选择类 | 参考页排序、讨论页排序 | 第三十四批已换 |
+| 选择类 | `BlockShareHelper#导入到调色板` | **未换**：它是 helper 类，拿不到 FragmentManager |
+| **动作类**（无当前值） | `CustomEvents`(编辑/导出/删除)、`UserManage`(角色/重置密码/删除)、`LogicVisualizer` ×5（切 Activity、复制到项目…）、`CustomBlocks` 长按菜单 | **保持对话框** |
+
+**组件改造**：`SortOptionsSheet` → **`OptionsSheet`**（泛化：`descs`/`selectedIndex` 都可省，
+`REQUEST_KEY` 改 `options_sheet`），两个排序调用点跟着改名。类注释里写明「动作类菜单不适用本组件」。
+
+**真机验证（4 个入口）**
+
+| 入口 | 结果 |
+|---|---|
+| 参考页排序 / 讨论页排序 | 第三十四批已验，改名后复跑无异常 ✓ |
+| 参考详情**快速跳转** | 弹层标题「积木块 / Variable」，每项带该条目自己的说明；当前项 `Number` 带勾；点 `set` → 详情页真的跳到 `set`（描述变成「将一个值赋给变量。」）✓ |
+| 积木管理 → 长按积木 → **移动到调色板** | 弹层列出全部调色板（asset / Listen / Json / …）✓ |
+| 积木编辑器 → 点**类型**字段 | 弹层 12 项、每项带该积木形状的含义（s/d/r/b/c/e/f/h 这套代号光看标签说不清）；当前项 `c (if 容器)` 带勾 ✓ |
+
+**一处行为变化**（刻意）：类型选择原来是「确定 / 取消」两段式（选完还要点确定才生效），
+现在**选完立即生效**；不选、直接下滑关掉即等于取消 —— 与其它三处一致。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 2353 warnings**（持平）。
+
+**残留**：`BlockShareHelper#导入到调色板` 仍是系统单选列表（helper 无 FragmentManager）。
+要换得先把它接进某个 fragment，或改用非 Fragment 版的 `BottomSheetDialog`，此处未动。
+
 ---
 
 ## 九、剩余待办
