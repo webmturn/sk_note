@@ -6,14 +6,21 @@
     android:orientation="vertical"
     android:background="?attr/colorSurface">
 
+    <!--
+      标题行（收起态）：标题 + 搜索图标。搜索图标是两个 tab 共用的唯一入口，
+      点击行为按当前 tab 分（见 ReferenceContainerFragment）：
+        · 参考手册 tab → 跳到参考搜索页（与旧的那条 56dp 假搜索框同一目的地）
+        · 代码片段 tab → 本行原地展开成输入框，输入即过滤下面的片段列表
+      与下面的展开态高度同为 48dp，切换时 TabLayout 与内容不会跳。
+    -->
     <LinearLayout
+        android:id="@+id/layoutHeaderTitle"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="0dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="8dp">
 
         <TextView
             android:layout_width="0dp"
@@ -23,6 +30,57 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />
+
+        <ImageView
+            android:id="@+id/btnSearchToggle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_search"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="搜索" />
+    </LinearLayout>
+
+    <!-- 标题行（展开态）：默认隐藏，只在代码片段 tab 点图标后出现 -->
+    <LinearLayout
+        android:id="@+id/layoutHeaderSearch"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingEnd="8dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/btnSearchBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="收起搜索" />
+
+        <EditText
+            android:id="@+id/etHeaderSearch"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:hint="搜索代码片段..."
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:background="@android:color/transparent"
+            android:paddingHorizontal="8dp"
+            android:textSize="16sp"
+            android:singleLine="true" />
+
+        <ImageButton
+            android:id="@+id/btnSearchClear"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="清除"
+            android:visibility="gone" />
     </LinearLayout>
 
     <com.google.android.material.tabs.TabLayout

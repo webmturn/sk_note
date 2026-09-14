@@ -82,10 +82,7 @@ class ReferenceFragment : Fragment() {
             viewModel.loadReferences(currentType, currentCategory)
         }
 
-        binding.layoutSearchBar.setOnClickListener {
-            navController.navigate(R.id.referenceSearchFragment, null, navOptions)
-        }
-
+        // 搜索入口已搬到容器的标题行（第三十三批），本页不再有 layoutSearchBar
         ReferenceData.init(requireContext())
         setupChipFilters()
         updateChipCounts()

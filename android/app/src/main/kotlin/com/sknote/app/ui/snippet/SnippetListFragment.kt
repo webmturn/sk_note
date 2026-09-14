@@ -1,15 +1,10 @@
 package com.sknote.app.ui.snippet
 
-import android.content.Context
 import android.os.Bundle
 import android.os.Parcelable
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -21,6 +16,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.databinding.FragmentSnippetListBinding
+import com.sknote.app.ui.reference.LearningSearchViewModel
 import com.sknote.app.util.NavPrefill
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.hideSkeletonAndShow
@@ -36,6 +32,12 @@ class SnippetListFragment : Fragment() {
     private var _binding: FragmentSnippetListBinding? = null
     private val binding get() = _binding!!
     private val viewModel: SnippetListViewModel by viewModels()
+
+    /**
+     * 搜索词来自容器（作用域挂在 [com.sknote.app.ui.reference.ReferenceContainerFragment] 上），
+     * 因为输入框现在在容器的标题行里，而列表在这里。第三十三批把行内搜索框收进了标题行。
+     */
+    private val searchViewModel: LearningSearchViewModel by viewModels({ requireParentFragment() })
     private lateinit var adapter: SnippetAdapter
     private var currentCategory: String? = null
     private var currentQuery: String = ""
@@ -62,6 +64,8 @@ class SnippetListFragment : Fragment() {
             listState = it.getParcelable(STATE_LIST)
             currentQuery = it.getString(STATE_QUERY).orEmpty()
         }
+        // 进程被杀后重建时把关键词回灌给容器，标题行的输入框才不会是空的（配置变更时那边本来就有）
+        if (currentQuery.isNotEmpty()) searchViewModel.setQuery(currentQuery)
 
         val navController = parentFragment?.view?.let { Navigation.findNavController(it) }
             ?: findNavController()
@@ -106,32 +110,14 @@ class SnippetListFragment : Fragment() {
             }
         })
 
-        if (currentQuery.isNotEmpty()) {
-            binding.etSearch.setText(currentQuery)
-            binding.etSearch.setSelection(currentQuery.length)
-        }
-
-        binding.btnSearch.setOnClickListener { performSearch() }
-
-        binding.etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                updateSearchActionState(s?.toString()?.trim().orEmpty())
+        // 搜索框已经搬到容器的标题行，这里只消费共享的查询词。
+        // 值与 currentQuery 相同时不动：首次组合、旋转重建、回灌都走这条静默分支，不会多打请求。
+        searchViewModel.query.observe(viewLifecycleOwner) { query ->
+            val normalized = query.orEmpty()
+            if (normalized != currentQuery) {
+                currentQuery = normalized
+                viewModel.loadSnippets(currentCategory, normalized.ifEmpty { null }, force = true)
             }
-        })
-
-        binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                performSearch()
-                true
-            } else false
-        }
-
-        binding.btnClear.setOnClickListener {
-            binding.etSearch.text?.clear()
-            viewModel.loadSnippets(currentCategory, force = true)
-            updateSearchActionState("")
         }
 
         navController.currentBackStackEntry?.savedStateHandle
@@ -154,7 +140,6 @@ class SnippetListFragment : Fragment() {
                 }
             }
 
-        updateSearchActionState(currentQuery)
         observeData()
 
         val cached = viewModel.snippets.value
@@ -173,23 +158,7 @@ class SnippetListFragment : Fragment() {
         viewModel.loadCategories()
     }
 
-    private fun currentSearchQuery(): String {
-        return binding.etSearch.text?.toString()?.trim().orEmpty()
-    }
-
-    private fun performSearch() {
-        val query = currentSearchQuery()
-        if (query.isEmpty()) return
-        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
-        viewModel.loadSnippets(currentCategory, query, force = true)
-    }
-
-    private fun updateSearchActionState(query: String) {
-        binding.btnClear.visibility = if (query.isEmpty()) View.GONE else View.VISIBLE
-        binding.btnSearch.isEnabled = query.isNotEmpty()
-        binding.btnSearch.alpha = if (query.isNotEmpty()) 1f else 0.4f
-    }
+    private fun currentSearchQuery(): String = currentQuery
 
     private fun observeData() {
         viewModel.snippets.observe(viewLifecycleOwner) { list ->
@@ -275,7 +244,7 @@ class SnippetListFragment : Fragment() {
 
     private fun captureUiState() {
         val currentBinding = _binding ?: return
-        currentQuery = currentBinding.etSearch.text?.toString().orEmpty()
+        // currentQuery 现在由容器的输入框驱动（经 LearningSearchViewModel 下发），这里不再读 EditText
         listState = currentBinding.rvSnippets.layoutManager?.onSaveInstanceState()
     }
 

@@ -14,66 +14,11 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardSearch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="2dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="?attr/colorSurfaceVariant">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="6dp">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_search"
-                        android:alpha="0.5"
-                        android:layout_marginEnd="10dp"
-                        android:importantForAccessibility="no" />
-
-                    <EditText
-                        android:id="@+id/etSearch"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:background="@android:color/transparent"
-                        android:hint="搜索代码片段..."
-                        android:textSize="14sp"
-                        android:inputType="text"
-                        android:imeOptions="actionSearch"
-                        android:maxLines="1" />
-
-                    <ImageButton
-                        android:id="@+id/btnClear"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_close"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="清除"
-                        android:visibility="gone" />
-
-                    <ImageButton
-                        android:id="@+id/btnSearch"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_search"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="搜索"
-                        android:enabled="false" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
+            <!--
+              这里原先有一条行内搜索框（cardSearch + etSearch/btnClear/btnSearch）。
+              第三十三批把搜索入口收进「学习资源」容器的标题行（代码片段 tab 点图标原地展开），
+              本页只负责显示结果，顶部因此省下约 60dp。
+            -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

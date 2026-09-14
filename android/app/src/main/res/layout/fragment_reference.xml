@@ -176,79 +176,22 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <com.google.android.material.card.MaterialCardView
+    <!--
+      筛选 chip 行 + 排序（第三十三批）。
+      这一行原来是两个东西：一条 56dp 的「搜索参考内容」假搜索框（整块可点、点了跳搜索页）
+      和它右边的排序按钮，同处一张 68dp 的卡片里。搜索入口已收进「学习资源」容器的标题行，
+      卡片随之删掉；排序属于这个列表，就并到已有的这行 chip 里，不再单独占一行高度。
+    -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="4dp"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:cardBackgroundColor="?attr/colorSurfaceVariant">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-        <LinearLayout
-            android:id="@+id/layoutSearchBar"
-            android:layout_width="match_parent"
+        <com.sknote.app.util.NestedScrollableHost
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:minHeight="56dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="10dp">
-
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:src="@drawable/ic_search"
-                android:layout_marginEnd="8dp"
-                android:importantForAccessibility="no" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="搜索参考内容"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="按关键词、名称快速查找"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvSortMode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:text="默认"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp" />
-
-            <ImageView
-                android:id="@+id/btnSort"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_sort"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:contentDescription="切换排序" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.sknote.app.util.NestedScrollableHost
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+            android:layout_weight="1">
 
         <HorizontalScrollView
             android:layout_width="match_parent"
@@ -311,7 +254,27 @@
 
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
-    </com.sknote.app.util.NestedScrollableHost>
+        </com.sknote.app.util.NestedScrollableHost>
+
+        <TextView
+            android:id="@+id/tvSortMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="默认"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp" />
+
+        <ImageView
+            android:id="@+id/btnSort"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_sort"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="切换排序" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/layoutDetailFilterSummary"
