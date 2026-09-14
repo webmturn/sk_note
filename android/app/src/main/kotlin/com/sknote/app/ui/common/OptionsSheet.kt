@@ -19,31 +19,35 @@ import com.google.android.material.color.MaterialColors
 import com.sknote.app.R
 
 /**
- * 排序 / 筛选的选项弹层。讨论区与参考手册两处共用，替代原先的 [android.widget.PopupMenu]。
+ * 「从一列选项里挑一个」的通用底部弹层：排序方式、参考详情页的快速跳转、积木块类型、
+ * 调色板选择都走它。
  *
- * 为什么换掉 PopupMenu（第三十四批）：
- * 1. 参考页有 7 个选项，纯文字的一长条没有分组也没有标题，看起来就是系统默认菜单；
- * 2. 它标当前项的办法是给标题拼一个「✓ 」前缀，选中项文字会右移、也没有真正的选中态；
- * 3. 讨论页那个 3 项的连选中标记都没有 —— 两个入口样式还不一致。
+ * 为什么不再用 `MaterialAlertDialogBuilder#setItems / setSingleChoiceItems`（第三十四/三十六批）：
+ * 1. 系统默认列表：一排小字、没有说明、长列表就是一堵墙，看起来像未加工的占位；
+ * 2. 单选态只有一个系统 radio，选中项与未选中项在视觉上几乎没有差别；
+ * 3. 参考页原先的排序菜单更极端 —— 靠 `it.title = "✓ ${it.title}"` 拼字符串假装选中。
  *
- * 现在：底部弹层 + 标题 + 每项「名称 + 一句说明」+ 当前项左侧实心勾（未选中项保留同宽占位，
- * 文字不会左右跳）。之所以能用弹层：本项目的 [com.sknote.app.ui.reference.BlockGuideDialog]
- * 与 `BlockCompareDialog` 已经是底部弹层，两处排序跟着统一。
+ * 现在：底部弹层 + 标题 + 每项「名称 +（可选）一句说明」+ 当前项左侧实心勾
+ * （未选中项用 `alpha=0` 的勾占位，文字左边缘不会跳）。之所以能用弹层：本项目的
+ * [com.sknote.app.ui.reference.BlockGuideDialog] 与 `BlockCompareDialog` 已经是底部弹层。
+ *
+ * **注意**：动作类菜单（编辑 / 导出 / 删除 / 设为某角色…）**不适用**这个组件 —— 它们没有
+ * 「当前选中项」的概念，继续用对话框更轻。判断标准是「这列选项里有没有一个『当前值』」。
  *
  * 结果通过 FragmentResult 回传（不用回调属性）：弹层开着时若发生配置变更，回调属性会随旧实例
  * 丢失，FragmentResult 不会。
  *
  * 用法：
  * ```
- * childFragmentManager.setFragmentResultListener(SortOptionsSheet.REQUEST_KEY, viewLifecycleOwner) { _, bundle ->
- *     val index = bundle.getInt(SortOptionsSheet.RESULT_INDEX, -1)
+ * childFragmentManager.setFragmentResultListener(OptionsSheet.REQUEST_KEY, viewLifecycleOwner) { _, bundle ->
+ *     val index = bundle.getInt(OptionsSheet.RESULT_INDEX, -1)
  *     if (index >= 0) { ... }
  * }
- * SortOptionsSheet.newInstance("排序方式", labels, descs, selectedIndex)
- *     .show(childFragmentManager, "sortSheet")
+ * OptionsSheet.newInstance("排序方式", labels, descs, selectedIndex)
+ *     .show(childFragmentManager, "optionsSheet")
  * ```
  */
-class SortOptionsSheet : BottomSheetDialogFragment() {
+class OptionsSheet : BottomSheetDialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.dialog_sort_sheet, container, false)
@@ -57,7 +61,7 @@ class SortOptionsSheet : BottomSheetDialogFragment() {
         val selected = arguments?.getInt(ARG_SELECTED, -1) ?: -1
 
         view.findViewById<TextView>(R.id.tvSheetTitle).text =
-            arguments?.getString(ARG_TITLE) ?: "排序方式"
+            arguments?.getString(ARG_TITLE) ?: "请选择"
 
         val container = view.findViewById<LinearLayout>(R.id.layoutOptions)
         labels.forEachIndexed { index, label ->
@@ -128,7 +132,7 @@ class SortOptionsSheet : BottomSheetDialogFragment() {
     }
 
     companion object {
-        const val REQUEST_KEY = "sort_options_sheet"
+        const val REQUEST_KEY = "options_sheet"
         const val RESULT_INDEX = "result_index"
 
         private const val ARG_TITLE = "title"
@@ -139,9 +143,9 @@ class SortOptionsSheet : BottomSheetDialogFragment() {
         fun newInstance(
             title: String,
             labels: List<String>,
-            descs: List<String>,
-            selectedIndex: Int
-        ) = SortOptionsSheet().apply {
+            descs: List<String> = emptyList(),
+            selectedIndex: Int = -1
+        ) = OptionsSheet().apply {
             arguments = bundleOf(
                 ARG_TITLE to title,
                 ARG_LABELS to ArrayList(labels),

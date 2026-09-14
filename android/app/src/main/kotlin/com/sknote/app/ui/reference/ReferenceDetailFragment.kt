@@ -14,7 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.sknote.app.ui.common.OptionsSheet
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.data.model.ReferenceItem
@@ -209,24 +209,39 @@ class ReferenceDetailFragment : Fragment() {
         }
     }
 
+    /**
+     * 快速跳转：同类型同分类下的其它条目。
+     *
+     * 第三十六批把这里的 `MaterialAlertDialogBuilder#setSingleChoiceItems`（系统默认单选列表，
+     * 「Number/String/Boolean/Map/set/increase…」一堵小字墙）换成 [OptionsSheet]：
+     * 每项带上该条目自己的说明，当前条目左侧有实心勾。
+     */
     private fun showQuickJumpDialog() {
         val ref = currentRef ?: return
         val items = ReferenceData.getByTypeAndCategory(ref.type, ref.category)
-        val names = items.map { it.name }.toTypedArray()
-        val currentIdx = items.indexOfFirst { it.id == ref.id }
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("${getTypeLabel(ref.type)} / ${ref.category}")
-            .setSingleChoiceItems(names, currentIdx) { dialog, which ->
-                dialog.dismiss()
-                val selected = items[which]
-                if (selected.id != referenceId) {
-                    referenceId = selected.id
-                    updateBookmarkIcon()
-                    viewModel.loadReference(selected.id)
-                }
+        if (items.isEmpty()) return
+
+        // 结果回来时按「当时的当前条目」重算列表，避免旋转重建后拿到过期数据
+        childFragmentManager.setFragmentResultListener(
+            OptionsSheet.REQUEST_KEY, viewLifecycleOwner
+        ) { _, bundle ->
+            val index = bundle.getInt(OptionsSheet.RESULT_INDEX, -1)
+            val current = currentRef ?: return@setFragmentResultListener
+            val list = ReferenceData.getByTypeAndCategory(current.type, current.category)
+            val selected = list.getOrNull(index) ?: return@setFragmentResultListener
+            if (selected.id != referenceId) {
+                referenceId = selected.id
+                updateBookmarkIcon()
+                viewModel.loadReference(selected.id)
             }
-            .setNegativeButton("取消", null)
-            .show()
+        }
+
+        OptionsSheet.newInstance(
+            title = "${getTypeLabel(ref.type)} / ${ref.category}",
+            labels = items.map { it.name },
+            descs = items.map { it.description.orEmpty() },
+            selectedIndex = items.indexOfFirst { it.id == ref.id }
+        ).show(childFragmentManager, "quickJump")
     }
 
     private fun getTypeLabel(type: String): String = ReferenceIcons.getTypeLabel(type)

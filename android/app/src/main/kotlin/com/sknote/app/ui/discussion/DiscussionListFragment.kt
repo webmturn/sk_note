@@ -17,7 +17,7 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentDiscussionListBinding
-import com.sknote.app.ui.common.SortOptionsSheet
+import com.sknote.app.ui.common.OptionsSheet
 import com.sknote.app.util.CategoryIconResolver
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.hideSkeletonAndShow
@@ -93,13 +93,13 @@ class DiscussionListFragment : Fragment() {
 
         binding.btnSort.text = DiscussionListViewModel.sortLabel(currentSort)
 
-        // 排序选项弹层：与参考手册页共用同一个 SortOptionsSheet（第三十四批从 PopupMenu 换过来）。
+        // 排序选项弹层：与参考手册页共用同一个 OptionsSheet（第三十四批从 PopupMenu 换过来）。
         // 原来那个 3 项菜单连「当前是哪一项」都没有标记。
         childFragmentManager.setFragmentResultListener(
-            SortOptionsSheet.REQUEST_KEY, viewLifecycleOwner
+            OptionsSheet.REQUEST_KEY, viewLifecycleOwner
         ) { _, bundle ->
             val picked = DiscussionListViewModel.SORT_OPTIONS
-                .getOrNull(bundle.getInt(SortOptionsSheet.RESULT_INDEX, -1))?.first
+                .getOrNull(bundle.getInt(OptionsSheet.RESULT_INDEX, -1))?.first
             if (picked != null && picked != currentSort) {
                 currentSort = picked
                 binding.btnSort.text = DiscussionListViewModel.sortLabel(picked)
@@ -110,7 +110,7 @@ class DiscussionListFragment : Fragment() {
         }
 
         binding.btnSort.setOnClickListener {
-            SortOptionsSheet.newInstance(
+            OptionsSheet.newInstance(
                 title = "排序方式",
                 labels = DiscussionListViewModel.SORT_OPTIONS.map { it.second },
                 descs = listOf("按最后一条回复的时间", "按浏览量", "按回复数"),

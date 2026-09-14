@@ -18,6 +18,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.ui.reference.BlockShapeView
 import com.sknote.app.databinding.FragmentBlockEditorBinding
+import com.sknote.app.ui.common.OptionsSheet
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -75,23 +76,47 @@ class BlockEditorFragment : Fragment() {
             "b (布尔)", "d (数值)", "v (变量)", "a (map)",
             "f (终止)", "l (列表)", "p (组件)", "h (标题)"
         )
+        // s/d/r/b/c/e/f/h 这套是 Sketchware 的积木形状代号，光看标签说不清，所以每项配一句说明；
+        // 文案与积木块图鉴（BlockGuideDialog）里的形状图例一致。
+        val descs = listOf(
+            "执行操作，无返回值，可上下拼接",
+            "C 形块，包裹其他积木块（if / repeat 等）",
+            "E 形块，if-else，有两个包裹区域",
+            "返回字符串 (String)，椭圆形",
+            "返回 true / false，菱形，可嵌入条件位",
+            "返回数字 (number)，椭圆形",
+            "变量声明与赋值类积木",
+            "键值对 (map) 相关操作",
+            "终止执行流，如 finish / break / stop",
+            "列表 (List) 操作",
+            "组件操作与 Intent",
+            "事件入口块，位于积木堆栈顶部"
+        )
         binding.etType.setText("regular (语句)")
+        binding.etType.tag = "regular"
+
+        // 第三十六批：原来是 AlertDialog 的 setSingleChoiceItems + 确定/取消，
+        // 现在换成 OptionsSheet，选完立即生效（不选直接下滑关掉就等于取消）
+        childFragmentManager.setFragmentResultListener(
+            OptionsSheet.REQUEST_KEY, viewLifecycleOwner
+        ) { _, bundle ->
+            val which = bundle.getInt(OptionsSheet.RESULT_INDEX, -1)
+            if (which !in types.indices) return@setFragmentResultListener
+            binding.etType.setText(labels[which])
+            binding.etType.tag = types[which]
+            binding.spec2Layout.visibility = if (types[which] == "e") View.VISIBLE else View.GONE
+            updatePreview()
+        }
+
         binding.etType.setOnClickListener {
             val currentTag = binding.etType.tag?.toString()?.trim() ?: ""
-            var selected = types.indexOf(currentTag).coerceAtLeast(0)
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("选择类型")
-                .setSingleChoiceItems(labels, selected) { _, which -> selected = which }
-                .setPositiveButton("确定") { _, _ ->
-                    binding.etType.setText(labels[selected])
-                    binding.etType.tag = types[selected]
-                    binding.spec2Layout.visibility = if (types[selected] == "e") View.VISIBLE else View.GONE
-                    updatePreview()
-                }
-                .setNegativeButton("取消", null)
-                .show()
+            OptionsSheet.newInstance(
+                title = "选择类型",
+                labels = labels.toList(),
+                descs = descs,
+                selectedIndex = types.indexOf(currentTag)
+            ).show(childFragmentManager, "blockType")
         }
-        binding.etType.tag = "regular"
     }
 
     private fun setupParameters() {

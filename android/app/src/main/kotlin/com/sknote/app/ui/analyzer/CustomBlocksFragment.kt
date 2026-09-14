@@ -25,6 +25,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.databinding.FragmentCustomBlocksBinding
+import com.sknote.app.ui.common.OptionsSheet
 import com.sknote.app.ui.reference.BlockShapeView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -499,16 +500,18 @@ class CustomBlocksFragment : Fragment() {
             AppSnackbar.make(binding.root, "没有调色板", Snackbar.LENGTH_SHORT).show()
             return
         }
-        val names = palettes.map { it.optString("name", "") }.toTypedArray()
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("移动到调色板")
-            .setItems(names) { _, which ->
-                allBlocks[blockIndex].put("palette", (which + 9).toString())
-                saveBlocks()
-                currentPalette?.let { showBlocksInPalette(it) }
-            }
-            .setNegativeButton("取消", null)
-            .show()
+        val names = palettes.map { it.optString("name", "") }
+        // 第三十六批：与其它「从一列里挑一个」的地方统一成 OptionsSheet
+        childFragmentManager.setFragmentResultListener(
+            OptionsSheet.REQUEST_KEY, viewLifecycleOwner
+        ) { _, bundle ->
+            val which = bundle.getInt(OptionsSheet.RESULT_INDEX, -1)
+            if (which < 0 || which >= palettes.size) return@setFragmentResultListener
+            allBlocks[blockIndex].put("palette", (which + 9).toString())
+            saveBlocks()
+            currentPalette?.let { showBlocksInPalette(it) }
+        }
+        OptionsSheet.newInstance("移动到调色板", names).show(childFragmentManager, "moveToPalette")
     }
 
     // ── Palette Dialogs ──

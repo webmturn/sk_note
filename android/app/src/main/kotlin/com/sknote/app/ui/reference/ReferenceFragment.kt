@@ -6,7 +6,7 @@ import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.sknote.app.ui.common.SortOptionsSheet
+import com.sknote.app.ui.common.OptionsSheet
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.Navigation
@@ -175,7 +175,7 @@ class ReferenceFragment : Fragment() {
     }
 
     /**
-     * 排序入口。第七个选项等含义不直观，所以每项配一句说明 —— 弹层见 [SortOptionsSheet]。
+     * 排序入口。第七个选项等含义不直观，所以每项配一句说明 —— 弹层见 [OptionsSheet]。
      * 选项顺序必须与 [SortMode] 的声明顺序一致（索引即模式）。
      */
     private fun setupSortButton() {
@@ -186,9 +186,9 @@ class ReferenceFragment : Fragment() {
 
         // 在能点之前就注册好，弹层回传时一定有人接（FragmentResult 也扛得住配置变更）
         childFragmentManager.setFragmentResultListener(
-            SortOptionsSheet.REQUEST_KEY, viewLifecycleOwner
+            OptionsSheet.REQUEST_KEY, viewLifecycleOwner
         ) { _, bundle ->
-            val index = bundle.getInt(SortOptionsSheet.RESULT_INDEX, -1)
+            val index = bundle.getInt(OptionsSheet.RESULT_INDEX, -1)
             if (index < 0) return@setFragmentResultListener
             viewModel.sortMode = SortMode.entries.getOrElse(index) { SortMode.DEFAULT }
             if (showingBookmarks) {
@@ -200,7 +200,7 @@ class ReferenceFragment : Fragment() {
         }
 
         binding.btnSort.setOnClickListener {
-            SortOptionsSheet.newInstance(
+            OptionsSheet.newInstance(
                 title = "排序方式",
                 labels = labels,
                 descs = descs,
