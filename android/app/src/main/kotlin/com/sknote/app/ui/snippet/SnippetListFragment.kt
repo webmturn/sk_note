@@ -92,7 +92,7 @@ class SnippetListFragment : Fragment() {
         }
 
         // 向下滚动时收起分类 chip 行，向上滚回时展开（与参考手册 tab 同一套行为）
-        binding.rvSnippets.hideOnScroll(binding.layoutFilterRow)
+        binding.rvSnippets.hideOnScroll(binding.layoutFilterRowSpace, binding.layoutFilterRow)
 
         binding.fabAddSnippet.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {

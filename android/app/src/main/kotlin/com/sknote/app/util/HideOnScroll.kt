@@ -1,51 +1,82 @@
 package com.sknote.app.util
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.RecyclerView
 
 /**
  * 「向下滚动收起、向上滚动展开」的一行（筛选 chip 行这类）。
  *
- * 实现要点：**用高度动画，不用 translationY**。translationY 只是把这一行滑出视野，它占的高度
- * 还在，下面的列表不会跟着上移 —— 看起来像收起来了，实际一点空间都没让出来。高度动画才是真收起。
+ * 结构要求：[space] 是只管占位的容器（`FrameLayout`，`height=wrap_content`，`clipChildren` 默认 true），
+ * [content] 是它唯一的孩子 —— 也就是真正的筛选行。
  *
- * 细节：
- * - 收起结束时才置 `GONE`、展开开始时先置 `VISIBLE` 且高度为 0 —— 两个方向都不会因为布局
- *   突变而跳一下；
- * - 触顶时强制展开（否则用户滑回顶部却看不到筛选行，会以为功能丢了）；
- * - 手势中途反向：直接取消上一个动画朝反方向走，不排队；
- * - 高度按开始动画那一刻的实测值取，不写死 dp。
+ * **为什么不是简单地把行的高度从 h 动画到 0**（第一版就是这么写的，真机上翻车了）：
+ * 那样每一帧都在重新布局这一行，行内的 chip（较高）会先被压没、而垂直居中的排序按钮还留在原地 ——
+ * 真机截图里就是「分类 chip 没了、『默认』和排序图标孤零零杵着」，加上下面的行与列表项错位重叠，
+ * 观感就是用户报的「会闪」。
+ *
+ * 现在的做法：**动画开始前把 content 的高度钉死成 h**，之后
+ * - `space.height` 在 h↔0 之间动画（真正让出高度，列表跟着上移）；
+ * - `content.translationY` 同步在 0↔-h 之间动画（整行往上滑出去，被 space 裁掉）。
+ * 于是内容是「被裁掉」而不是「被压扁」，chip 与按钮始终同进同出。
+ *
+ * 其它细节：
+ * - 触顶强制展开（否则滑回顶部看不到筛选行，会以为功能丢了）；
+ * - 用累积位移做迟滞，避免滑动末尾的抖动让行反复收起/弹出；
+ * - 收起只在静止态启动（动画中不动它），展开允许打断收起；
+ * - `cancel()` 前先摘掉引用：`ValueAnimator.cancel()` 也会回调 `onAnimationEnd`，
+ *   否则收起的收尾（置 GONE）会在展开途中执行，行会凭空消失。
  */
-fun RecyclerView.hideOnScroll(row: View, hideThreshold: Int = 8, durationMs: Long = 180L) {
-    if (row.id == View.NO_ID) return
-    var collapsed = false
+fun RecyclerView.hideOnScroll(
+    space: View,
+    content: View,
+    hideThreshold: Int = 48,
+    durationMs: Long = 180L
+) {
+    if (space !is ViewGroup || space.childCount == 0) return
 
-    // 展开态的高度只在收起时记一次：展开时行是 VISIBLE + height=0，此时 measuredHeight 量不到真实值
+    var collapsed = false
     var expandedHeight = 0
     var animator: ValueAnimator? = null
+    var accumulated = 0
 
-    fun animateTo(from: Int, to: Int, endState: () -> Unit) {
-        // 先摘引用再 cancel：ValueAnimator.cancel() 也会回调 onAnimationEnd（先 cancel 后 end），
-        // 若引用还在，收起的收尾动作（置 GONE）会在「展开到一半被反向取消」时被执行，行会凭空消失。
+    fun animate(toCollapsed: Boolean) {
+        val h = expandedHeight
+        if (h <= 0) return
+        // 关键：从**当前高度**接着走，而不是从写死的 0/h 开始。
+        // 展开打断正在播的收起时，容器此刻停在半截高度（比如 80px），若从 0 起播，
+        // 第一帧会把高度直接拽到 0 再长回来 —— 来回滑动时看到的就是这一下闪。
+        val current = space.height.coerceIn(0, h)
+        val target = if (toCollapsed) 0 else h
+
+        // 钉死内容高度：space 变矮时内容是「被裁」而不是「被压扁」
+        content.layoutParams = content.layoutParams.apply { height = h }
+
         val previous = animator
         animator = null
         previous?.cancel()
-        row.layoutParams = row.layoutParams.apply { height = from }
-        row.requestLayout()
-        animator = ValueAnimator.ofInt(from, to).apply {
+
+        animator = ValueAnimator.ofInt(current, target).apply {
             duration = durationMs
             interpolator = DecelerateInterpolator()
             addUpdateListener { va ->
-                row.layoutParams = row.layoutParams.apply { height = va.animatedValue as Int }
-                row.requestLayout()
+                val v = va.animatedValue as Int
+                space.layoutParams = space.layoutParams.apply { height = v }
+                content.translationY = -(h - v).toFloat()
+                space.requestLayout()
             }
-            addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
                     if (animator !== animation) return
-                    endState()
                     animator = null
+                    space.layoutParams = space.layoutParams.apply { height = if (toCollapsed) 0 else h }
+                    content.translationY = 0f
+                    space.visibility = if (toCollapsed) View.GONE else View.VISIBLE
+                    space.requestLayout()
                 }
             })
             start()
@@ -53,37 +84,43 @@ fun RecyclerView.hideOnScroll(row: View, hideThreshold: Int = 8, durationMs: Lon
     }
 
     fun collapse() {
-        // 只在静止态启动收起：若此刻正在播动画，行高是中间值，拿它当 expandedHeight 会把
-        // 「展开高度」记成半截（实测踩过：收起途中反向，记住 55px，之后永远只展开到 55px）。
-        if (animator != null) return
-        val h = row.height.takeIf { it > 0 } ?: row.measuredHeight
-        if (h <= 0) return
-        expandedHeight = h
+        if (animator != null) return          // 动画中不动它，等稳定
+        if (space.height <= 0) return
+        expandedHeight = space.height
         collapsed = true
-        animateTo(h, 0) { row.visibility = View.GONE }
+        animate(true)
     }
 
     fun expand() {
-        if (!collapsed) return
-        // 展开允许打断正在播的收起（手势反向时不排队），此时 collapsed 仍为 true、expandedHeight 可信
+        if (!collapsed) return                // 展开允许打断正在播的收起
         collapsed = false
         if (expandedHeight <= 0) {
-            row.visibility = View.VISIBLE
+            space.visibility = View.VISIBLE
             return
         }
-        row.layoutParams = row.layoutParams.apply { height = 0 }
-        row.visibility = View.VISIBLE
-        animateTo(0, expandedHeight) { }
+        space.visibility = View.VISIBLE
+        animate(false)
     }
 
     addOnScrollListener(object : RecyclerView.OnScrollListener() {
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-            if (row.height <= 0 && !collapsed) return // 还没量过，先不动
+            // 迟滞：手在末尾抖一下不应该让筛选行来回弹
+            if (dy > 0) accumulated = if (accumulated < 0) dy else accumulated + dy
+            else if (dy < 0) accumulated = if (accumulated > 0) dy else accumulated + dy
+
             when {
-                dy > hideThreshold && !collapsed && canScrollVertically(1) -> collapse()
-                dy < -hideThreshold && collapsed -> expand()
-                // 已经在顶部就保证是展开的
-                !canScrollVertically(-1) && collapsed -> expand()
+                accumulated > hideThreshold && !collapsed && canScrollVertically(1) -> {
+                    accumulated = 0
+                    collapse()
+                }
+                accumulated < -hideThreshold && collapsed -> {
+                    accumulated = 0
+                    expand()
+                }
+                !canScrollVertically(-1) && collapsed -> {
+                    accumulated = 0
+                    expand()
+                }
             }
         }
     })

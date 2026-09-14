@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -182,6 +183,17 @@
       和它右边的排序按钮，同处一张 68dp 的卡片里。搜索入口已收进「学习资源」容器的标题行，
       卡片随之删掉；排序属于这个列表，就并到已有的这行 chip 里，不再单独占一行高度。
     -->
+    <!--
+      筛选行外层这个 FrameLayout 只负责「占位 + 裁剪」（第三十七批）：
+      滚动收起时动画改的是它的高度，而真正的行（layoutFilterRow）高度被钉死并整体上移，
+      于是行是「被裁掉」而不是「被压扁」—— 压扁会让 chip 先消失、排序按钮还杵在原地。
+    -->
+    <FrameLayout
+        android:id="@+id/layoutFilterRowSpace"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:ignore="UselessParent">
+
     <LinearLayout
         android:id="@+id/layoutFilterRow"
         android:layout_width="match_parent"
@@ -278,6 +290,7 @@
             android:focusable="true"
             android:contentDescription="排序方式" />
     </LinearLayout>
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/layoutDetailFilterSummary"
