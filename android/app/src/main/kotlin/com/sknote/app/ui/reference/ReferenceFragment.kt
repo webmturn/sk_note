@@ -78,7 +78,7 @@ class ReferenceFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             adapter = this@ReferenceFragment.adapter
             // 向下滚动时收起筛选行（分类 chip + 排序），向上滚回时展开
-            hideOnScroll(binding.layoutFilterRowSpace, binding.layoutFilterRow)
+            hideOnScroll(binding.layoutFilterRowSpace, binding.filterHeaderContent)
         }
 
         binding.swipeRefresh.setOnRefreshListener {
