@@ -17,6 +17,7 @@
             android:id="@+id/btnBack"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:padding="8dp"
             android:src="@drawable/ic_arrow_back"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回" />
@@ -38,6 +39,7 @@
             android:id="@+id/btnClear"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:padding="8dp"
             android:src="@drawable/ic_close"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="清除"
@@ -47,6 +49,7 @@
             android:id="@+id/btnSearch"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:padding="8dp"
             android:src="@drawable/ic_search"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="搜索"

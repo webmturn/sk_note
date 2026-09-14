@@ -51,6 +51,7 @@
                         <ImageView
                             android:layout_width="36dp"
                             android:layout_height="36dp"
+                            android:padding="6dp"
                             android:layout_gravity="center"
                             android:src="@drawable/ic_storage"
                             app:tint="?attr/colorPrimary"

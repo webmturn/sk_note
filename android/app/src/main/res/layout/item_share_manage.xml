@@ -113,6 +113,7 @@
                 android:id="@+id/btnView"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:padding="8dp"
                 android:src="@drawable/ic_chevron_right"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="查看" />

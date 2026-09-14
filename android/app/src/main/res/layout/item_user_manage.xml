@@ -79,6 +79,7 @@
             android:id="@+id/btnMore"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:padding="8dp"
             android:src="@drawable/ic_more_vert"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="更多操作" />

@@ -27,6 +27,7 @@
             android:id="@+id/btnCloseCompare"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:padding="8dp"
             android:src="@drawable/ic_close"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="关闭" />
