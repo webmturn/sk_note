@@ -1662,6 +1662,93 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
 **顺带确认无回归**：发布页格式工具条第一枚仍是「添加图片」（第三十批的重排仍在）；列表卡片、
 分类 chips、底部导航均与第三十批一致。
 
+### 第三十二批（底部导航栏：81dp → 65dp，紧凑到主流尺寸）
+
+**起因**：用户反馈「感觉底部导航栏占用过大」。
+
+**调研（先查库、再量同行，最后才定数字）**
+
+Material 库里的实证（解包 `material-1.11.0.aar` 的 `res/values/values.xml`）：
+
+| 常量 | 值 | 用途 |
+|---|---|---|
+| `m3_comp_navigation_bar_container_height` | **80dp** | 被 `Base.Widget.Material3.BottomNavigationView` 用作 **`android:minHeight`** |
+| `m3_bottom_nav_item_padding_top` / `_bottom` | 12dp / 16dp | 条目的上下内边距 |
+| `m3_comp_navigation_bar_active_indicator_height` / `_width` | 32dp / 64dp | 选中态胶囊 |
+| `m3_comp_navigation_bar_icon_size` | 24dp | 图标 |
+
+**关键发现**：80dp 是 `android:minHeight`，是**下限**。所以只把 `layout_height` 写成 64dp 会被顶回
+80dp —— 这正是两天前 `c386165` 那次「64dp 失败」的真实原因：当时是把 `itemPaddingTop/Bottom`
+压到 2dp 硬塞（内容 12+32+16+16 装不进 64），而不是覆盖 `minHeight`。**「64dp 装不下」这个结论
+是错的**，正确的三件套是 `minHeight` + 上下各 8dp + 32dp 指示条 + 16dp 标签 = 64dp。
+
+主流对照：M3 规范 80dp（我们当时照抄的）／Material 2 默认 **56dp**／iOS TabBar **49pt**（+34pt
+安全区）／**知乎**在本机实测（`tab_divider` 上沿 y=2224）**59dp**。也就是说我们处在规范围里最大的
+那一档，比用同一台机器量的同行高 20dp 以上。
+
+**方案与选择**（用户拍板）：**A 64dp**（8 + 32 + 16 + 8 + 1dp 分割线），标签保持
+`labelVisibilityMode=selected` 不变。
+
+**改动（4 个文件，28 增 13 删）**
+
+- `values/dimens.xml`：`bottom_nav_height` 80dp → **64dp**；`bottom_nav_content_inset` 104dp → **88dp**
+  （= 64 + 24 呼吸余量，5 个布局共 8 处引用的是同一个 dimen，改一行即全同步）；
+- `values/themes.xml`：`Widget.SkNote.BottomNavigation` 增加
+  `android:minHeight=@dimen/bottom_nav_height` 与 `itemPaddingTop/Bottom=8dp`，并在注释里写清
+  「三者是一组、`minHeight` 才是真正生效的那一个」；
+- `layout/activity_main.xml`、`util/AppSnackbar.kt`：把两处写死旧几何的注释改成实测值。
+
+**真机验证（像素级，480dpi → 1dp = 3px）**
+
+| 项 | 改前 | 改后 | 判定 |
+|---|---|---|---|
+| 分割线 | y=2157 | **y=2205..2207** | 条顶 = 2400 − 195 = 2205 ✓ |
+| 栏体 | 2160..2400（80dp） | **2208..2400（192px = 64dp）** | ✓ |
+| 指示条 | 96px 高 | **96px 高**（x=480 量，避开圆角），顶边 2232 = 栏顶 + 8dp | 未被压扁 ✓ |
+| 标签 | 字形 2304..2352 | **字形 2320..2365**，标签视图底 ≈2380（距屏幕底 8dp） | 无裁切 ✓ |
+| 未选中图标 | 中心 2280 | 中心 2304（2268..2340，栏内居中） | ✓ |
+| **整条** | **81dp** | **65dp** | **省 16dp（20%）** |
+
+配套项同步验过：
+
+- `fabScrollTop`（回到顶部）底边 = **2136** = 2400 − 264，正是 88dp 让位量 ✓；
+- 「我的」页滚到底，最后一项（退出登录卡）底边 2064，距分割线 141px，不被导航栏压住 ✓；
+- 详情页导航栏从视图树消失（`wrapper_present=False`），返回后回到 `[0,2205][1176,2301]` ✓；
+- **提示条锚点**：顶部页发帖/编辑帖触发，`snackbar_text`「讨论更新成功」实测
+  **`[72,2061][1104,2202]`** —— 下沿距分割线只剩 3px（1dp），与改前同构（改前栏顶 2157、提示条
+  下沿 2154，同样是 3px）。库内部按锚点高度算 `bottomMargin`，所以缩小栏高不会破坏这个关系 ✓。
+
+**方法论教训（记下来免得下次再绕）**：本项目提示条的容器色是**刻意反着来的**
+（`snackbar_container=#FF2B2930`，不随 M3 反色），所以我先按「找一条亮色宽带」连拍两张都没找到，
+**连拍也很难命中只有 1.5–2s 的提示条**。最后靠「按容器色匹配 + `uiautomator dump` 连打」才抓到，
+而 dump 还能直接给出精确 bounds —— 以后验证短命浮层优先用 dump，不要用截图碰运气。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 2353 warnings**（与改前逐位相同）。
+
+**又踩了一次 Git 行尾坑，这次把可复用的判据定下来**（提交 `914ad3d`）：
+
+- 现象：4 个文件里只有 `activity_main.xml` 被报「整文件改写」（commit 打印 73 增 58 删，
+  实际只有 28 增 13 删）。
+- **判据一（不可信）**：`git -c core.autocrlf=false diff --cached` 这次给出了错误结论 ——
+  它对该文件报 49/50 行改写，而两个 blob 实测都是纯 LF。
+- **判据二（可信）**：比 blob 本身。`git cat-file -s HEAD^:<path>` = 2227、`git cat-file -s HEAD:<path>`
+  = 2215（差值 12 = 我改动的文本净减字节数，行尾字节数相同 → 风格一致）；
+  `git grep -c "`r" <rev> -- <path>` 两个版本都为空 = 无 CR。**结论：干净。**
+- 根因与正确做法：工作区 CRLF、库内 LF（`core.autocrlf=true`）。`git -c core.autocrlf=false add`
+  会把工作区的 CRLF 原样写进索引，与父提交的 LF 不一致 → 雪崩。**用普通 `git add`**；
+  若 `git ls-files --eol` 仍显示 `i/crlf`（本次就是），再补一条
+  `git add --renormalize <path>`，目标是 `i/lf  w/crlf`。
+
+**生产数据**：为验证提示条锚点发了两个测试帖（`verify-nav-snackbar` id14、`verify-nav-snackbar2` id15），
+**均已删除**，生产仍为 7/11/8 三条、reply 1/16/1；view 51/45/36。
+
+**残留**
+
+1. 选中项图标比未选中项高 12dp（`labelVisibilityMode=selected` 的固有行为：选中项换成带标签的
+   布局）。用户本次选择**保持现状**；要消掉就得改成 `labeled`（四项都有字，高度不变）。
+2. 条的视觉下沿即屏幕底（内容画进手势条区域），与知乎同款做法；本机手势条不可见，所以观感成立。
+   若将来遇到手势条可见的机型，可再评估是否给条目加底部 inset。
+
 ---
 
 ## 九、剩余待办
@@ -1704,4 +1791,5 @@ UTF-8（`read` 工具直接报 invalid UTF-8）。已 `git checkout` 还原并�
 **需要产品决策（其他）**
 1. `SyntaxHighlightUtil` 与 `JavaSyntaxHighlighter` 两套配色的浅色值归一（需确认以哪套为准）
 2. `AuthActionHelper.requireRolesOrExit` 的 9 个调用点是否传入 `anchorView` 以彻底去掉 Toast
-3. 导航栏 `labelVisibilityMode` 是否由 `selected` 改为 `labeled`（四项图标对齐，但标签常显）
+3. 导航栏 `labelVisibilityMode` 是否由 `selected` 改为 `labeled`（四项图标对齐，但标签常显）——
+   **第三十二批已就此问过，用户选择保持 `selected`**（接受选中项图标高 12dp）
