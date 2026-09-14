@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  圆角细笔画的放大镜，专供「学习资源」标题行（Material Symbols Rounded 的字形）。
+  为什么不直接改 ic_search：那个是 2014 版 Material Icons 的粗杆锐角放大镜，
+  全项目还有 8 处在用（首页假搜索条、参考搜索页、分享列表等），换掉会波及没验证过的页面。
+  配色取 colorOnSurfaceVariant（次要动作），与该行右侧其它小图标同族。
+  注意成像尺寸：ImageView 不写 padding 时 fitCenter 会把 24dp 放大到容器大小，
+  在 48dp 容器里这枚字形会画到约 35dp —— 用它的地方必须给 padding（见 fragment_reference_container.xml）。
+  本字形墨迹约占 viewport 的 73%。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9.5,16q-2.725,0 -4.612,-1.888T3,9.5t1.888,-4.612T9.5,3t4.613,1.888T16,9.5q0,1.1 -0.35,2.075T14.675,13.3l5.5,5.5q0.275,0.275 0.275,0.7t-0.275,0.7 -0.7,0.275 -0.7,-0.275l-5.5,-5.5q-0.9,0.65 -1.875,1T9.5,16m0,-2q1.875,0 3.188,-1.312T14,9.5t-1.312,-3.187T9.5,5T6.313,6.313T5,9.5t1.313,3.188T9.5,14" />
+</vector>
