@@ -17,6 +17,7 @@ import com.sknote.app.R
 import com.sknote.app.data.api.ApiClient
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentDiscussionListBinding
+import com.sknote.app.ui.common.SortOptionsSheet
 import com.sknote.app.util.CategoryIconResolver
 import com.sknote.app.util.SkeletonAnimator
 import com.sknote.app.util.hideSkeletonAndShow
@@ -91,23 +92,30 @@ class DiscussionListFragment : Fragment() {
         }
 
         binding.btnSort.text = DiscussionListViewModel.sortLabel(currentSort)
-        binding.btnSort.setOnClickListener { anchor ->
-            val popup = androidx.appcompat.widget.PopupMenu(requireContext(), anchor)
-            DiscussionListViewModel.SORT_OPTIONS.forEachIndexed { index, (value, label) ->
-                popup.menu.add(0, index, index, label)
+
+        // 排序选项弹层：与参考手册页共用同一个 SortOptionsSheet（第三十四批从 PopupMenu 换过来）。
+        // 原来那个 3 项菜单连「当前是哪一项」都没有标记。
+        childFragmentManager.setFragmentResultListener(
+            SortOptionsSheet.REQUEST_KEY, viewLifecycleOwner
+        ) { _, bundle ->
+            val picked = DiscussionListViewModel.SORT_OPTIONS
+                .getOrNull(bundle.getInt(SortOptionsSheet.RESULT_INDEX, -1))?.first
+            if (picked != null && picked != currentSort) {
+                currentSort = picked
+                binding.btnSort.text = DiscussionListViewModel.sortLabel(picked)
+                // 换排序等于换一份列表：滚回顶部再加载，否则会停在上一次的滚动位置
+                binding.rvDiscussions.scrollToPosition(0)
+                viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
             }
-            popup.setOnMenuItemClickListener { item ->
-                val picked = DiscussionListViewModel.SORT_OPTIONS.getOrNull(item.itemId)?.first
-                if (picked != null && picked != currentSort) {
-                    currentSort = picked
-                    binding.btnSort.text = DiscussionListViewModel.sortLabel(picked)
-                    // 换排序等于换一份列表：滚回顶部再加载，否则会停在上一次的滚动位置
-                    binding.rvDiscussions.scrollToPosition(0)
-                    viewModel.loadDiscussions(currentCategory, currentArticleId, currentSort, force = true)
-                }
-                true
-            }
-            popup.show()
+        }
+
+        binding.btnSort.setOnClickListener {
+            SortOptionsSheet.newInstance(
+                title = "排序方式",
+                labels = DiscussionListViewModel.SORT_OPTIONS.map { it.second },
+                descs = listOf("按最后一条回复的时间", "按浏览量", "按回复数"),
+                selectedIndex = DiscussionListViewModel.SORT_OPTIONS.indexOfFirst { it.first == currentSort }
+            ).show(childFragmentManager, "sortSheet")
         }
 
         binding.fabNewDiscussion.setOnClickListener {

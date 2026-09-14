@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  排序/筛选的选择弹层（第三十四批）。
+  替代原来的 PopupMenu：那个有 7 个纯文字项、没有真正的选中标记（参考页是用
+  `it.title = "✓ ${it.title}"` 拼字符串糊上去的），看起来像系统默认菜单。
+
+  本布局刻意不写 android:background —— 让 Material3 的 BottomSheet 自己那层圆角容器与
+  拖拽把手生效（对比：dialog_block_guide.xml 写了 ?attr/colorSurface，会把圆角盖掉）。
+  选项行由 SortOptionsSheet 动态添加，因为两个调用点的选项数量与文案都不同。
+-->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:maxHeight="560dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="20dp">
+
+        <!-- 标题由 SortOptionsSheet 从参数里填（这里不写 android:text，免得又多一条硬编码文案告警） -->
+        <TextView
+            android:id="@+id/tvSheetTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/layoutOptions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

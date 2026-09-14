@@ -6,7 +6,7 @@ import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.PopupMenu
+import com.sknote.app.ui.common.SortOptionsSheet
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.Navigation
@@ -174,43 +174,38 @@ class ReferenceFragment : Fragment() {
         }
     }
 
+    /**
+     * 排序入口。第七个选项等含义不直观，所以每项配一句说明 —— 弹层见 [SortOptionsSheet]。
+     * 选项顺序必须与 [SortMode] 的声明顺序一致（索引即模式）。
+     */
     private fun setupSortButton() {
-        binding.btnSort.setOnClickListener { v ->
-            val popup = PopupMenu(requireContext(), v)
-            popup.menu.add(0, 0, 0, "默认排序")
-            popup.menu.add(0, 1, 1, "按名称 A→Z")
-            popup.menu.add(0, 2, 2, "按名称 Z→A")
-            popup.menu.add(0, 3, 3, "按分类")
-            popup.menu.add(0, 4, 4, "按ID ↑")
-            popup.menu.add(0, 5, 5, "按ID ↓")
-            popup.menu.add(0, 6, 6, "按颜色分组")
-            // Mark current
-            val currentId = when (viewModel.sortMode) {
-                SortMode.DEFAULT -> 0; SortMode.NAME_ASC -> 1; SortMode.NAME_DESC -> 2
-                SortMode.CATEGORY -> 3; SortMode.ID_ASC -> 4; SortMode.ID_DESC -> 5; SortMode.COLOR -> 6
+        val labels = listOf("默认排序", "按名称 A→Z", "按名称 Z→A", "按分类", "按 ID ↑", "按 ID ↓", "按颜色分组")
+        val descs = listOf(
+            "文档原有顺序", "名称升序", "名称降序", "同类相邻", "按录入顺序", "按录入倒序", "同色积木块相邻"
+        )
+
+        // 在能点之前就注册好，弹层回传时一定有人接（FragmentResult 也扛得住配置变更）
+        childFragmentManager.setFragmentResultListener(
+            SortOptionsSheet.REQUEST_KEY, viewLifecycleOwner
+        ) { _, bundle ->
+            val index = bundle.getInt(SortOptionsSheet.RESULT_INDEX, -1)
+            if (index < 0) return@setFragmentResultListener
+            viewModel.sortMode = SortMode.entries.getOrElse(index) { SortMode.DEFAULT }
+            if (showingBookmarks) {
+                loadBookmarks()
+            } else {
+                viewModel.loadReferences(currentType, currentCategory)
             }
-            popup.menu.getItem(currentId)?.let {
-                it.title = "✓ ${it.title}"
-            }
-            popup.setOnMenuItemClickListener { item ->
-                viewModel.sortMode = when (item.itemId) {
-                    1 -> SortMode.NAME_ASC
-                    2 -> SortMode.NAME_DESC
-                    3 -> SortMode.CATEGORY
-                    4 -> SortMode.ID_ASC
-                    5 -> SortMode.ID_DESC
-                    6 -> SortMode.COLOR
-                    else -> SortMode.DEFAULT
-                }
-                if (showingBookmarks) {
-                    loadBookmarks()
-                } else {
-                    viewModel.loadReferences(currentType, currentCategory)
-                }
-                updateSortUi()
-                true
-            }
-            popup.show()
+            updateSortUi()
+        }
+
+        binding.btnSort.setOnClickListener {
+            SortOptionsSheet.newInstance(
+                title = "排序方式",
+                labels = labels,
+                descs = descs,
+                selectedIndex = SortMode.entries.indexOf(viewModel.sortMode)
+            ).show(childFragmentManager, "sortSheet")
         }
     }
 

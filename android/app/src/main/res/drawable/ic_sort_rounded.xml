@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  圆角三横条（Material Symbols Rounded 的 sort），供排序入口使用。
+  与旧 ic_sort 的区别：旧的是直角实心块，放大后很硬；这版是圆头细条。
+  配色取 colorOnSurfaceVariant —— 它旁边就是「默认 / 名称 A→Z」这行 12sp 的弱化文案，
+  图标比文字还亮会显得喧宾夺主（第三十四批）。
+  注意：ImageView 不写 padding 时 fitCenter 会把 24dp 放大到容器尺寸，必须给 padding
+  （讨论页用 app:iconSize 控制，参考页用 padding）。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurfaceVariant">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M4,18q-0.425,0 -0.712,-0.288T3,17t0.288,-0.712T4,16h5q0.425,0 0.713,0.288T10,17t-0.288,0.713T9,18zM4,13q-0.425,0 -0.712,-0.288T3,12t0.288,-0.712T4,11h10q0.425,0 0.713,0.288T15,12t-0.288,0.713T14,13zM4,8q-0.425,0 -0.712,-0.288T3,7t0.288,-0.712T4,6h16q0.425,0 0.713,0.288T21,7t-0.288,0.713T20,8z" />
+</vector>
