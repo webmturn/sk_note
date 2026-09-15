@@ -68,6 +68,16 @@ class DiscussionDetailFragment : Fragment() {
     /** 真实评论是否已经渲染过。用于避免预填的占位行与真实评论同时存在。 */
     private var commentsLoaded: Boolean = false
 
+    /** 当前展示的评论（threadedSort 之后的顺序）。点引用块跳转时按它定位。 */
+    private var displayedComments: List<Comment> = emptyList()
+
+    /** 跳转高亮的延时清理任务：连续跳转时先撤掉上一次，否则旧任务会提前清掉新高亮。 */
+    private val clearHighlight = Runnable {
+        commentAdapter.highlight(null)
+        // 由根适配器（ConcatAdapter）广播，理由见 CommentAdapter.highlight 的说明
+        _binding?.rvMain?.adapter?.notifyDataSetChanged()
+    }
+
     private companion object {
         /**
          * 占位评论行上限。占位行只需铺满页头以下的首屏，多出来的本来就在屏幕之外，
@@ -77,6 +87,9 @@ class DiscussionDetailFragment : Fragment() {
 
         /** 等页头 ViewHolder 就绪的帧数上限，防止极端情况下无限重试。 */
         const val MAX_PREFILL_WAIT_FRAMES = 10
+
+        /** 引用跳转后高亮停留时长：够看清落点，又不至于一直亮着。 */
+        const val HIGHLIGHT_MS = 1200L
     }
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
@@ -305,7 +318,8 @@ class DiscussionDetailFragment : Fragment() {
                 } else {
                     AppSnackbar.make(binding.root, "你没有权限编辑这条评论", Snackbar.LENGTH_SHORT).show()
                 }
-            }
+            },
+            onQuoteClick = { comment -> jumpToQuotedComment(comment) }
         )
         binding.rvMain.apply {
             layoutManager = LinearLayoutManager(context)
@@ -348,6 +362,11 @@ class DiscussionDetailFragment : Fragment() {
 
         binding.btnCancelReply.setOnClickListener {
             clearReplyTarget()
+        }
+
+        // 点提示条 = 跳回被引用的那条评论（与点评论里的引用块同一行为）
+        binding.layoutReplyIndicator.setOnClickListener {
+            replyParentCommentId?.let { jumpToComment(it) }
         }
 
         observeData()
@@ -521,10 +540,15 @@ class DiscussionDetailFragment : Fragment() {
 
         viewModel.comments.observe(viewLifecycleOwner) { comments ->
             commentsLoaded = true
+            displayedComments = comments
+            // 引用块要显示被回复那条评论的原文。整篇评论是一次性返回的（服务端不分页，
+            // VM 已用 threadedSort 排好序），所以父评论直接在本地查表即可 —— 不需要
+            // 后端加字段、也不需要额外请求。
+            val byId = comments.associateBy { it.id }
             // 真实评论到达，撤掉占位行。两者共用同一套行高，且首条评论的顶边
             // 与首条占位行的顶边都紧贴页头底部，因此这一步不产生位移。
             commentPlaceholderAdapter.clear()
-            commentAdapter.submitList(comments)
+            commentAdapter.submitList(comments.map { CommentRow(it, it.parentId?.let(byId::get)) })
             hb?.tvCommentsHeader?.text = "评论 (${comments.size})"
             hb?.layoutNoComments?.visibility = if (comments.isEmpty()) View.VISIBLE else View.GONE
         }
@@ -616,6 +640,11 @@ class DiscussionDetailFragment : Fragment() {
         replyTargetName = comment.authorName ?: "匿名"
         binding.etReply.hint = "回复 @$replyTargetName"
         binding.tvReplyIndicator.text = "正在回复 @$replyTargetName"
+        // 引用原文预览：写作时能看见自己要回的是哪句话。父评论本来就在本地列表里
+        // （评论整篇一次返回，见 comments 观察者），不用再发请求。
+        val quoted = comment.content?.trim().orEmpty()
+        binding.tvReplyQuote.text = if (quoted.isEmpty()) "" else "「$quoted」"
+        binding.tvReplyQuote.visibility = if (quoted.isEmpty()) View.GONE else View.VISIBLE
         binding.layoutReplyIndicator.visibility = View.VISIBLE
         binding.etReply.requestFocus()
         // 弹出键盘
@@ -627,7 +656,38 @@ class DiscussionDetailFragment : Fragment() {
         replyParentCommentId = null
         replyTargetName = ""
         binding.etReply.hint = "写评论..."
+        binding.tvReplyQuote.text = ""
+        binding.tvReplyQuote.visibility = View.GONE
         binding.layoutReplyIndicator.visibility = View.GONE
+    }
+
+    /** 点评论里的引用块：跳到它引用的那条评论。 */
+    private fun jumpToQuotedComment(comment: Comment) {
+        comment.parentId?.let { jumpToComment(it) }
+    }
+
+    /**
+     * 滚到指定评论并高亮一下。
+     *
+     * 位置必须加上前面两个 adapter 的条数：列表是 ConcatAdapter(页头, 占位行, 评论)，
+     * 只按评论下标滚会整体偏移。找不到目标（父评论已被删除、或不在本次返回里）时给一句
+     * 提示，而不是静默无反应 —— 点了没动静比提示"不在了"更难排查。
+     */
+    private fun jumpToComment(commentId: Long) {
+        val index = displayedComments.indexOfFirst { it.id == commentId }
+        if (index < 0) {
+            AppSnackbar.make(binding.root, "原评论已不在了", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        val lm = binding.rvMain.layoutManager as? LinearLayoutManager ?: return
+        binding.rvMain.removeCallbacks(clearHighlight)
+        val offset = headerAdapter.itemCount + commentPlaceholderAdapter.itemCount
+        commentAdapter.highlight(commentId)
+        // 先广播重绑、再排滚动：两个动作都在下一次布局生效，但滚动位置必须在
+        // 重绑之后排队，否则会被整体刷新吃掉。
+        binding.rvMain.adapter?.notifyDataSetChanged()
+        lm.scrollToPositionWithOffset(offset + index, 0)
+        binding.rvMain.postDelayed(clearHighlight, HIGHLIGHT_MS)
     }
 
     private fun copyCommentContent(content: String) {
@@ -707,11 +767,13 @@ class DiscussionDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        binding.rvMain.removeCallbacks(clearHighlight)
         skeletonAnimator?.stop()
         skeletonAnimator = null
         contentShown = false
         pendingPrefill = null
         commentsLoaded = false
+        displayedComments = emptyList()
         _binding = null
     }
 }

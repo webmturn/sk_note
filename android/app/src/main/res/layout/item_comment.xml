@@ -50,19 +50,16 @@
                 android:id="@+id/tvAuthor"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorPrimary" />
 
-            <TextView
-                android:id="@+id/tvReplyTo"
+            <Space
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:visibility="gone" />
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/tvTime"
@@ -70,6 +67,69 @@
                 android:layout_height="wrap_content"
                 android:textSize="11sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <!--
+          引用块（第三十八批）：回复某条评论时，把被引用评论的作者与原文带过来 ——
+          此前只有作者行里一行「→ @某某」，看不到被回复的到底是什么，回复一多就断链。
+
+          结构刻意用「左侧竖条」而不是块内再加一层带背景的卡片：评论卡本身已是
+          colorSurfaceVariant 底 + 16dp 圆角，块内再套一层有底色的块，深色下会叠出
+          三层明度差（页面/卡片/引用），看起来像嵌套错误。竖条取 colorOnSurfaceVariant
+          加 45% 透明度，昼夜都成立，不需要新色号。
+
+          三种状态：
+          - 父评论在列表里 → 作者 + 原文（2 行截断），可点击跳转到那条评论
+          - 父评论已被删除 → 作者（服务端 parent_author_name）+「该评论已删除」，不可点
+          - 两者都没有   → 整块 GONE
+        -->
+        <LinearLayout
+            android:id="@+id/layoutQuote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp"
+            android:paddingVertical="4dp"
+            android:paddingEnd="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone">
+
+            <View
+                android:id="@+id/viewQuoteBar"
+                android:layout_width="3dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="8dp"
+                android:alpha="0.45"
+                android:background="?attr/colorOnSurfaceVariant"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvQuoteAuthor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/tvQuoteContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:lineSpacingMultiplier="1.2"
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView

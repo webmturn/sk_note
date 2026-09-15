@@ -2104,6 +2104,84 @@ onScrolled dy=-1 h=34 → applyHeight v=35
 
 ---
 
+### 第三十八批（评论回复引用）
+
+**起因**：用户提「做评论区的回复引用功能」。
+
+**先摸现状 —— 这功能已经做了一半。** 数据链路早就是通的：`Comment.parentId`、`btnReply` →
+`beginReplyTo()` → `sendComment(..., parentId)`，后端 `POST /comments` 一直在收 `parent_id`，列表也
+已有回复缩进。**缺的正是「引用」本身**：回复只显示一行 `→ @某某`，看不到被回复的原文；写作时也看不到；
+那行字点了没有任何反应。
+
+**关键判断：不改后端、不加迁移、不需部署。** 依据（逐条核对过后端）：
+
+- `GET /api/discussions/:id` 一次返回**全部**评论（`ORDER BY created_at ASC`，无 LIMIT/OFFSET，**没有分页**）；
+- 这个响应**没有任何缓存**（唯一被缓存的评论相关接口是讨论列表 `edgeCache(120)`，且只带 `reply_count`）；
+- 服务端只派生一层 `parent_author_name`（`LEFT JOIN comments pcm`），**不返回父评论正文**；
+- 而客户端 `DiscussionDetailViewModel.threadedSort()` 本来就已经 `comments.associateBy { it.id }` 建过索引。
+
+→ 父评论原文就在本地列表里，查表即可。给服务端加 `parent_content` 是多余的，还会牵动 `deploy_now.py`
+的迁移登记（该脚本被 gitignore，只存在于本机）。
+
+**做了什么（四处）**
+
+1. `item_comment.xml`：删掉 `tvReplyTo`（那行 `→ @某某`），换成引用块 `layoutQuote` —— 3dp 左侧竖条 +
+   `@作者` + 原文（2 行截断）。**刻意不加底色**：评论卡本身已是 `colorSurfaceVariant` + 16dp 圆角，
+   块内再套一层有底色的块，深色下会叠出三层明度差（页面/卡片/引用），看起来像嵌套错误。
+2. `CommentAdapter`：item 从 `Comment` 换成 `CommentRow(comment, parent)`。**这层包装是必要的**：
+   DiffUtil 只比较 item 自身，若仍是 `Comment`，父评论被编辑（正文变了、子评论对象没变）时子项不会
+   重绑，引用块会一直显示旧正文。顺带新增 `onQuoteClick` 回调与高亮状态。
+3. `fragment_discussion_detail.xml`：输入区提示条从「一行 `正在回复 @X`」扩成两行（第二行 `「原文」`），
+   整条可点。波纹走 `foreground` —— `background` 已被 `colorSecondaryContainer` 占用。
+4. `DiscussionDetailFragment`：本地建表后 `submitList(map { CommentRow(it, parent) })`；
+   `jumpToComment()` 按 `ConcatAdapter` 前两个适配器的条数补偏移再 `scrollToPositionWithOffset` +
+   高亮 1.2s；**点引用块与点提示条走同一个函数**。
+
+**三种状态**：父评论在列表里 → 可点跳转；父评论已被删除（服务端仍带 `parent_author_name`）→ 显示
+「该评论已删除」且**不可点**（点了跳不到任何地方，留着可点状态只会让人以为点击失效）；两者都没有 → 整块 GONE。
+
+**真机踩到的 bug（已修，附日志证据）：高亮不灭。** 加日志抓到：
+
+```
+adapter.highlight previous=null -> 18
+jumpTo id=18 idx=0 offset=1 posted=1200ms
+clearHighlight runnable fired          ← 1.2s 后确实执行了
+adapter.highlight previous=18 -> null
+```
+
+状态翻转了、**视觉没变** → 子适配器的通知没让列表重绑。这个列表挂在
+`ConcatAdapter(页头, 占位行, 评论)` 下，在**子适配器**里调 `notifyItemChanged` / `notifyDataSetChanged`
+都不生效；改成由**根适配器**广播（`rvMain.adapter?.notifyDataSetChanged()`）后，`onBindViewHolder`
+日志显示 1.2s 后 18/19/20/21 全部重绑、`highlight=false` ✓。
+
+顺带解释了一个巧合：起初「高亮亮起来」看着是生效的 —— 那一下其实是 `scrollToPositionWithOffset`
+引发的重绑，不是通知生效。**所以「一半生效」的现象要当成两条独立路径去查，别用一个解释糊过去。**
+
+**验证（LIO-AN00；全部走只读路径，没有往生产库发任何评论）**
+
+| 检查 | 结果 |
+|---|---|
+| 回复的引用块 | 显示 `@管理员` + 原文，竖条按两行文字撑满 ✓（含「回复的回复」多例） |
+| 点引用块 | 列表滚到被引用评论、目标卡片高亮 ✓ |
+| 高亮自动灭 | 1.2s 后恢复常态色 ✓（修复前一直亮着 ✗） |
+| 点输入区提示条 | 同样跳转 + 高亮，且不丢回复目标 ✓ |
+| 输入区预览 | `正在回复 @管理员` + `「哈哈，多谢」`，hint 变 `回复 @管理员` ✓ |
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 2356 warnings**。
+（提醒：warnings 计数本身不稳 —— 同一份代码三次跑出 2353 / 2355 / 2356，别拿它当回归判据，只有
+errors=0 是硬指标。）
+
+**未做 / 残留**
+
+1. **端到端「发一条真回复、看它自己带引用块」没做**：那需要往**生产库**写数据，用户没授权写生产。
+   该路径的渲染代码与已验证的完全同一段，但确实没被真机跑过 —— **不等同于已验证**。
+2. 父评论被 `ON DELETE CASCADE` 连带删除，所以「该评论已删除」这一态基本不可达，属防御分支。
+3. `notifications` 里的回复通知不带评论 id（`related_id` 是讨论 id），所以点通知无法深链到具体评论；
+   要做需给通知补字段。
+4. 评论输入框仍没有格式工具条（讨论正文编辑器有 `> ` 引用按钮），本次未动。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。

@@ -87,6 +87,9 @@
         </FrameLayout>
 
         <!-- Reply indicator banner -->
+        <!-- 整条可点：点它跳回被引用的那条评论（与点评论里的引用块同一行为）。
+             波纹走 foreground —— background 已被 colorSecondaryContainer 占用，
+             换成 selectableItemBackground 会把底色丢掉。minSdk 24，foreground 可用。 -->
         <LinearLayout
             android:id="@+id/layoutReplyIndicator"
             android:layout_width="match_parent"
@@ -96,6 +99,9 @@
             android:paddingHorizontal="16dp"
             android:paddingVertical="6dp"
             android:background="?attr/colorSecondaryContainer"
+            android:foreground="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
             android:visibility="gone">
 
             <ImageView
@@ -106,15 +112,35 @@
                 android:layout_marginEnd="6dp"
                 android:importantForAccessibility="no" />
 
-            <TextView
-                android:id="@+id/tvReplyIndicator"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnSecondaryContainer"
-                android:singleLine="true"
-                android:ellipsize="end" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvReplyIndicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSecondaryContainer"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+
+                <!-- 引用原文预览（第三十八批）：此前只显示「正在回复 @某某」，
+                     写作时看不到自己到底在回哪句话。 -->
+                <TextView
+                    android:id="@+id/tvReplyQuote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textSize="11sp"
+                    android:alpha="0.75"
+                    android:textColor="?attr/colorOnSecondaryContainer"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <ImageView
                 android:id="@+id/btnCancelReply"
