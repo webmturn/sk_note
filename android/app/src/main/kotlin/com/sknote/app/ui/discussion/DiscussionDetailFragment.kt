@@ -95,9 +95,11 @@ class DiscussionDetailFragment : Fragment() {
         const val HIGHLIGHT_MS = 1200L
 
         /**
-         * 收起态下一楼先显示几条回复。**取 0 = 全部折叠**，只留根评论 + 一行
-         * 「查看全部 N 条回复」（用户选的口味：页面最短、语义最干净）。
-         * 想改回带预览（微博那种留一两条给上下文）只需把这里改成 1/2/3。
+         * 收起态下一楼先显示几条回复。**取 0 = 全部折叠**，只留根评论 + 一行入口。
+         *
+         * 试过对齐 B站 的 3 条预览又撤掉了（用户：「预览三个不搞」）—— 但**入口文案保留
+         * B站 口径**：`共 N 条回复`（其接口字段 sub_reply_entry_text 就是这个），给的是
+         * 这一楼的回复总数，而不是"还剩几条没显示"。
          */
         const val COLLAPSED_REPLY_PREVIEW = 0
 
@@ -762,7 +764,8 @@ class DiscussionDetailFragment : Fragment() {
             // 楼结束（下一条属于别的楼，或已是最后一条）→ 补折叠 / 收起行
             val nextRoot = comments.getOrNull(i + 1)?.let { rootOf.getValue(it.id) }
             if (total > COLLAPSED_REPLY_PREVIEW && (nextRoot == null || nextRoot != r)) {
-                rows += CommentRow.Expand(r, total - COLLAPSED_REPLY_PREVIEW, COLLAPSED_REPLY_PREVIEW, isExpanded)
+                // 文案取 B站 口径：给的是这一楼的回复【总数】，不是"还剩几条没显示"
+                rows += CommentRow.Expand(r, total, isExpanded)
             }
         }
         return rows

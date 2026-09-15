@@ -31,13 +31,12 @@ sealed class CommentRow {
     }
 
     /**
-     * [hiddenCount] 仅在收起态有意义；[previewCount] 是收起态露出的条数（0 = 全部折叠，
-     * 文案随之从「展开其余」变成「查看全部」）；[expanded] 为 true 时这一行是「收起回复」。
+     * [totalCount] 是这一楼的回复**总数**（B站 的 `rcount`，文案「共 N 条回复」用的就是它）；
+     * [expanded] 为 true 时这一行是「收起回复」。
      */
     data class Expand(
         val rootId: Long,
-        val hiddenCount: Int,
-        val previewCount: Int,
+        val totalCount: Int,
         val expanded: Boolean
     ) : CommentRow() {
         override val key: Long get() = -rootId
@@ -119,12 +118,8 @@ class CommentAdapter(
 
     private fun bindExpand(holder: ExpandViewHolder, row: CommentRow.Expand) {
         val b = holder.binding
-        b.tvExpandLabel.text = when {
-            row.expanded -> "收起回复"
-            // 一条预览都不留时「展开其余」是错的（其余 = 全部），改成「查看全部」
-            row.previewCount == 0 -> "查看全部 ${row.hiddenCount} 条回复"
-            else -> "展开其余 ${row.hiddenCount} 条回复"
-        }
+        // 文案对齐 B站 的 sub_reply_entry_text：「共 xx 条回复」（总数口径）
+        b.tvExpandLabel.text = if (row.expanded) "收起回复" else "共 ${row.totalCount} 条回复"
         b.ivExpandIcon.setImageResource(
             if (row.expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
         )
