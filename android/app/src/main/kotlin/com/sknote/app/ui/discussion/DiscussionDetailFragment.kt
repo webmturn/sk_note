@@ -94,8 +94,12 @@ class DiscussionDetailFragment : Fragment() {
         /** 引用跳转后高亮停留时长：够看清落点，又不至于一直亮着。 */
         const val HIGHLIGHT_MS = 1200L
 
-        /** 收起态下一楼先显示几条回复。 */
-        const val COLLAPSED_REPLY_PREVIEW = 2
+        /**
+         * 收起态下一楼先显示几条回复。**取 0 = 全部折叠**，只留根评论 + 一行
+         * 「查看全部 N 条回复」（用户选的口味：页面最短、语义最干净）。
+         * 想改回带预览（微博那种留一两条给上下文）只需把这里改成 1/2/3。
+         */
+        const val COLLAPSED_REPLY_PREVIEW = 0
 
         const val STATE_EXPANDED_ROOTS = "expanded_roots"
     }
@@ -758,7 +762,7 @@ class DiscussionDetailFragment : Fragment() {
             // 楼结束（下一条属于别的楼，或已是最后一条）→ 补折叠 / 收起行
             val nextRoot = comments.getOrNull(i + 1)?.let { rootOf.getValue(it.id) }
             if (total > COLLAPSED_REPLY_PREVIEW && (nextRoot == null || nextRoot != r)) {
-                rows += CommentRow.Expand(r, total - COLLAPSED_REPLY_PREVIEW, isExpanded)
+                rows += CommentRow.Expand(r, total - COLLAPSED_REPLY_PREVIEW, COLLAPSED_REPLY_PREVIEW, isExpanded)
             }
         }
         return rows
