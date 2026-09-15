@@ -71,6 +71,9 @@ class DiscussionDetailFragment : Fragment() {
     /** 当前展示的评论（threadedSort 之后的顺序）。点引用块跳转时按它定位。 */
     private var displayedComments: List<Comment> = emptyList()
 
+    /** 已展开的楼（根评论 id）。默认全部收起，只显示根评论 + 前几条回复。 */
+    private val expandedRoots = mutableSetOf<Long>()
+
     /** 跳转高亮的延时清理任务：连续跳转时先撤掉上一次，否则旧任务会提前清掉新高亮。 */
     private val clearHighlight = Runnable {
         commentAdapter.highlight(null)
@@ -90,6 +93,11 @@ class DiscussionDetailFragment : Fragment() {
 
         /** 引用跳转后高亮停留时长：够看清落点，又不至于一直亮着。 */
         const val HIGHLIGHT_MS = 1200L
+
+        /** 收起态下一楼先显示几条回复。 */
+        const val COLLAPSED_REPLY_PREVIEW = 2
+
+        const val STATE_EXPANDED_ROOTS = "expanded_roots"
     }
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
@@ -255,6 +263,8 @@ class DiscussionDetailFragment : Fragment() {
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
             .build()
+        // 折叠状态活过旋转：fragment 实例会随配置变更重建，字段本身留不住。
+        savedInstanceState?.getLongArray(STATE_EXPANDED_ROOTS)?.forEach { expandedRoots.add(it) }
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_discussion_detail)
 
@@ -319,7 +329,11 @@ class DiscussionDetailFragment : Fragment() {
                     AppSnackbar.make(binding.root, "你没有权限编辑这条评论", Snackbar.LENGTH_SHORT).show()
                 }
             },
-            onQuoteClick = { comment -> jumpToQuotedComment(comment) }
+            onQuoteClick = { comment -> jumpToQuotedComment(comment) },
+            onExpandClick = { rootId, expanded ->
+                if (expanded) expandedRoots.remove(rootId) else expandedRoots.add(rootId)
+                renderComments(displayedComments)
+            }
         )
         binding.rvMain.apply {
             layoutManager = LinearLayoutManager(context)
@@ -541,14 +555,10 @@ class DiscussionDetailFragment : Fragment() {
         viewModel.comments.observe(viewLifecycleOwner) { comments ->
             commentsLoaded = true
             displayedComments = comments
-            // 引用块要显示被回复那条评论的原文。整篇评论是一次性返回的（服务端不分页，
-            // VM 已用 threadedSort 排好序），所以父评论直接在本地查表即可 —— 不需要
-            // 后端加字段、也不需要额外请求。
-            val byId = comments.associateBy { it.id }
             // 真实评论到达，撤掉占位行。两者共用同一套行高，且首条评论的顶边
             // 与首条占位行的顶边都紧贴页头底部，因此这一步不产生位移。
             commentPlaceholderAdapter.clear()
-            commentAdapter.submitList(comments.map { CommentRow(it, it.parentId?.let(byId::get)) })
+            renderComments(comments)
             hb?.tvCommentsHeader?.text = "评论 (${comments.size})"
             hb?.layoutNoComments?.visibility = if (comments.isEmpty()) View.VISIBLE else View.GONE
         }
@@ -667,14 +677,29 @@ class DiscussionDetailFragment : Fragment() {
     }
 
     /**
-     * 滚到指定评论并高亮一下。
+     * 滚到指定评论并高亮一下。**目标可能正被折叠在某一楼里，先把它所在的楼展开。**
      *
-     * 位置必须加上前面两个 adapter 的条数：列表是 ConcatAdapter(页头, 占位行, 评论)，
-     * 只按评论下标滚会整体偏移。找不到目标（父评论已被删除、或不在本次返回里）时给一句
-     * 提示，而不是静默无反应 —— 点了没动静比提示"不在了"更难排查。
+     * 顺序很关键：`submitList` 是异步 diff，必须等它提交完再算下标，否则滚动位置算的是
+     * 旧的折叠列表。找不到目标（父评论已被删除、或不在本次返回里）时给一句提示，
+     * 而不是静默无反应 —— 点了没动静比提示"不在了"更难排查。
      */
     private fun jumpToComment(commentId: Long) {
-        val index = displayedComments.indexOfFirst { it.id == commentId }
+        if (displayedComments.none { it.id == commentId }) {
+            AppSnackbar.make(binding.root, "原评论已不在了", Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        val rootId = rootIdMap(displayedComments)[commentId]
+        if (rootId != null && rootId != commentId && expandedRoots.add(rootId)) {
+            renderComments(displayedComments) { scrollToComment(commentId) }
+        } else {
+            scrollToComment(commentId)
+        }
+    }
+
+    private fun scrollToComment(commentId: Long) {
+        val index = commentAdapter.currentList.indexOfFirst {
+            it is CommentRow.Item && it.comment.id == commentId
+        }
         if (index < 0) {
             AppSnackbar.make(binding.root, "原评论已不在了", Snackbar.LENGTH_SHORT).show()
             return
@@ -688,6 +713,73 @@ class DiscussionDetailFragment : Fragment() {
         binding.rvMain.adapter?.notifyDataSetChanged()
         lm.scrollToPositionWithOffset(offset + index, 0)
         binding.rvMain.postDelayed(clearHighlight, HIGHLIGHT_MS)
+    }
+
+    /** 按当前折叠状态把整篇评论整形成列表行并提交（[onCommitted] 在 diff 应用后回调）。 */
+    private fun renderComments(comments: List<Comment>, onCommitted: (() -> Unit)? = null) {
+        val rows = buildRows(comments, expandedRoots)
+        if (onCommitted != null) commentAdapter.submitList(rows, onCommitted) else commentAdapter.submitList(rows)
+    }
+
+    /**
+     * 每一楼显示根评论 + 前 [COLLAPSED_REPLY_PREVIEW] 条回复，其余折叠成一行
+     * 「展开其余 N 条回复」；已展开的楼全部显示，末尾补一行「收起回复」。
+     *
+     * 折叠掉的回复**不生成行**（不是隐藏），长楼因此不参与布局与滚动 —— 讨论 11 的
+     * 15 条回复全挂在同一个根下，展开态约 2200dp（3.4 屏），收起后约一屏。
+     *
+     * 判据与 ViewModel 的 threadedSort 一致：追到「没有父评论、或父评论不在本篇里」的
+     * 那一层作为楼根，所以孤儿评论自己就是一楼的根，不会掉出行列表。
+     */
+    private fun buildRows(comments: List<Comment>, expanded: Set<Long>): List<CommentRow> {
+        if (comments.isEmpty()) return emptyList()
+        val byId = comments.associateBy { it.id }
+        val rootOf = rootIdMap(comments)
+        val replyTotal = HashMap<Long, Int>()
+        for (c in comments) {
+            val r = rootOf.getValue(c.id)
+            if (c.id != r) replyTotal[r] = (replyTotal[r] ?: 0) + 1
+        }
+        val seenReplies = HashMap<Long, Int>()
+        val rows = ArrayList<CommentRow>(comments.size + replyTotal.size)
+        for ((i, c) in comments.withIndex()) {
+            val r = rootOf.getValue(c.id)
+            val total = replyTotal[r] ?: 0
+            val isExpanded = r in expanded
+            val visible: Boolean
+            if (c.id == r || isExpanded || total <= COLLAPSED_REPLY_PREVIEW) {
+                visible = true
+            } else {
+                val n = (seenReplies[r] ?: 0) + 1
+                seenReplies[r] = n
+                visible = n <= COLLAPSED_REPLY_PREVIEW
+            }
+            if (visible) rows += CommentRow.Item(c, c.parentId?.let { byId[it] })
+            // 楼结束（下一条属于别的楼，或已是最后一条）→ 补折叠 / 收起行
+            val nextRoot = comments.getOrNull(i + 1)?.let { rootOf.getValue(it.id) }
+            if (total > COLLAPSED_REPLY_PREVIEW && (nextRoot == null || nextRoot != r)) {
+                rows += CommentRow.Expand(r, total - COLLAPSED_REPLY_PREVIEW, isExpanded)
+            }
+        }
+        return rows
+    }
+
+    /** 解析每条评论所属楼的根评论 id（追到根祖先，带记忆化与环保护）。 */
+    private fun rootIdMap(comments: List<Comment>): Map<Long, Long> {
+        val byId = comments.associateBy { it.id }
+        val memo = HashMap<Long, Long>(comments.size)
+        for (c in comments) {
+            if (memo.containsKey(c.id)) continue
+            val path = ArrayList<Comment>(4)
+            val seen = HashSet<Long>(4)
+            var cur = c
+            while (seen.add(cur.id)) {
+                path += cur
+                cur = cur.parentId?.let { byId[it] } ?: break
+            }
+            for (v in path) memo[v.id] = cur.id
+        }
+        return memo
     }
 
     private fun copyCommentContent(content: String) {
@@ -763,6 +855,11 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         dialog.show()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putLongArray(STATE_EXPANDED_ROOTS, expandedRoots.toLongArray())
     }
 
     override fun onDestroyView() {

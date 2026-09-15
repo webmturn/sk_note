@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  「展开其余 N 条回复 / 收起回复」行（第三十九批）。
+
+  为什么单独一行、而不是在根评论卡里做一个「查看全部」按钮：
+  折叠掉的回复在列表里是**真的不存在**（不是隐藏），这样长楼不会参与布局与滚动；
+  而按钮放在卡片里会让卡片高度随折叠状态变化，同一个根评论在两个状态下长得不一样。
+
+  左缘与回复卡片对齐（8dp 卡片边距 + 28dp 回复缩进，由 CommentAdapter 在代码里叠加），
+  这样它读起来是「这一楼的一部分」，而不是一条新评论。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layoutExpand"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/comment_card_inset"
+    android:layout_marginBottom="8dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:minHeight="40dp"
+    android:paddingHorizontal="12dp"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        android:id="@+id/ivExpandIcon"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="4dp"
+        android:src="@drawable/ic_expand_more"
+        app:tint="?attr/colorPrimary"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/tvExpandLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="?attr/colorPrimary" />
+</LinearLayout>
