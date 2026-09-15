@@ -728,11 +728,14 @@ class DiscussionDetailFragment : Fragment() {
     }
 
     /**
-     * 每一楼显示根评论 + 前 [COLLAPSED_REPLY_PREVIEW] 条回复，其余折叠成一行
-     * 「展开其余 N 条回复」；已展开的楼全部显示，末尾补一行「收起回复」。
+     * 每一楼显示根评论 + 前 [COLLAPSED_REPLY_PREVIEW] 条回复，其余折叠成一行入口；
+     * 已展开的楼把回复全部显示。
+     *
+     * **入口行紧贴根评论（楼顶），展开与收起是同一行、位置不动**；早期版本把它放在楼尾，
+     * 16 条回复的楼要滑到底才够得着「收起」。
      *
      * 折叠掉的回复**不生成行**（不是隐藏），长楼因此不参与布局与滚动 —— 讨论 11 的
-     * 15 条回复全挂在同一个根下，展开态约 2200dp（3.4 屏），收起后约一屏。
+     * 16 条回复全挂在同一个根下，展开态约 2200dp（3.4 屏），收起后只剩一行。
      *
      * 判据与 ViewModel 的 threadedSort 一致：追到「没有父评论、或父评论不在本篇里」的
      * 那一层作为楼根，所以孤儿评论自己就是一楼的根，不会掉出行列表。
@@ -748,7 +751,7 @@ class DiscussionDetailFragment : Fragment() {
         }
         val seenReplies = HashMap<Long, Int>()
         val rows = ArrayList<CommentRow>(comments.size + replyTotal.size)
-        for ((i, c) in comments.withIndex()) {
+        for (c in comments) {
             val r = rootOf.getValue(c.id)
             val total = replyTotal[r] ?: 0
             val isExpanded = r in expanded
@@ -761,9 +764,9 @@ class DiscussionDetailFragment : Fragment() {
                 visible = n <= COLLAPSED_REPLY_PREVIEW
             }
             if (visible) rows += CommentRow.Item(c, c.parentId?.let { byId[it] })
-            // 楼结束（下一条属于别的楼，或已是最后一条）→ 补折叠 / 收起行
-            val nextRoot = comments.getOrNull(i + 1)?.let { rootOf.getValue(it.id) }
-            if (total > COLLAPSED_REPLY_PREVIEW && (nextRoot == null || nextRoot != r)) {
+            // 入口行放在**楼顶**（紧贴根评论），展开与收起共用它、位置不动 ——
+            // 放在楼尾时，16 条回复的楼要滑 2.7 屏才够得着「收起」（用户实测抱怨）。
+            if (c.id == r && total > COLLAPSED_REPLY_PREVIEW) {
                 // 文案取 B站 口径：给的是这一楼的回复【总数】，不是"还剩几条没显示"
                 rows += CommentRow.Expand(r, total, isExpanded)
             }

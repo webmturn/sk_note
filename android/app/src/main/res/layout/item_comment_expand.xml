@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  「展开其余 N 条回复 / 收起回复」行（第三十九批）。
+  「共 N 条回复 / 收起回复」行（第三十九批，第二次调整）。
 
-  为什么单独一行、而不是在根评论卡里做一个「查看全部」按钮：
-  折叠掉的回复在列表里是**真的不存在**（不是隐藏），这样长楼不会参与布局与滚动；
-  而按钮放在卡片里会让卡片高度随折叠状态变化，同一个根评论在两个状态下长得不一样。
+  两个位置与尺寸上的决定：
+  1. **放在楼顶**（紧贴根评论下面），展开与收起共用这一行、位置不动 —— 早先放在楼尾，
+     16 条回复的楼要滑 2.7 屏才够得着「收起」，用户实测抱怨过。
+  2. **32dp 而不是 40dp**：这一行只有一行 13sp 文字 + 一个小箭头，40dp 时四周空得明显
+     （实测占可见区 6.2%，比它承载的信息多得多）。
 
   左缘与回复卡片对齐（8dp 卡片边距 + 28dp 回复缩进，由 CommentAdapter 在代码里叠加），
-  这样它读起来是「这一楼的一部分」，而不是一条新评论。
+  读起来才算「这一楼的一部分」。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -15,20 +17,20 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="@dimen/comment_card_inset"
-    android:layout_marginBottom="8dp"
+    android:layout_marginBottom="6dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:minHeight="40dp"
-    android:paddingHorizontal="12dp"
+    android:minHeight="32dp"
+    android:paddingHorizontal="8dp"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
     <ImageView
         android:id="@+id/ivExpandIcon"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
-        android:layout_marginEnd="4dp"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="2dp"
         android:src="@drawable/ic_expand_more"
         app:tint="?attr/colorPrimary"
         android:importantForAccessibility="no" />
