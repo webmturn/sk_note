@@ -1900,6 +1900,10 @@ class ProjectAnalyzerFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // 扫描是异步的：视图销毁时把「等扫描完成再执行」的请求与标记一起清掉，
+        // 免得上一轮视图的请求被下一轮扫描完成后误触发（两边标记必须同时复位）。
+        pendingAfterScan = null
+        projectsScanned = false
         _binding = null
     }
 }

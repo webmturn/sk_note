@@ -2415,6 +2415,29 @@ logic）+ 主线程渲染，全页最重的一条路径离开 UI 线程。
 **仍未做**：`LogicVisualizerFragment` / `ProjectResourceFragment` 的 `loadProjects()`（同模式，另有三处
 主线程 `BitmapFactory.decodeFile`）；P2 仓库+缓存；P3 未使用资源检测。**P1 的预览配色仍未肉眼看**。
 
+#### 第四十批·第二次审查（盯着刚提交的那批再查一遍）
+
+**查过没问题的**
+
+1. **IO 安全**：`parseLogicFile`（`:715-981`）与 `parseViewFile`（`:1152-1262`）的函数体内**没有任何**
+   `requireContext` / `resolveColor` / View 构造 —— 那些都在它们之后的绘制辅助函数里（`createCard` `:982`、
+   `buildVisualPreview` `:1263`、`buildViewTree` `:1573`）。所以「解析进 IO」不会踩到只能在主线程碰的东西。
+2. **`restoreState` 全链路**：`analyzeProject → renderProject`，三个使用点（`:560/:599/:662`）都拿到了值。
+3. **空项目路径**：扫描返回 null/空时，仍会先跑排队的那件事（`showCrossProjectStats` 自己会 Snackbar
+   「没有找到项目」），再显示空态 —— 顺序正确。
+
+**查出来要补的（已改，2 行）**：`pendingAfterScan` 与 `projectsScanned` 在 `onDestroyView` 里**没有复位**。
+不复位的话，视图销毁时留在队列里的请求（捕获的是旧视图上下文）可能在下一轮扫描完成后被误触发。
+现在两者一起清掉：旋转后请求会重新排队、随新的一轮扫描完成再执行。
+
+**这条没验证完（如实记）**：它的意义就在旋转路径上，而我在设备上连续几次「点工具箱卡片 + 转屏」把页面
+状态带偏了（一次停在工具箱页、一次停到首页），**没测到旋转恢复**。改动本身只有两行清字段、没有可失败的
+分支，但仍属**未验证**，下次补测一次旋转。
+
+**顺带记一个操作教训**：`.sketchware` 工具页的 `cardGlobalStats` 在页面**最底部**（卡片中心 y≈2213，
+紧贴内容区下沿 2223），点击命中很不稳 —— 连续两次「点了没反应」其实是**没点中**，不是功能坏。要复测这个
+入口，先 `uiautomator dump` 拿到实时 bounds 再点，别复用上一轮的坐标。
+
 ---
 
 ## 九、剩余待办
