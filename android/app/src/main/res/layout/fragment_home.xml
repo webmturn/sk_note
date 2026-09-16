@@ -397,7 +397,7 @@
                         <ImageView
                             android:layout_width="64dp"
                             android:layout_height="64dp"
-                            android:src="@drawable/ic_empty"
+                            android:src="@drawable/ic_error_outline"
                             android:alpha="0.5"
                             android:layout_marginBottom="12dp"
                             android:importantForAccessibility="no" />

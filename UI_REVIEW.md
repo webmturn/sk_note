@@ -2463,6 +2463,66 @@ P3 未使用资源检测；以及两个**改了但没看过**的项（P1 预览�
 
 ---
 
+### 第四十一批（文章页审查：四个必修项）
+
+**起因**：用户「先做文章页面界面审查」。
+
+**做法**：先派子代理静态盘点（10 个布局 + 8 个 Kotlin 文件，逐条 `file:line`，落盘
+`ARTICLE_UI_REVIEW_FACTS.md`），我再**逐条回真机复核**。复核推翻了静态清单里的两条结论，并且
+查出两个只有浅色模式才暴露的图标缺陷 —— 测试机常年深色，所以它们从 `0a40dd7`（v1.1.0 首次提交）
+活到现在。
+
+**四个真缺陷与修法**
+
+| # | 缺陷 | 根因 | 修法 |
+|---|---|---|---|
+| ① | **点赞图标在浅色模式下不可见** | `ic_favorite.xml:8` 是 `@android:color/white` 且**不自带 tint**，`fragment_article_detail.xml:280` 也没给。同一个底栏里 `ic_bookmark_outline/filled` 却自带 `?attr/colorOnSurface` —— **两套约定并存**才是根因 | 图标补 `android:tint="?attr/colorOnSurfaceVariant"`（与同排 14dp 统计图标 `ic_download` 对齐）；底栏那一处显式 `app:tint="?attr/colorOnSurface"`（与收藏/分享对齐） |
+| ② | **空态图标从来没画出来过** | `ic_empty.xml:7` 的 `fillColor` 是 `@android:color/transparent` 且无 tint → 该 vector 渲染为空。`git log --follow` 确认**首次提交起就是透明的，不是回归** | 换 inbox 字形 + `?attr/colorOnSurfaceVariant` + `alpha=0.3`，与 `ic_empty_comment`/`ic_empty_notification` 完全同构 |
+| ③ | **列表错误态会叠在卡片上** | `fragment_article_list.xml` 的 `layoutError` 没有背景，而详情页同一个块有 `?attr/colorSurface`（`:227`） | 补同一个背景 |
+| ④ | **空态文案写死「该分类暂无文章」** | 布局写死、代码只切可见性；但「查看全部」入口进来的是**全量**列表（`currentCategoryId == null`） | 按入口设文案：全量 →「暂无文章」，分类 →「该分类暂无文章」 |
+
+一处连带：首页错误块用的也是 `ic_empty`（把「空」图标用在「加载失败」上），② 修好后它会**突然变得
+可见**，因此换成 `ic_error_outline`。
+
+**验证（LIO-AN00；① 深浅两个模式各截一次，②③④ 用临时包强制显示后截图，看完即还原）**
+
+| 检查 | 结果 |
+|---|---|
+| ① 浅色 · 文章详情底栏 | 「♥ 点赞」图标可见（修前该位置**空白**，而同排收藏/分享/讨论都正常）✓ |
+| ① 深色 · 同上 | 图标同样可见，无回归 ✓ |
+| ② 空态图标 | 逐行像素扫描确认是**描边托盘 + 底部 V 形缺口**（`####....#####`），不是实心块 ✓ |
+| ② 深色 | `colorOnSurfaceVariant@30%` 在深色下同样成立 ✓ |
+| ③ 错误块 | 强制显示后**完整遮住两张卡片**（修前会透出卡片）✓ |
+| ④ | 「查看全部」→「暂无文章」；分类入口 →「该分类暂无文章」✓ |
+
+**验证手段（值得记）**：空态与错误态在当前数据下**无法通过正常入口触发**（全站只有 1 个分类、
+2 篇文章），所以用一个临时包把它们强制 visible 画出来截图，**截完立即还原并重跑门禁**；临时改动全程
+带 `// TEMP-VERIFY` 标记，提交前用 `Select-String` 复查无残留。
+同一个陷阱连踩两次：把 `layoutEmpty`/`layoutError` 的 XML `visibility` 改成 visible **也没用** ——
+代码里的 `fadeOut()` else 分支会立刻把它设回 `GONE`。**强制显示必须同时中和代码路径。**
+
+**复核推翻的两条静态结论**
+
+1. 静态清单称「`layout_empty_state.xml` 用 `ic_empty` 72dp alpha0.3」—— 实际该文件**全项目零引用**
+   （`ivEmptyIcon` 连 `android:src` 都没有），是死布局。
+2. 静态清单称「底栏被挤压变形、标签 `bounds=0`」—— 实际 app 是 edge-to-edge（`dumpsys window`：
+   MainActivity 窗口 `[0,0][1176,2400]`），uiautomator 报的 `0..2301` 是裁掉系统栏后的**可见区**；
+   `0dp + weight=1` 写法正确，192+6+1959+144 = 2301 自洽。**不是布局错误** —— 只是底栏最后 33dp 落在
+   手势条区域（`navigation_mode=100`），三键导航下才会被系统栏盖住，属全局设计决策。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 0 fatal**。
+
+**残留（本次刻意不做）**
+
+1. **点赞没有「已赞」态**（收藏有完整三件套：实心图标 + 文案 + 主色）。根因在后端：`GET /api/articles/:id`
+   的响应不含 `liked`，客户端进页面时无从知道是否已赞。纯客户端只能做到「本次停留内记住」，
+   要跨会话正确需后端补字段 —— **属后端改动，需单独授权部署**。分享/代码片段详情同构。
+2. 一致性收敛另开一批：详情标题 24sp vs 分享/片段 20sp、条目标题 16 vs 15sp、chip 内边距 10/3 vs 8/2、
+   空态文案 14 vs 16sp、`ArticleDetailViewModel.isLoading` 从未被观察（死代码）。
+3. 更正 `UI_REVIEW.md:288`：记的 `item_article_simple.xml:35` = 10sp **已过时**，现值 11sp。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。

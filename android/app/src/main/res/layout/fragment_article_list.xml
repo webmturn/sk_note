@@ -64,6 +64,7 @@
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:gravity="center"
+                android:background="?attr/colorSurface"
                 android:visibility="gone">
 
                 <TextView

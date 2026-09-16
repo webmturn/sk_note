@@ -44,6 +44,9 @@ class ArticleListFragment : Fragment() {
         val categoryName = arguments?.getString("category_name") ?: "文章列表"
 
         binding.toolbar.title = categoryName
+        // 空态文案随入口变化：首页「查看全部」进来的是全量列表（currentCategoryId == null），
+        // 布局里写死的「该分类暂无文章」在那个入口下是错的。
+        binding.tvEmpty.text = if (currentCategoryId == null) "暂无文章" else "该分类暂无文章"
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         adapter = ArticleAdapter { article ->
