@@ -152,15 +152,20 @@ class ProjectAnalyzerFragment : Fragment() {
 
         if (hasStoragePermission()) {
             loadProjects()
-            val restored = restoreUiStateAfterLoad()
-            // Handle direct navigation from SwToolsFragment
-            if (!restored) {
-                val showGlobal = arguments?.getBoolean("show_global_stats", false) == true
-                val showBackup = arguments?.getBoolean("show_backup", false) == true
-                if (showGlobal) {
-                    binding.root.post { showCrossProjectStats() }
-                } else if (showBackup) {
-                    binding.root.post { showBackupDialog() }
+            // 这三条路径都要读 allProjects，必须在扫描完成之后跑 —— 扫描改成 IO 线程之前
+            // 它是同步的，靠的是「调用即完成」这个巧合；异步后不排队就会读到空列表、
+            // 表现为「从工具箱点全局统计只看到项目列表」。
+            runAfterProjectsLoaded {
+                val restored = restoreUiStateAfterLoad()
+                // Handle direct navigation from SwToolsFragment
+                if (!restored) {
+                    val showGlobal = arguments?.getBoolean("show_global_stats", false) == true
+                    val showBackup = arguments?.getBoolean("show_backup", false) == true
+                    if (showGlobal) {
+                        binding.root.post { showCrossProjectStats() }
+                    } else if (showBackup) {
+                        binding.root.post { showBackupDialog() }
+                    }
                 }
             }
         } else {
@@ -171,8 +176,7 @@ class ProjectAnalyzerFragment : Fragment() {
     private fun hasStoragePermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
-        } else {
-            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        } else {            ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -195,6 +199,17 @@ class ProjectAnalyzerFragment : Fragment() {
     }
 
     /**
+     * 扫描（IO 线程）完成前到来的「打开全局统计 / 恢复上次视图 / 备份」请求先存这里，
+     * 扫完再执行。没有这层排队，它们会读到空的 [allProjects] 而静默失败。
+     */
+    private var pendingAfterScan: (() -> Unit)? = null
+    private var projectsScanned = false
+
+    private fun runAfterProjectsLoaded(action: () -> Unit) {
+        if (projectsScanned) action() else pendingAfterScan = action
+    }
+
+    /**
      * 扫描 Sketchware 项目目录。
      *
      * **读盘放 IO 线程、渲染留主线程**。旧版本整段同步跑在 UI 线程，而且 progressBar 在
@@ -208,14 +223,24 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.layoutEmpty.visibility = View.GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
-            val projects = withContext(Dispatchers.IO) { scanProjects() }
+            // 读盘/解析抛异常时不能让协程带着异常结束（会崩应用），失败按「没扫到」处理
+            val projects = try {
+                withContext(Dispatchers.IO) { scanProjects() }
+            } catch (e: Exception) {
+                null
+            }
             if (_binding == null) return@launch // 中途退出：别再碰 View
             binding.progressBar.visibility = View.GONE
+            allProjects = projects.orEmpty()
+            projectsScanned = true
+            // 扫描完成前排队的那件事（全局统计 / 恢复视图 / 备份）现在可以跑了
+            val pending = pendingAfterScan
+            pendingAfterScan = null
+            pending?.invoke()
             if (projects.isNullOrEmpty()) {
                 binding.layoutEmpty.visibility = View.VISIBLE
                 return@launch
             }
-            allProjects = projects
             binding.rvProjects.visibility = View.VISIBLE
             binding.rvProjects.layoutManager = LinearLayoutManager(requireContext())
             binding.rvProjects.adapter = ProjectAdapter(projects) { project ->
@@ -271,9 +296,17 @@ class ProjectAnalyzerFragment : Fragment() {
     private fun analyzeProject(project: SkProject, restoreState: Boolean = false) {
         binding.progressBar.visibility = View.VISIBLE
         viewLifecycleOwner.lifecycleScope.launch {
-            val parsed = withContext(Dispatchers.IO) { parseProject(project) }
+            val parsed = try {
+                withContext(Dispatchers.IO) { parseProject(project) }
+            } catch (e: Exception) {
+                null // 同上：解析异常不能崩应用，也不能让加载圈永远转下去
+            }
             if (_binding == null) return@launch
             binding.progressBar.visibility = View.GONE
+            if (parsed == null) {
+                AppSnackbar.make(binding.root, "分析失败：读取项目出错", Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
             renderProject(project, parsed, restoreState)
         }
     }
@@ -1575,26 +1608,23 @@ class ProjectAnalyzerFragment : Fragment() {
         val ctx = requireContext()
         val dp = { v: Int -> (v * resources.displayMetrics.density).toInt() }
 
-        val globalBlocks = mutableMapOf<String, Int>()
-        val globalComponents = mutableMapOf<String, Int>()
-        var totalBlocks = 0
-
-        allProjects.forEach { project ->
-            if (project.path.exists()) {
-                project.path.listFiles()?.forEach { file ->
-                    if (file.name == "logic" && file.isFile) {
-                        val blocks = mutableMapOf<String, Int>()
-                        val comps = mutableSetOf<String>()
-                        parseLogicFile(file, blocks, mutableSetOf(), mutableSetOf(), comps, AnalysisData())
-                        blocks.forEach { (k, v) ->
-                            globalBlocks[k] = (globalBlocks[k] ?: 0) + v
-                            totalBlocks += v
-                        }
-                        comps.forEach { globalComponents[it] = (globalComponents[it] ?: 0) + 1 }
-                    }
-                }
+        binding.progressBar.visibility = View.VISIBLE
+        // 跨项目统计要把**每个项目**的 logic 再解析一遍，是全页最重的一条路径 —— 同样放 IO。
+        viewLifecycleOwner.lifecycleScope.launch {
+            val stats = try {
+                withContext(Dispatchers.IO) { scanGlobalStats() }
+            } catch (e: Exception) {
+                null // 解析抛异常不能让 lifecycleScope 的协程崩掉应用
             }
-        }
+            if (_binding == null) return@launch
+            binding.progressBar.visibility = View.GONE
+            if (stats == null) {
+                AppSnackbar.make(binding.root, "统计失败：读取项目出错", Snackbar.LENGTH_SHORT).show()
+                return@launch
+            }
+            val globalBlocks = stats.blocks
+            val globalComponents = stats.components
+            val totalBlocks = stats.totalBlocks
 
         // Summary
         container.addView(createSectionTitle("全局概览"))
@@ -1705,6 +1735,37 @@ class ProjectAnalyzerFragment : Fragment() {
         } else {
             binding.layoutAnalysis.scrollTo(0, 0)
         }
+        } // launch
+    }
+
+    /** 跨项目统计里「纯数据」的那一半：遍历所有项目的 logic 文件累加，不碰任何 View。 */
+    private class GlobalStats(
+        val blocks: MutableMap<String, Int>,
+        val components: MutableMap<String, Int>,
+        val totalBlocks: Int
+    )
+
+    private fun scanGlobalStats(): GlobalStats {
+        val globalBlocks = mutableMapOf<String, Int>()
+        val globalComponents = mutableMapOf<String, Int>()
+        var totalBlocks = 0
+        allProjects.forEach { project ->
+            if (project.path.exists()) {
+                project.path.listFiles()?.forEach { file ->
+                    if (file.name == "logic" && file.isFile) {
+                        val blocks = mutableMapOf<String, Int>()
+                        val comps = mutableSetOf<String>()
+                        parseLogicFile(file, blocks, mutableSetOf(), mutableSetOf(), comps, AnalysisData())
+                        blocks.forEach { (k, v) ->
+                            globalBlocks[k] = (globalBlocks[k] ?: 0) + v
+                            totalBlocks += v
+                        }
+                        comps.forEach { globalComponents[it] = (globalComponents[it] ?: 0) + 1 }
+                    }
+                }
+            }
+        }
+        return GlobalStats(globalBlocks, globalComponents, totalBlocks)
     }
 
     private fun restoreUiStateAfterLoad(): Boolean {

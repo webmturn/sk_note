@@ -2389,6 +2389,32 @@ XML」→ 读到陈旧快照；已加「先删本地文件再 pull」。
 3. P2 抽 `SkProjectRepository` + 内存缓存（旋转/返回不再重解析）；P3「未使用资源」检测 ——
    `scanResources` 目前只被逻辑可视化调用做列表展示，**全项目没有任何"资源是否被引用"的交叉比对**。
 
+#### 第四十批·修正（审查自查 + 继续：跨项目统计入 IO，并修掉我自己引入的回归）
+
+**审查自查发现一处疏漏（自己改的代码）**：两个协程体里**没有异常兜底**。解析若抛出未捕获异常，
+`lifecycleScope` 的协程会带着异常结束 → **崩应用**；而且 `progressBar` 已经置 VISIBLE，会**永远转下去**。
+已改成 `try { withContext(IO) { … } } catch (e: Exception) { null }` + 失败 Snackbar + 关掉进度条。
+
+**继续做的一条**：`showCrossProjectStats()` 拆成 `scanGlobalStats()`（IO，遍历 13 个项目再各解析一遍
+logic）+ 主线程渲染，全页最重的一条路径离开 UI 线程。
+
+**真机抓到我自己引入的回归（重要）**：跨项目统计入口点开只看到项目列表，什么都没发生。
+根因：`onViewCreated` 里 `loadProjects()` **原本是同步**的，所以紧随其后的三条路径
+（`show_global_stats` 导航参数、`restoreUiStateAfterLoad()`、`show_backup`）都能读到已经填好的
+`allProjects`；我把扫描改成 IO 之后它们**抢跑**，读到空列表后静默 return（`:1558` 的
+`if (allProjects.isEmpty())` 只弹一句 Snackbar）。
+
+修法：加一层排队 —— `runAfterProjectsLoaded { … }` 把「扫描完成前到来的请求」存进 `pendingAfterScan`，
+扫描结束时先填 `allProjects` 再执行它。**教训**：把同步函数改成异步时，要把它**所有隐式的前置条件**
+（这里就是"调用即完成"）一起找出来，否则改成异步等于悄悄改了别人的契约。
+
+**复验（LIO-AN00）**：工具箱 → 全局统计 → **「全局统计 (13 个项目)」** 正常渲染：
+**2223 总积木块 / 134 种类 / 13 项目 / 9 组件** + TOP20（`addSourceDirectly` 372 次、`setTypeface` 154 次、
+`mapPut` 132 次…）✓；分析器列表与单项目分析（38/15/3/13）仍正常 ✓。
+
+**仍未做**：`LogicVisualizerFragment` / `ProjectResourceFragment` 的 `loadProjects()`（同模式，另有三处
+主线程 `BitmapFactory.decodeFile`）；P2 仓库+缓存；P3 未使用资源检测。**P1 的预览配色仍未肉眼看**。
+
 ---
 
 ## 九、剩余待办
