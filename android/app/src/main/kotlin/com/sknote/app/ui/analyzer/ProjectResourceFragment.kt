@@ -4,6 +4,10 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.net.Uri
@@ -140,18 +144,43 @@ class ProjectResourceFragment : Fragment() {
 
     // ---- Load projects ----
 
+    /**
+     * 进入本页：**扫盘放 IO 线程，渲染留主线程**（与项目分析器同一处理）。
+     *
+     * 顺带删掉一处白干的活：旧代码为每个项目算了 `hasRes`（该项目有没有资源文件），
+     * 但**从来没用过** —— 而它每个项目要跑 5 次 `listFiles`（13 个项目 = 65 次目录扫描），
+     * 且全在主线程上。
+     */
     private fun loadProjects() {
         binding.layoutPermission.visibility = View.GONE
         binding.progressBar.visibility = View.VISIBLE
 
-        val skDir = File(Environment.getExternalStorageDirectory(), ".sketchware/mysc/list")
-        val resBase = File(Environment.getExternalStorageDirectory(), ".sketchware/resources")
-
-        if (!skDir.exists() || !skDir.isDirectory) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val projects = try {
+                withContext(Dispatchers.IO) { scanProjects() }
+            } catch (e: Exception) {
+                null // 读盘异常不能让协程带着异常结束（会崩应用）
+            }
+            if (_binding == null) return@launch
             binding.progressBar.visibility = View.GONE
-            binding.layoutEmpty.visibility = View.VISIBLE
-            return
+            if (projects.isNullOrEmpty()) {
+                binding.layoutEmpty.visibility = View.VISIBLE
+                return@launch
+            }
+            allProjects = projects
+            binding.rvProjects.visibility = View.VISIBLE
+            binding.rvProjects.layoutManager = LinearLayoutManager(requireContext())
+            binding.rvProjects.adapter = ProjectListAdapter(projects) { project ->
+                openProjectResources(project)
+            }
+            binding.toolbar.subtitle = "找到 ${projects.size} 个项目"
         }
+    }
+
+    /** 扫盘 + 读每个项目的 `project` JSON。返回 null = 目录不存在（与「目录在但没有项目」区分）。 */
+    private fun scanProjects(): List<SkProject>? {
+        val skDir = File(Environment.getExternalStorageDirectory(), ".sketchware/mysc/list")
+        if (!skDir.exists() || !skDir.isDirectory) return null
 
         val projects = mutableListOf<SkProject>()
         skDir.listFiles()?.forEach { projDir ->
@@ -161,30 +190,12 @@ class ProjectResourceFragment : Fragment() {
                     val json = JSONObject(projectFile.readText())
                     val id = projDir.name
                     val name = json.optString("my_ws_name", "未命名")
-                    // Check if this project has any resources
-                    val hasRes = resourceTypes.any { type ->
-                        val dir = resolveResDir(resBase, type, id)
-                        dir.exists() && (dir.listFiles()?.isNotEmpty() == true)
-                    }
                     projects.add(SkProject(id, name, id))
                 } catch (_: Exception) {}
             }
         }
         projects.sortByDescending { it.id.toIntOrNull() ?: 0 }
-
-        binding.progressBar.visibility = View.GONE
-        if (projects.isEmpty()) {
-            binding.layoutEmpty.visibility = View.VISIBLE
-            return
-        }
-
-        allProjects = projects
-        binding.rvProjects.visibility = View.VISIBLE
-        binding.rvProjects.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvProjects.adapter = ProjectListAdapter(projects) { project ->
-            openProjectResources(project)
-        }
-        binding.toolbar.subtitle = "找到 ${projects.size} 个项目"
+        return projects
     }
 
     // ---- Open project resources ----

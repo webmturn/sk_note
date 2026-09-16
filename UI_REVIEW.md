@@ -2438,6 +2438,29 @@ logic）+ 主线程渲染，全页最重的一条路径离开 UI 线程。
 紧贴内容区下沿 2223），点击命中很不稳 —— 连续两次「点了没反应」其实是**没点中**，不是功能坏。要复测这个
 入口，先 `uiautomator dump` 拿到实时 bounds 再点，别复用上一轮的坐标。
 
+#### 第四十批·继续（项目资源管理页：同样搬出 UI 线程 + 删掉一处很贵的死代码）
+
+**先审查再动手**：翻了 `ProjectResourceFragment` 的加载路径与 `onViewCreated` —— 后者末尾就一句
+`loadProjects()`，**后面没有任何依赖"已完成"的逻辑**（没有 restore 路径），所以这次**不需要**分析器里那层
+排队；`LogicVisualizerFragment` 则**有** `restoreUiStateAfterLoad()`（`:214/:356`），拆分时必须照分析器加队列
+（已记进待办，别漏）。
+
+**改了两处**
+
+1. `loadProjects()` → `scanProjects()`（IO 扫盘 + 读 project JSON）+ 主线程渲染；补 `_binding == null` 守卫
+   与 `try/catch`（读盘异常不能让协程崩）。
+2. **删掉死代码 `hasRes`**：旧代码为每个项目算"有没有资源文件"，**算完从来没用过** —— 代价是每个项目
+   **5 次 `listFiles`**（13 个项目 = **65 次目录扫描**），而且全在主线程。连同只为它存在的 `resBase` 局部
+   变量一起删。**这就是"死代码不只是难看，它是白烧的 IO"** 的实例。
+
+**验证（LIO-AN00）**：项目资源管理页 **「找到 13 个项目」**、13 张卡片齐全，且每张卡的资源计数照常显示
+（`DarkAuth Motion / ID: 731 · 1图标`、`Dashboard / ID: 702 · 1图标`…）—— 计数来自另一条路径，删掉 `hasRes`
+不影响它，**反证删的确实是死代码** ✓。
+
+**仍未做**：`LogicVisualizerFragment.loadProjects()`（要注意它有 restore 路径，需队列）；三处主线程
+`BitmapFactory.decodeFile`（`ProjectResourceFragment:357/654`、`LogicVisualizerFragment:1024`）；P2 仓库+缓存；
+P3 未使用资源检测；以及两个**改了但没看过**的项（P1 预览配色、`onDestroyView` 复位）。
+
 ---
 
 ## 九、剩余待办
