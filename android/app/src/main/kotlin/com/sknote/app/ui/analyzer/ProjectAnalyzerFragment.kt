@@ -24,6 +24,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -193,18 +194,42 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.layoutAnalysis.visibility = View.GONE
     }
 
+    /**
+     * 扫描 Sketchware 项目目录。
+     *
+     * **读盘放 IO 线程、渲染留主线程**。旧版本整段同步跑在 UI 线程，而且 progressBar 在
+     * 同一帧里 VISIBLE→GONE —— 那个加载圈从来没有机会画出来，用户看到的是「点了没反应，
+     * 然后突然好了」。
+     */
     private fun loadProjects() {
         binding.layoutPermission.visibility = View.GONE
         binding.progressBar.visibility = View.VISIBLE
+        binding.rvProjects.visibility = View.GONE
+        binding.layoutEmpty.visibility = View.GONE
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            val projects = withContext(Dispatchers.IO) { scanProjects() }
+            if (_binding == null) return@launch // 中途退出：别再碰 View
+            binding.progressBar.visibility = View.GONE
+            if (projects.isNullOrEmpty()) {
+                binding.layoutEmpty.visibility = View.VISIBLE
+                return@launch
+            }
+            allProjects = projects
+            binding.rvProjects.visibility = View.VISIBLE
+            binding.rvProjects.layoutManager = LinearLayoutManager(requireContext())
+            binding.rvProjects.adapter = ProjectAdapter(projects) { project ->
+                analyzeProject(project)
+            }
+            binding.toolbar.subtitle = "找到 ${projects.size} 个项目"
+        }
+    }
+
+    /** 扫盘 + 读每个项目的 `project` JSON。返回 null = 目录不存在（与「目录在但没有项目」区分）。 */
+    private fun scanProjects(): List<SkProject>? {
         val skDir = File(Environment.getExternalStorageDirectory(), ".sketchware/mysc/list")
         val dataDir = File(Environment.getExternalStorageDirectory(), ".sketchware/data")
-
-        if (!skDir.exists() || !skDir.isDirectory) {
-            binding.progressBar.visibility = View.GONE
-            binding.layoutEmpty.visibility = View.VISIBLE
-            return
-        }
+        if (!skDir.exists() || !skDir.isDirectory) return null
 
         val projects = mutableListOf<SkProject>()
         skDir.listFiles()?.forEach { projDir ->
@@ -215,28 +240,12 @@ class ProjectAnalyzerFragment : Fragment() {
                     val id = projDir.name
                     val name = json.optString("my_ws_name", "未命名")
                     val pkg = json.optString("my_sc_pkg_name", "")
-                    val projDataDir = File(dataDir, id)
-                    projects.add(SkProject(id, name, pkg, projDataDir))
+                    projects.add(SkProject(id, name, pkg, File(dataDir, id)))
                 } catch (_: Exception) {}
             }
         }
-
         projects.sortByDescending { it.id.toIntOrNull() ?: 0 }
-
-        binding.progressBar.visibility = View.GONE
-        if (projects.isEmpty()) {
-            binding.layoutEmpty.visibility = View.VISIBLE
-            return
-        }
-
-        allProjects = projects
-        binding.rvProjects.visibility = View.VISIBLE
-        binding.rvProjects.layoutManager = LinearLayoutManager(requireContext())
-        binding.rvProjects.adapter = ProjectAdapter(projects) { project ->
-            analyzeProject(project)
-        }
-
-        binding.toolbar.subtitle = "找到 ${projects.size} 个项目"
+        return projects
     }
 
     private fun goBackToProjectList() {
@@ -252,7 +261,61 @@ class ProjectAnalyzerFragment : Fragment() {
         backCallback.isEnabled = false
     }
 
+    /**
+     * 打开一个项目：**解析进 IO 线程，渲染留主线程**。
+     *
+     * 旧版本从 `listFiles` 到逐行 `JSONObject` 解析全在 UI 线程（logic / view 两个文件都是
+     * `readLines()` 整读），项目一大就卡住甚至 ANR。渲染必须主线程（要 new View），
+     * 所以切成 [parseProject] + [renderProject] 两段。
+     */
     private fun analyzeProject(project: SkProject, restoreState: Boolean = false) {
+        binding.progressBar.visibility = View.VISIBLE
+        viewLifecycleOwner.lifecycleScope.launch {
+            val parsed = withContext(Dispatchers.IO) { parseProject(project) }
+            if (_binding == null) return@launch
+            binding.progressBar.visibility = View.GONE
+            renderProject(project, parsed, restoreState)
+        }
+    }
+
+    /** 一次读完 logic + view：纯数据搬运，不碰任何 View，因此可以整段放 IO 线程。 */
+    private class ParsedProject(
+        val usedBlocks: MutableMap<String, Int>,
+        val usedComponents: MutableSet<String>,
+        val usedEvents: MutableSet<String>,
+        val usedListeners: MutableSet<String>,
+        val analysisData: AnalysisData,
+        val viewNodes: MutableList<ViewNode>,
+        val viewSections: MutableList<ViewSection>
+    )
+
+    private fun parseProject(project: SkProject): ParsedProject {
+        val usedBlocks = mutableMapOf<String, Int>() // blockOpCode -> count
+        val usedComponents = mutableSetOf<String>()
+        val usedEvents = mutableSetOf<String>()
+        val usedListeners = mutableSetOf<String>()
+        val analysisData = AnalysisData()
+        val viewNodes = mutableListOf<ViewNode>()
+        val viewSections = mutableListOf<ViewSection>()
+
+        val dir = project.path
+        if (dir.exists()) {
+            // 一次 listFiles 同时挑出 logic 与 view（旧版对同一个目录扫了两遍）
+            dir.listFiles()?.forEach { file ->
+                when {
+                    file.name == "logic" && file.isFile ->
+                        parseLogicFile(file, usedBlocks, usedEvents, usedListeners, usedComponents, analysisData)
+                    file.name == "view" && file.isFile ->
+                        parseViewFile(file, viewNodes, viewSections)
+                }
+            }
+        }
+        return ParsedProject(
+            usedBlocks, usedComponents, usedEvents, usedListeners, analysisData, viewNodes, viewSections
+        )
+    }
+
+    private fun renderProject(project: SkProject, parsed: ParsedProject, restoreState: Boolean) {
         binding.rvProjects.visibility = View.GONE
         binding.layoutAnalysis.visibility = View.VISIBLE
         binding.toolbar.subtitle = project.name
@@ -260,6 +323,15 @@ class ProjectAnalyzerFragment : Fragment() {
         binding.toolbar.setNavigationOnClickListener { goBackToProjectList() }
         currentProjectId = project.id
         isShowingGlobalStats = false
+
+        val usedBlocks = parsed.usedBlocks
+        val usedComponents = parsed.usedComponents
+        val usedEvents = parsed.usedEvents
+        val usedListeners = parsed.usedListeners
+        val analysisData = parsed.analysisData
+        val viewNodes = parsed.viewNodes
+        val viewSections = parsed.viewSections
+        val totalBlockCount = usedBlocks.values.sum()
 
         val container = binding.layoutAnalysisContent
         container.removeAllViews()
@@ -276,24 +348,6 @@ class ProjectAnalyzerFragment : Fragment() {
         infoLayout.addView(createText("ID: ${project.id}  |  ${project.packageName}", 12f, false, resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant)))
         infoCard.addView(infoLayout)
         container.addView(infoCard, marginParams(dp(0), dp(0), dp(0), dp(12)))
-
-        // Parse logic files
-        val logicDir = project.path
-        val usedBlocks = mutableMapOf<String, Int>() // blockOpCode -> count
-        val usedComponents = mutableSetOf<String>()
-        val usedEvents = mutableSetOf<String>()
-        val usedListeners = mutableSetOf<String>()
-        val analysisData = AnalysisData()
-        var totalBlockCount = 0
-
-        if (logicDir.exists()) {
-            logicDir.listFiles()?.forEach { file ->
-                if (file.name == "logic" && file.isFile) {
-                    parseLogicFile(file, usedBlocks, usedEvents, usedListeners, usedComponents, analysisData)
-                    totalBlockCount = usedBlocks.values.sum()
-                }
-            }
-        }
 
         // Stats summary
         val statsCard = createCard()
@@ -437,17 +491,7 @@ class ProjectAnalyzerFragment : Fragment() {
             container.addView(eventCard, marginParams(dp(0), dp(0), dp(0), dp(12)))
         }
 
-        // View structure
-        val viewDir = project.path
-        val viewNodes = mutableListOf<ViewNode>()
-        val viewSections = mutableListOf<ViewSection>()
-        if (viewDir.exists()) {
-            viewDir.listFiles()?.forEach { file ->
-                if (file.name == "view" && file.isFile) {
-                    parseViewFile(file, viewNodes, viewSections)
-                }
-            }
-        }
+        // View 结构：view 文件已在 parseProject 里读完（合并成一次 listFiles）
         if (viewSections.isNotEmpty()) {
             // Section title with toggle
             val titleRow = LinearLayout(ctx).apply {
@@ -1170,10 +1214,16 @@ class ProjectAnalyzerFragment : Fragment() {
         } catch (_: Exception) {}
     }
 
-    // Color palette for containers — distinct colors by depth with better contrast
-    private val containerColors = intArrayOf(
-        0x302196F3.toInt(), 0x304CAF50.toInt(), 0x30FF9800.toInt(),
-        0x309C27B0.toInt(), 0x30E91E63.toInt(), 0x3000BCD4.toInt()
+    // Color palette for containers — M3 surface 角色阶梯，按嵌套深度取。
+    // 旧版是 6 个硬编码饱和色（0x302196F3 / 0x304CAF50 / … ，19% 不透明度），深色模式下
+    // 浑浊、且不随 M3 分层（见 UI_REVIEW 里挂了很久的那条 TODO）。换成角色色后深浅两套
+    // 主题各自成立，也不用再维护色表；再叠一层透明度让嵌套盒子仍能区分。
+    private val containerColorAttrs = intArrayOf(
+        com.google.android.material.R.attr.colorSurfaceContainerLow,
+        com.google.android.material.R.attr.colorSurfaceContainer,
+        com.google.android.material.R.attr.colorSurfaceContainerHigh,
+        com.google.android.material.R.attr.colorSurfaceContainerHighest,
+        com.google.android.material.R.attr.colorSurfaceVariant
     )
 
     private fun buildVisualPreview(node: ViewNode, dp: (Int) -> Int, depth: Int = 0): View {
@@ -1224,7 +1274,7 @@ class ProjectAnalyzerFragment : Fragment() {
             }
 
             // Apply container styling
-            val bgColor = containerColors[depth % containerColors.size]
+            val bgColor = resolveColorWithAlpha(containerColorAttrs[depth % containerColorAttrs.size], 0x80)
             container.setBackgroundColor(bgColor)
             container.setPadding(
                 dp(node.paddingLeft.coerceAtLeast(2)),

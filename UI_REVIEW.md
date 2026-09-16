@@ -2350,6 +2350,47 @@ XML」→ 读到陈旧快照；已加「先删本地文件再 pull」。
 
 ---
 
+### 第四十批（项目分析器：解析离开 UI 线程 + 预览配色归位）
+
+**起因**：用户「优化项目分析器功能」。先派子代理盘全貌、**再逐条回代码复核**（复核确认报告的每条
+承重结论都成立）：全包只有**一个**协程（zip 备份 `:1746-1748`），扫描与解析全在 UI 线程；
+`progressBar` 与解析在**同一帧**里 VISIBLE→GONE（那个加载圈从来没有机会画出来）；无缓存、无 ViewModel，
+配置变更（`restoreUiStateAfterLoad`）与返回重进都全量重跑。
+
+**本次做的（P0+P1，只动 `ProjectAnalyzerFragment.kt`，+108/−58）**
+
+1. `loadProjects()` → **`scanProjects()`（IO 扫描 + 读 project JSON）+ 主线程渲染**；补 `_binding == null`
+   守卫，加载圈从此真的可见。
+2. `analyzeProject()` → **`parseProject()`（IO）+ `renderProject()`（主线程）**。渲染体逻辑一行没改，
+   靠 `ParsedProject` 把结果带过去；顺带把旧版对**同一个目录的两遍 `listFiles`**（`:290-295` 找 logic、
+   `:444-450` 找 view）合并成一次。
+3. `containerColors` 6 个硬编码饱和色（`0x302196F3` 等，19% 不透明）→ **M3 角色阶梯**
+   （`colorSurfaceContainerLow/Normal/High/Highest` + `colorSurfaceVariant`，按嵌套深度取，叠 50% 透明）
+   —— 清掉 UI_REVIEW 里挂了很久的那条 TODO。
+
+**真机验证（LIO-AN00）**
+
+| 检查 | 结果 |
+|---|---|
+| 分析器主页 | **「找到 13 个项目」**，13 张项目卡齐全 ✓（IO 扫描结果照常回主线程渲染） |
+| 打开项目（CountdownTimer） | **38 积木块 / 15 种类 / 3 组件 / 13 事件** + TOP 积木榜（`addSourceDirectly` 16、`definedFunc` 5、`timerCancel` 3…）✓ **拆分没有丢数据** |
+| 构建 / 门禁 | `assembleDebug` ✓、`lintDebug` **0 errors** ✓ |
+| **P1 预览配色** | **未肉眼确认**：点「可视化预览」那一步的点击+滑动组合最终停在项目列表页，没截到预览区。改动只是把色表换成主题角色（沿用同一套 `resolveColorWithAlpha`），编译与门禁通过，但**没看到渲染效果**，下次补一眼 |
+
+**过程中断（如实记）**：中途手机 USB 调试又关了（Windows 只剩 WPD、`adb devices` 为空），按规矩
+**压住提交**；用户重开后继续。另有一次是我在 ADB Interface 枚举完成前就查了 PnP、误判成"没连上"
+（其实已连），白等一轮 —— 设备类问题**要间隔几秒连查两次**再下结论。
+
+**未做（P0 剩余 + P2/P3）**
+
+1. `showCrossProjectStats()`（`:1507`，`allProjects.forEach` 里对每篇再 `parseLogicFile` 一遍）仍在主线程。
+2. `LogicVisualizerFragment` / `ProjectResourceFragment` 的 `loadProjects()` 同一模式未动，另有三处主线程
+   `BitmapFactory.decodeFile`。
+3. P2 抽 `SkProjectRepository` + 内存缓存（旋转/返回不再重解析）；P3「未使用资源」检测 ——
+   `scanResources` 目前只被逻辑可视化调用做列表展示，**全项目没有任何"资源是否被引用"的交叉比对**。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
