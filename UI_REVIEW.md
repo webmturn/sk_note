@@ -2523,6 +2523,81 @@ P3 未使用资源检测；以及两个**改了但没看过**的项（P1 预览�
 
 ---
 
+### 第四十二批（审查续：真机补齐管理页与编辑器，修 5 项）
+
+**起因**：用户「审查继续」→ 补完上一批没上设备的入口（管理中心 → 文章管理 → 编辑器四态 →
+列表骨架），报出问题 → 用户「修复」。
+
+**新查到的真 bug（本批主项）：编辑器预览态文字重叠**
+
+`applyPreviewMode()`（`ArticleEditorFragment.kt:217-228`）藏的是**内层 EditText**：
+
+```kotlin
+binding.etContent.visibility = View.GONE      // ← 只藏了输入框
+```
+
+而 `etContent` 是 `TextInputLayout`（id `layoutContent`，带 `android:hint` + `counterEnabled` +
+`helperText`）**唯一的孩子**。输入框没了 → 框体塌缩成一条，但浮动标签、helper、计数器仍照原位布局，
+三者挤进 30dp 的带里。真机截图（编辑态与创建态都复现）：
+
+```
+支持标题、列表、引用、代码块等 Markdown      0/50000
+在此输入 Markdown 内容...                            ← 浮动标签压在上面
+```
+
+dump 佐证：helper 落在 `y[1413..1504]`（被挤成**两行**，30.3dp）、counter 同高，
+而 `tvPreview` 从 `y[1566]` 才开始。
+
+**修法**：改藏 `binding.layoutContent`。安全性已核 —— `renderPreview():241`、`saveArticle():266`、
+`currentDraftState():324` 都只是**读** `etContent.text`，GONE 状态照常可读。
+顺带把 Markdown 语法速查行在预览态一并收掉（新加 id `tvMarkdownHint`）：框体不再占位后，
+它会正好夹在统计行与预览正文之间，而它是编辑辅助信息。
+
+**其余四项**
+
+| 项 | 现状（真机量的） | 修法 |
+|---|---|---|
+| `btnPreview` 触控高 | **105px = 35.0dp**（`minHeight="0dp"` + 上下 4dp padding），同屏其它按钮都是 48dp | `minHeight="40dp"`（与第三十八批定的 40dp 触控下限一致） |
+| 管理页 vs 列表页正文左缘 | **28dp vs 32dp**。根因是 RV padding 8/12dp 的任意分组 —— 连"管理页"内部都不齐（`category_manage` 是 12dp，`share_manage`/`release_manage` 已带 `clipToPadding`） | **6 个管理页统一 8→12dp**，全 app 10 个列表页从此都是「12dp RV + 4dp item = 16dp 卡片外边距」 |
+| 管理中心行标签 | 文章管理 / 分类管理 / 讨论管理 / **代码片段** / 分享管理 | 改「**代码片段管理**」—— `nav_graph.xml:359` 与 `fragment_snippet_manage.xml:17` 本来就叫这个 |
+| `ArticleListFragment.kt:52-57` 注释 | 称列表查询**不含** `a.content`、预填是"刻意被拒" | 与后端实际相反（`articles.ts:21-26` 带着该列，注释还写着「别把这一列删掉」，第二十批）→ 重写 |
+
+**验证（LIO-AN00 深色模式，逐条 dump 量）**
+
+| 检查 | 改前 | 改后 |
+|---|---|---|
+| 预览态文字带 | helper 两行 + 浮动标签重叠，30dp 带里塞三个元素 | **全部消失**；`tvPreview` 上移到 `y[1400..1529]`，与统计行之间 24px（8dp）✓ |
+| 切回编辑态 | — | `etContent` 回到 `y[1416..1992]`、按钮文案回「预览」✓ |
+| `btnPreview` 高 | 105px = 35.0dp | **120px = 40.0dp** ✓ |
+| 文章管理 `tvTitle` 左缘 | x=84px（28dp） | **x=96px（32dp）**，与文章列表页一致 ✓ |
+| 讨论管理 `tvTitle` 左缘 | 78px | 90px（等量 +12px；绝对值随该页 item 自身内边距）✓ |
+| 管理中心行标签 | 代码片段 | **代码片段管理** ✓ |
+
+**顺带白捡一个验证**：转场中间帧抓到了**列表骨架屏** —— 5 张骨架卡（chip 块 + 标题条 + 摘要条 +
+统计行），几何与 `item_article` 一致 ✓。详情页骨架没抓到：从列表进详情时**入场帧就已有正文**
+（预填生效，见上表最后一项），当前数据下这条路径不走骨架。
+
+**查过、但判断为「不该改」的两条**
+
+1. `validateBeforeSave()` 的三个 error 分支**不可达**：`updateFormState():338` 的 `canSave` 要求
+   标题 + 分类 + 正文全非空，按钮在那之前是 `isEnabled=false`。用户实际看到的是**禁用按钮 +
+   上下文提示**（`tvDraftMeta` 三态：「先填写标题，让文章主题更明确」/「请选择文章分类，方便内容归档」/
+   「正文不能为空，至少补充主要内容」），比弹错误文案更好 —— 保持。
+2. `btnPreview` 在内容为空时用 `alpha=0.6` 表示"不可用"但**仍可点**（点了显示「暂无可预览内容」）。
+   视觉与行为不一致，但结果无害，属刻意引导 —— 保持。
+
+**工具补充**：原有 dump 脚本只给 id/bounds，看文案得靠新写的 `%TEMP%\sktext.py`（ElementTree 遍历 →
+输出「文本 + bounds + dp」到 UTF-8 文件）。**PowerShell 直读中文会乱码**（`Get-Content` 按 ANSI 解码
+无 BOM 的 UTF-8），所以结果一律落文件再用读取工具看 —— 与第三十九批那条「先确认观测手段本身可信」
+是同一类教训。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 0 fatal**。
+
+**生产数据零写入**：这两批的真机操作全程只读 —— 唯一一次点「保存文章」命中的是**禁用**按钮
+（`saveArticle()` 验证不过直接 return），编辑器里未输入任何字符，因此也没留下草稿。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。

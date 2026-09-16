@@ -217,11 +217,17 @@ class ArticleEditorFragment : Fragment() {
     private fun applyPreviewMode() {
         if (isPreviewMode) {
             renderPreview()
-            binding.etContent.visibility = View.GONE
+            // 藏**整个 TextInputLayout**，不能只藏里面的 EditText —— 只藏 EditText 的话
+            // 框体会塌缩成一条，而它的浮动 hint、helperText、counter 仍照原位布局，
+            // 三者会叠在同一带里（真机截图确认过）。顺带把 Markdown 语法速查行也收掉，
+            // 它是编辑辅助信息，夹在「内容（Markdown）」标题和预览正文之间只是噪音。
+            binding.layoutContent.visibility = View.GONE
+            binding.tvMarkdownHint.visibility = View.GONE
             binding.tvPreview.visibility = View.VISIBLE
             binding.btnPreview.text = "继续编辑"
         } else {
-            binding.etContent.visibility = View.VISIBLE
+            binding.layoutContent.visibility = View.VISIBLE
+            binding.tvMarkdownHint.visibility = View.VISIBLE
             binding.tvPreview.visibility = View.GONE
             binding.btnPreview.text = "预览"
         }

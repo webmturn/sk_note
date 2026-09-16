@@ -101,7 +101,7 @@
                     android:layout_height="wrap_content"
                     android:text="预览"
                     style="@style/Widget.Material3.Button.TextButton"
-                    android:minHeight="0dp"
+                    android:minHeight="40dp"
                     android:paddingTop="4dp"
                     android:paddingBottom="4dp" />
             </LinearLayout>
@@ -138,6 +138,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <TextView
+                android:id="@+id/tvMarkdownHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"

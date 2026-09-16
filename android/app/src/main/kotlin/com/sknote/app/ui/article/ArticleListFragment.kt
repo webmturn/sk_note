@@ -52,12 +52,10 @@ class ArticleListFragment : Fragment() {
         adapter = ArticleAdapter { article ->
             val bundle = Bundle().apply {
                 putLong("article_id", article.id)
-                // 注意：文章列表接口（`articles.ts:22`）是明确列列名的查询，**不含
-                // `a.content`**（`SELECT a.*` 出现在同文件的详情查询 `:75`）。所以这里
-                // 带过去的 Article 是「没有正文的」，会被详情页的 content 守卫拒绝并
-                // 退回骨架路径 —— 这是刻意的：正文缺失时预填会让「相关讨论」卡片与
-                // 操作栏先出现再被顶下去，比骨架更糟。
-                // 若后端在列表查询里补上 `a.content`，这条路径无需改动即可自动生效。
+                // 列表接口（`articles.ts:21-26`）**刻意带了 `a.content`**，那边的注释写着
+                // 「别把这一列删掉」（UI_REVIEW.md 第二十批）。所以这里的 Article 是带正文的，
+                // 详情页能靠它在第一帧就渲染真实内容、不走骨架 —— 真机上从本页进详情的转场
+                // 中间帧已经能看到正文。若后端哪天去掉这一列，这条路径会静默退回骨架（不会崩）。
                 putPrefill(NavPrefill.KEY_ARTICLE, article)
             }
             findNavController().navigate(R.id.articleDetailFragment, bundle, slideNavOptions())
