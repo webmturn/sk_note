@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 import com.sknote.app.R
 import com.sknote.app.util.slideNavOptions
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 import com.sknote.app.util.TimeUtil
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
 class ArticleDetailFragment : Fragment() {
@@ -57,6 +59,13 @@ class ArticleDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
+            // 正文里的链接默认**点不动**：Markwon 不会自己给 TextView 设 movementMethod，
+            // 而 ClickableSpan 必须有 MovementMethod 才能接到点击。这个插件是可选件
+            // （markwon-core 的 io.noties.markwon.movement.MovementMethodPlugin），
+            // 它的 beforeSetText 会无条件把 movementMethod 换成 LinkMovementMethod
+            // 并通知 CorePlugin 让路 —— 所以与布局里的 textIsSelectable 可以共存：
+            // 链接点得开，长按仍能选中复制。
+            .usePlugin(MovementMethodPlugin.create())
             .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_article_detail)
@@ -94,12 +103,13 @@ class ArticleDetailFragment : Fragment() {
         // 下方、且同在滚动容器内，正文留空会让它们先出现在屏幕上、再被正文顶下去，
         // 比骨架更糟。
         //
-        // 现状：**文章没有任何一条列表接口返回 `a.content`** —— `articles.ts:22` 的列表
-        // 查询（文章列表与搜索都用它）是明确列列名的，`aggregated.ts:16` 的首页查询、
-        // `bookmarks.ts:16`/`:82` 的收藏与历史查询同样没有取这一列；带 `SELECT a.*` 的
-        // `articles.ts:75` 是**详情**查询，正是这里想避开的那次请求。因此这条预填路径
-        // 目前对所有入口都会被守卫拒绝，页面走骨架 —— 与改造前一致，不会更糟。
-        // 后端只要在列表查询里补上 `a.content`，这里无需改动即可自动生效。
+        // 现状：**四条列表查询都刻意带上了 `a.content`** —— `articles.ts:21-26`（列表与搜索）、
+        // `aggregated.ts:18`（首页聚合）、`bookmarks.ts:15-17`（收藏）、`bookmarks.ts:82-84`
+        // （阅读历史），每一处的注释都写明「别把这一列删掉」（第二十批）。所以从这些入口
+        // 进来预填都会命中，第一帧就是真实正文（真机转场中间帧可见，不需要等网络）。
+        // 只有**正文本身为空**的文章才会退回骨架。
+        // 若哪天有人把某一条查询的 `a.content` 去掉，这条路径会**静默**退回骨架 ——
+        // 不会崩，但会丢掉这个优化。
         val prefill = arguments?.prefill<Article>(NavPrefill.KEY_ARTICLE)
             ?.takeIf { !it.content.isNullOrEmpty() }
         if (prefill != null) {
@@ -151,9 +161,11 @@ class ArticleDetailFragment : Fragment() {
 
             binding.tvTitle.text = article.title
             binding.tvAuthor.text = article.authorName ?: "Unknown"
+            bindAuthorAvatar(article.authorAvatar)
             binding.tvTime.text = TimeUtil.formatRelative(article.createdAt)
             binding.tvMeta.text = "${article.viewCount} 阅读"
-            binding.toolbar.title = "文章详情"
+            // 标题是静态串，放在布局里（`app:title`）—— 原先只在这里赋值，导致骨架态与
+            // 加载失败态下顶栏是"只有返回箭头的空标题栏"。
 
             if (!article.categoryName.isNullOrEmpty()) {
                 binding.tvCategory.text = article.categoryName.orEmpty()
@@ -164,6 +176,9 @@ class ArticleDetailFragment : Fragment() {
             binding.readingProgress.visibility = View.VISIBLE
 
             markwon.setMarkdown(binding.tvContent, article.content.orEmpty())
+            // 正文短到不可滚动时滚动回调永远不会触发，那条 2dp 轨道会一直停在 0%，
+            // 看起来像一条坏掉的加载条 —— 布局完成后量一次，滚不动就把它收掉。
+            binding.scrollView.post { syncProgressVisibility() }
         }
 
         // 观察者注册之后再套用预填，保证 setPrefilledArticle 一定会被渲染。
@@ -321,9 +336,46 @@ class ArticleDetailFragment : Fragment() {
             val child = (v as androidx.core.widget.NestedScrollView).getChildAt(0) ?: return@setOnScrollChangeListener
             val maxScroll = child.height - v.height
             if (maxScroll > 0) {
+                // 兜底：万一 syncProgressVisibility() 量早了把它收掉，这里第一条滚动就恢复。
+                binding.readingProgress.visibility = View.VISIBLE
                 val progress = (scrollY * 100) / maxScroll
                 binding.readingProgress.progress = progress.coerceIn(0, 100)
             }
+        }
+    }
+
+    /**
+     * 内容不足以滚动时把进度条收掉。
+     * 这种情况滚动回调**根本不会触发**（没有可滚动距离），轨道会一直停在 0%，
+     * 看上去像一条坏掉的加载条，所以要在布局完成后主动量一次。
+     */
+    private fun syncProgressVisibility() {
+        val sv = _binding?.scrollView ?: return
+        val child = sv.getChildAt(0) ?: return
+        binding.readingProgress.visibility = if (child.height - sv.height > 0) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * 作者头像。与讨论区同一套写法（`CommentAdapter:144-157`）：有头像就 circleCrop 载入并去掉
+     * 占位内边距，没有就回到 `ic_person` 占位、留 4dp 内边距。
+     * 接口一直在返回 `author_avatar`（`articles.ts:79`），但此前这个 ImageView 连 id 都没有，
+     * 结构上不可能被赋值 —— 所以永远显示占位人像。
+     */
+    private fun bindAuthorAvatar(url: String?) {
+        val iv = _binding?.ivAvatar ?: return
+        val placeholderPadding = (4 * resources.displayMetrics.density).toInt()
+        if (!url.isNullOrEmpty()) {
+            iv.imageTintList = null
+            iv.setPadding(0, 0, 0, 0)
+            Glide.with(this)
+                .load(url)
+                .circleCrop()
+                .placeholder(R.drawable.ic_person)
+                .into(iv)
+        } else {
+            Glide.with(this).clear(iv)
+            iv.setImageResource(R.drawable.ic_person)
+            iv.setPadding(placeholderPadding, placeholderPadding, placeholderPadding, placeholderPadding)
         }
     }
 

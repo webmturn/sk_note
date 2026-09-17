@@ -2652,6 +2652,54 @@ dump 佐证：helper 落在 `y[1413..1504]`（被挤成**两行**，30.3dp）、
 
 ---
 
+### 第四十三批（文章详情页逐处复核后的六处修复）
+
+**起因**：用户「一处一处的复核文章详情页，找到存在的问题」→ 逐元素过完（6 处真问题）→ 用户「逐步修复」。
+
+| # | 问题 | 修法 | 验证 |
+|---|---|---|---|
+| ① | 注释称「**没有任何一条列表接口返回 `a.content`**……对所有入口都会被守卫拒绝，页面走骨架」—— 与四个端点**全部相反** | 重写注释，逐条列出 `articles.ts:21-26` / `aggregated.ts:18` / `bookmarks.ts:15-17` / `:82-84` 都带着该列 | 静态 + `GET /api/articles` 实测返回 `content` 字段 |
+| ② | 顶栏标题只在数据到达后赋值（`:156` observer 内）→ 骨架态与**加载失败态**是「只有返回箭头的空标题栏」 | 标题移进布局 `app:title="文章详情"`，删掉 observer 里那行 | 真机：标题正常、无回归（加载/错误态在当前数据下不可达，属静态修正） |
+| ③ | 作者头像永远是占位人像 —— 接口一直返回 `author_avatar`（`articles.ts:79`），而那个 ImageView **连 id 都没有** | 补 id，按讨论区同一套写法（`CommentAdapter:144-157`）用 Glide `circleCrop` 载入；无图时回落 `ic_person` + 4dp 内边距 | **真机截图**：作者卡显示真实头像 ✓ |
+| ④ | 正文不能选中复制、链接点不动 | 挂 `MovementMethodPlugin` + `textIsSelectable="true"` | **真机截图**：长按选中字符并弹出「复制 / 翻译 / 分享」浮动条 ✓；**链接可点性未验证**（见残留 1） |
+| ⑤ | 底栏「讨论」图标用 `colorOnSecondaryContainer`（"色块上的图标"角色）站在 surface 上，与同排三枚不同色 | 底栏那处加 `app:tint="?attr/colorOnSurface"` | **像素**：四枚图标现在都是 `(230,224,233)`（原讨论为 `(207,229,237)`）✓ |
+| ⑥ | 不可滚动的文章上，2dp 进度轨道永远停在 0%，像一条坏掉的加载条 | 布局完成后量一次 `child.height − 视口`，滚不动就 GONE；并在滚动回调加兜底（量早了则第一条滚动恢复） | **像素**：轨道带由 `(54,52,59)` 变回背景 `(20,18,24)` ✓ |
+
+**④ 的一个前置判断（反编译确认，不是猜的）**：`textIsSelectable="true"` 会在 XML 解析时就把
+movementMethod 设成 `ArrowKeyMovementMethod`，若插件的逻辑是「仅在为 null 时才设置」，两者会互相抵消。
+`javap -c` 查 `MovementMethodPlugin.beforeSetText` 的字节码：
+
+```
+1: invokevirtual  TextView.getMovementMethod()
+10: if_acmpeq 21            // 只在"与目标不是同一个实例"时才覆盖
+18: invokevirtual TextView.setMovementMethod(...)
+```
+
+即**无条件覆盖**，并且 `configure()` 里会调 `CorePlugin.hasExplicitMovementMethod(true)` 让 CorePlugin 让路
+—— 所以真机上两者共存（截图已证）。
+
+**两处工具教训**
+
+1. `input swipe x1 y x2 y 900` 若起点落在左边缘（x=60）会被系统当成**返回手势**，直接退出页面 ——
+   模拟长按必须**起止点相同且避开手势区**。
+2. **浮动选择条不在 `uiautomator dump` 里**（它是独立 popup window）：这类浮层只能靠截图确认，
+   别因为 dump 里没有就判"没生效"。另外 `textIsSelectable` 生效后 uiautomator 仍报
+   `long-clickable="false"`（只有 `focusable` 变 true）—— **属性不可尽信，要看行为**。
+
+**门禁**：`:app:assembleDebug` 通过；`:app:lintDebug` **0 errors / 0 fatal**。
+
+**残留 / 未验证**
+
+1. **正文里的链接点得开**没法在当前数据下真机验证 —— 两篇文章正文分别只有 1 个字和 2 个字，没有链接；
+   插件本身的行为已由字节码确认。
+2. **同一处链接缺陷还有 4 个 Markwon 使用点未修**：`DiscussionDetailFragment:269`（讨论正文）、
+   `CreateDiscussionFragment:107`（发帖预览）、`ArticleEditorFragment:67`（文章预览）、
+   `ReferenceDetailFragment:49`（参考详情，本地数据里很可能就有 URL）。改法同为"加一个 `usePlugin`"，
+   建议单独一批。
+3. ②的加载/错误态、⑥的长文分支：均因当前数据不可达而未实测（⑥ 有滚动兜底）。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
