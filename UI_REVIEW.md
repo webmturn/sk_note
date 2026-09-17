@@ -2558,7 +2558,7 @@ dump 佐证：helper 落在 `y[1413..1504]`（被挤成**两行**，30.3dp）、
 | 项 | 现状（真机量的） | 修法 |
 |---|---|---|
 | `btnPreview` 触控高 | **105px = 35.0dp**（`minHeight="0dp"` + 上下 4dp padding），同屏其它按钮都是 48dp | `minHeight="40dp"`（与第三十八批定的 40dp 触控下限一致） |
-| 管理页 vs 列表页正文左缘 | **28dp vs 32dp**。根因是 RV padding 8/12dp 的任意分组 —— 连"管理页"内部都不齐（`category_manage` 是 12dp，`share_manage`/`release_manage` 已带 `clipToPadding`） | **6 个管理页统一 8→12dp**，全 app 10 个列表页从此都是「12dp RV + 4dp item = 16dp 卡片外边距」 |
+| 管理页 vs 列表页正文左缘 | **28dp vs 32dp**（同为 16dp 卡片内边距的 item，差在 RV padding 8dp vs 12dp） | **6 个管理页统一 8→12dp** → 文章管理 28→32dp，与文章列表页对齐 |
 | 管理中心行标签 | 文章管理 / 分类管理 / 讨论管理 / **代码片段** / 分享管理 | 改「**代码片段管理**」—— `nav_graph.xml:359` 与 `fragment_snippet_manage.xml:17` 本来就叫这个 |
 | `ArticleListFragment.kt:52-57` 注释 | 称列表查询**不含** `a.content`、预填是"刻意被拒" | 与后端实际相反（`articles.ts:21-26` 带着该列，注释还写着「别把这一列删掉」，第二十批）→ 重写 |
 
@@ -2570,7 +2570,8 @@ dump 佐证：helper 落在 `y[1413..1504]`（被挤成**两行**，30.3dp）、
 | 切回编辑态 | — | `etContent` 回到 `y[1416..1992]`、按钮文案回「预览」✓ |
 | `btnPreview` 高 | 105px = 35.0dp | **120px = 40.0dp** ✓ |
 | 文章管理 `tvTitle` 左缘 | x=84px（28dp） | **x=96px（32dp）**，与文章列表页一致 ✓ |
-| 讨论管理 `tvTitle` 左缘 | 78px | 90px（等量 +12px；绝对值随该页 item 自身内边距）✓ |
+| 讨论管理 `tvTitle` 左缘 | （未实测，见自查 §3） | 90px ✓ |
+| 代码片段管理 `tvTitle` / 账号管理 `tvAvatar` 左缘 | （未实测，见自查 §3） | 均 90px ✓ |
 | 管理中心行标签 | 代码片段 | **代码片段管理** ✓ |
 
 **顺带白捡一个验证**：转场中间帧抓到了**列表骨架屏** —— 5 张骨架卡（chip 块 + 标题条 + 摘要条 +
@@ -2595,6 +2596,59 @@ dump 佐证：helper 落在 `y[1413..1504]`（被挤成**两行**，30.3dp）、
 
 **生产数据零写入**：这两批的真机操作全程只读 —— 唯一一次点「保存文章」命中的是**禁用**按钮
 （`saveArticle()` 验证不过直接 return），编辑器里未输入任何字符，因此也没留下草稿。
+
+#### 第四十二批·自查（回审最近两批改动 `32f7253` + `edeb447`）
+
+**审法**：不看结论、只看证据 —— 逐条回到代码/资源/真机，专找「我声称过但没验过」的地方。
+共查 6 项：**0 处代码回归**，但**发现我自己 3 处文档表述不实**（已改）。
+
+**1. 预览态的旋转恢复路径**（我改了 `applyPreviewMode()` 的语义）—— 安全。
+`isPreviewMode` 在 `:83` 从 bundle 恢复，`:113` 无条件调用 `applyPreviewMode()`，顺序正确 → 旋转后
+`layoutContent` / `tvMarkdownHint` / `tvPreview` 三者可见性一致。另两处 `renderPreview()`
+（`:132` 预览态下改正文、`:180` 数据到位）也都带 `isPreviewMode` 守卫。
+
+**2. `ic_favorite` 是共享 drawable，7 个调用点我原先只在设备上看过 1 个** —— 补验后：**改对了，
+而且顺带修好了两处原本隐形的图标。**
+
+| 调用点 | 结论 |
+|---|---|
+| `fragment_article_detail.xml:280`（20dp） | ✓ 浅深两模式均可见（第四十一批已验） |
+| `item_snippet.xml:117`（14dp + alpha .4） | ✓ **浅色下已是清晰的灰色实心心形 + 数字**（截图 `♥ 1` / `♥ 0`）—— 改前是白底白图，等于不存在 |
+| `fragment_snippet_detail.xml:246`（MaterialButton `app:icon`） | ✓ 可见：图标在**按钮最左端**、标签居中。（像素探针一开始报"没探到"，是我扫错区间 —— 图标不挨着文字，而是贴按钮左内边距；这种"没探到"要先怀疑探针） |
+| `item_share.xml:126`、`fragment_share_detail.xml:275` | **无法验证**：分享列表当前**没有数据**（`tvEmpty`「暂无文件分享」），页面渲染不出行；结构与已验的片段版完全同构 |
+| `item_share_manage.xml:90`、`item_snippet_manage.xml:50` | 自带 `app:tint`，与本次的默认 tint 同值 → 无变化 |
+
+兜底判断依据：新旧差是「硬编码白 → 主题角色色」，在已知的四种底色（页面 surface / 卡片 / 色调按钮 /
+色块）上**只会提高对比度，不可能把原本可见的变成不可见**。
+
+**3. 「6 个管理页内边距都改对了」—— 实测 5/6，剩 1 页数据为空测不了。**
+真机左缘：文章管理 **96px**（改前 **84px**，真·前后对照）、讨论管理 / 代码片段管理 / 账号管理 / 版本发布
+**均 90px**。后四页的「改前值」只能按「该文件本次仅改 RV padding 8→12dp（= +12px）、item 布局未动」
+**反推**为 78px，**不是实测** —— 原文表格把讨论管理的改前值写成 78px，属不实，已改为「未实测」并补上另三页。
+`分享管理` 仍未测：当前无数据，连行都渲染不出来。
+
+**4. 「全 app 10 个列表页都是 12dp」—— 说大了，已删。**
+写了 `%TEMP%\rvpad.py` 扫全部 **37 个** `RecyclerView`/`ViewPager2`，结果：
+
+- **6 个管理页现在都是 12dp** ✓（本次目标达成）；
+- 12dp 的另有 `article_list` / `bookmark_list` / `reading_history` / `category_icon_picker` /
+  `logic_visualizer` / `project_analyzer` / `project_resource(rvProjects)` / `reference_search`；
+- **`category_manage` 根本没有 `android:padding`**（静态清单记的「12dp」是误读，它靠 item 自身边距），
+  所以原文"4 个列表页 12dp"实为 **3 个**；
+- 其余列表（讨论/片段/分享列表、通知、参考、关注…）**都没有 RV padding**，靠 item 边距与装饰；
+  另有 `project_resource(rvResources)` = 8dp、`search(rvResults)` = 16dp。
+
+→ 准确说法是「**6 个管理页 + 3 个列表页共 9 页同值 12dp**」，不是"全 app 统一"。
+
+**5. 顺带发现（本次未改，低优先级）**：同一份扫描显示，**恰好是本批改的 4 个管理页没有设
+`clipToPadding`**（article / discussion / snippet / user manage），而 app 里其余列表几乎全是 `false`。
+影响很小（12dp 内边距在滚动时是"留白"还是"内容可滑入"），属同族不一致，可并进一致性批次。
+
+**6. 文档级核对**：`item_article_simple.xml:35` 确认 **11sp** ✓（第四十一批对 `UI_REVIEW.md:288`
+的更正成立）；`ArticleListFragment.kt` 的新注释与 `articles.ts:21-26` 一致 ✓。
+
+**结论**：两批代码未发现回归或新引入问题；要改的是**我自己的三处表述**（把反推值写成实测、
+`category_manage` 并非 12dp、"全 app 统一"说大了），已在本节与上文表格中改正。
 
 ---
 
