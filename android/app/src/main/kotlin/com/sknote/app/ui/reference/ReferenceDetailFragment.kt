@@ -21,6 +21,8 @@ import com.sknote.app.data.model.ReferenceItem
 import com.sknote.app.databinding.FragmentReferenceDetailBinding
 import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
+import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
 class ReferenceDetailFragment : Fragment() {
@@ -46,7 +48,10 @@ class ReferenceDetailFragment : Fragment() {
         ReferenceData.init(requireContext())
         referenceId = arguments?.getLong("reference_id", 0L) ?: 0L
         if (referenceId <= 0L) return
-        markwon = Markwon.create(requireContext())
+        markwon = Markwon.builder(requireContext())
+            .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(LinkifyPlugin.create())
+            .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         setupToolbarMenu()

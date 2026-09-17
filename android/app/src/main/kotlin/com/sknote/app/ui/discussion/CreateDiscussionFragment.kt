@@ -41,6 +41,8 @@ import com.sknote.app.databinding.FragmentCreateDiscussionBinding
 import com.sknote.app.util.DiscussionIconResolver
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -106,6 +108,9 @@ class CreateDiscussionFragment : Fragment() {
 
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
+            // 预览与正式渲染保持一致：链接可点、裸 URL 也能点。
+            .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(LinkifyPlugin.create())
             .build()
 
         binding.toolbar.setNavigationOnClickListener { confirmExit() }

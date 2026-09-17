@@ -17,6 +17,8 @@ import com.sknote.app.data.model.CreateArticleRequest
 import com.sknote.app.data.model.UpdateArticleRequest
 import com.sknote.app.databinding.FragmentArticleEditorBinding
 import io.noties.markwon.Markwon
+import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
 class ArticleEditorFragment : Fragment() {
@@ -64,7 +66,11 @@ class ArticleEditorFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        markwon = Markwon.create(requireContext())
+        // 预览与详情页保持一致：链接可点、裸 URL 也能点。
+        markwon = Markwon.builder(requireContext())
+            .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(LinkifyPlugin.create())
+            .build()
 
         savedInstanceState?.let {
             currentDraftState = ArticleDraftState(

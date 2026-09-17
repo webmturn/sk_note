@@ -2700,6 +2700,60 @@ movementMethod 设成 `ArrowKeyMovementMethod`，若插件的逻辑是「仅在�
 
 ---
 
+### 第四十四批（Markdown 交互修复推广到全部 5 个渲染点，并加上裸 URL 识别）
+
+**起因**：用户「继续」—— 承接第四十三批的残留。
+
+**先查数据，发现原计划不够**：上一批修的是「Markdown 链接点不动」，但拉了一遍真实内容才发现 ——
+**本项目用户内容里的网址全是裸 URL**（讨论 11 正文里就有一个 `https://cy-pic.kuaizhan.com/…`），
+Markdown 的 `[文字](网址)` **一个都没有**。而 Markwon 的 core **不识别裸 URL**（那要 `linkify` 模块的
+`LinkifyPlugin`；已确认它不在 core 的 classes.jar 里，app 也没依赖）。⇒ 只挂 `MovementMethodPlugin`
+的话，**现有内容上不会产生任何可见变化，也无法验证**。
+
+**改动（6 个文件）**
+
+1. `build.gradle.kts`：新增 `io.noties.markwon:linkify:4.6.2` —— **本批唯一的新依赖**，理由写进了注释；
+2. 5 个 Markwon 渲染点统一挂上两个插件（`MovementMethodPlugin` + `LinkifyPlugin`）：
+
+   | 文件 | 用途 | 备注 |
+   |---|---|---|
+   | `ArticleDetailFragment` | 文章正文 | 上批已挂 Movement，本批补 Linkify |
+   | `DiscussionDetailFragment` | 讨论正文 | 真实数据里的裸 URL 就在这 |
+   | `CreateDiscussionFragment` | 发帖预览 | |
+   | `ArticleEditorFragment` | 文章预览 | `Markwon.create` → builder |
+   | `ReferenceDetailFragment` | 参考详情 | 同上 |
+
+**验证（真机，端到端）**
+
+| 检查 | 结果 |
+|---|---|
+| 裸 URL 是否变成链接 | ✓ 截图：讨论 11 正文里的 kuaizhan 网址显示为**蓝色**（正文其余是白色） |
+| **点它是否真能打开** | ✓✓ `dumpsys` 显示前台变成 **Brave 浏览器**（`com.brave.browser/…ChromeTabbedActivity`）—— 正是第四十三批做不到的那条验证 |
+| 参考详情（Markwon 字段最多的一页） | ✓ 描述 / 参数 / 用法 / 代码块全部正常渲染，无回归 |
+| 文章编辑器预览 | ✓「预览模式 · 正文 1 字」+ 预览正文正常，第四十二批修的重叠也没回归 |
+| 文章详情 | ✓（第四十三批已验，本批只补 Linkify） |
+| 发帖预览 | **未单独验证**（改法与前 4 处完全相同） |
+
+**被构建拦下的一个疏漏（记下来）**：我以为讨论正文的 TextView 没有 `textIsSelectable`，给它补了一行 ——
+构建直接报 `已经为元素 "TextView" 指定了属性 "android:textIsSelectable"`。根因是我上次搜
+`textIsSelectable` 时**只搜了 kotlin 目录、没搜布局**。
+⇒ **「全 app 有没有用过 X」这类排查必须覆盖 `src/main` 全部，不能只搜 kotlin。**
+（顺带印证：讨论正文本来就可选中，其 movementMethod 是 `ArrowKeyMovementMethod` ——
+这正是"能选中但链接点不动"的成因，与 `MovementMethodPlugin` 无条件覆盖的行为吻合。）
+
+**门禁**：`:app:assembleDebug` 通过（含新依赖解析）；`:app:lintDebug` **0 errors / 0 fatal**。
+
+**残留**
+
+1. 发帖预览未单独验证。
+2. **`ext-tables` / `syntax-highlight` 是两个死依赖**：全 `src/main` 搜不到 `TablePlugin` /
+   `SyntaxHighlightPlugin`，只在 `build.gradle.kts` 里声明（app 的语法高亮是自写的
+   `SyntaxHighlightUtil`）。本批未动 —— 删依赖要单独验一轮。
+3. 参考详情里那些 URL 都在**代码块**里（`` `view.loadUrl("https://example.com")` ``），
+   Markwon 不会把代码块内容变成链接 —— 按预期保持纯文本，不是缺陷。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。

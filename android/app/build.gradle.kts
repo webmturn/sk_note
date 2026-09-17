@@ -85,6 +85,9 @@ dependencies {
     implementation("io.noties.markwon:ext-tables:4.6.2")
     implementation("io.noties.markwon:syntax-highlight:4.6.2")
     implementation("io.noties.markwon:image-glide:4.6.2")
+    // 裸 URL 变成可点链接：本项目用户内容里的网址都是直接粘贴的裸 URL（Markdown 的
+    // `[文字](网址)` 一个都没有），而 core 不识别裸 URL —— 必须挂 LinkifyPlugin。
+    implementation("io.noties.markwon:linkify:4.6.2")
 
     // Glide (图片加载)
     implementation("com.github.bumptech.glide:glide:4.16.0")

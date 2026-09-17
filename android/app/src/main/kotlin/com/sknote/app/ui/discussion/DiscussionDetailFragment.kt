@@ -37,6 +37,8 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
+import io.noties.markwon.movement.MovementMethodPlugin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.AppSnackbar
@@ -268,6 +270,10 @@ class DiscussionDetailFragment : Fragment() {
         }
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
+            // 与文章详情同一套：Markwon 不会自己设 movementMethod（链接点不动），
+            // 也不识别裸 URL（`https://…` 只是普通文字）。讨论正文里就有这种裸 URL。
+            .usePlugin(MovementMethodPlugin.create())
+            .usePlugin(LinkifyPlugin.create())
             .build()
         // 折叠状态活过旋转：fragment 实例会随配置变更重建，字段本身留不住。
         savedInstanceState?.getLongArray(STATE_EXPANDED_ROOTS)?.forEach { expandedRoots.add(it) }

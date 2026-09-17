@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import com.sknote.app.util.TimeUtil
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
 import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
@@ -66,6 +67,10 @@ class ArticleDetailFragment : Fragment() {
             // 并通知 CorePlugin 让路 —— 所以与布局里的 textIsSelectable 可以共存：
             // 链接点得开，长按仍能选中复制。
             .usePlugin(MovementMethodPlugin.create())
+            // 裸 URL（用户直接粘贴的网址）默认只是普通文字 —— core 不识别裸 URL，
+            // 要靠 LinkifyPlugin 才能变成可点链接。顺序无所谓：movementMethod 在
+            // beforeSetText 装好，linkify 在 afterSetText 补 span，正好衔接。
+            .usePlugin(LinkifyPlugin.create())
             .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_article_detail)
