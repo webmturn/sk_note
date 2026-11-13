@@ -1,8 +1,11 @@
 package com.sknote.app.ui.discussion
 
+import android.text.method.LinkMovementMethod
+import android.text.util.Linkify
 import android.view.View
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -155,7 +158,7 @@ class CommentAdapter(
             b.ivAvatar.setImageResource(R.drawable.ic_person)
             b.ivAvatar.setPadding(placeholderPadding, placeholderPadding, placeholderPadding, placeholderPadding)
         }
-        b.tvContent.text = comment.content.orEmpty()
+        bindLinkifiedText(b.tvContent, comment.content.orEmpty())
         b.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         b.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
         bindQuote(holder, comment, parent)
@@ -213,12 +216,21 @@ class CommentAdapter(
         val alive = body.isNotEmpty()
         b.layoutQuote.visibility = View.VISIBLE
         b.tvQuoteAuthor.text = "@$authorName"
-        b.tvQuoteContent.text = if (alive) body else "该评论已删除"
+        bindLinkifiedText(b.tvQuoteContent, if (alive) body else "该评论已删除")
         b.viewQuoteBar.alpha = if (alive) 0.45f else 0.25f
         b.tvQuoteContent.alpha = if (alive) 1f else 0.6f
         b.layoutQuote.isClickable = alive
         b.layoutQuote.setOnClickListener(if (alive) View.OnClickListener { onQuoteClick(comment) } else null)
         b.layoutQuote.contentDescription = if (alive) "查看 @$authorName 的评论" else null
+    }
+
+    private fun bindLinkifiedText(textView: TextView, content: String) {
+        textView.text = content
+        textView.movementMethod = if (Linkify.addLinks(textView, Linkify.WEB_URLS)) {
+            LinkMovementMethod.getInstance()
+        } else {
+            null
+        }
     }
 
     private fun bindHighlight(holder: CommentViewHolder, comment: Comment) {

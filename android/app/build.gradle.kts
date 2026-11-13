@@ -87,6 +87,8 @@ dependencies {
     implementation("io.noties.markwon:image-glide:4.6.2")
     // 裸 URL 变成可点链接：本项目用户内容里的网址都是直接粘贴的裸 URL（Markdown 的
     // `[文字](网址)` 一个都没有），而 core 不识别裸 URL —— 必须挂 LinkifyPlugin。
+    // 口径收窄到 Linkify.WEB_URLS：默认的 LinkifyPlugin.create() 连邮箱和电话一起识别
+    // （mailto:/tel:），且电话分支在较新系统上走 libphonenumber，每个文本节点都要跑一次。
     implementation("io.noties.markwon:linkify:4.6.2")
 
     // Glide (图片加载)

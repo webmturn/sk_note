@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +28,9 @@ import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
 import com.sknote.app.util.SyntaxHighlightUtil
 import com.sknote.app.util.TimeUtil
+import io.noties.markwon.Markwon
+import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.AppSnackbar
@@ -35,6 +39,7 @@ class SnippetDetailFragment : Fragment() {
 
     private var _binding: FragmentSnippetDetailBinding? = null
     private val binding get() = _binding!!
+    private lateinit var markwon: Markwon
     private var snippetId: Long = 0
     private var codeText: String = ""
     private var isLiking = false
@@ -60,6 +65,10 @@ class SnippetDetailFragment : Fragment() {
             findNavController().navigateUp()
             return
         }
+        markwon = Markwon.builder(requireContext())
+            .usePlugin(GlideImagesPlugin.create(requireContext()))
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
+            .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_snippet_detail)
 
@@ -185,7 +194,7 @@ class SnippetDetailFragment : Fragment() {
 
         binding.tvTitle.text = snippet.title
         if (snippet.description.orEmpty().isNotEmpty()) {
-            binding.tvDescription.text = snippet.description.orEmpty()
+            markwon.setMarkdown(binding.tvDescription, snippet.description.orEmpty())
             binding.tvDescription.visibility = View.VISIBLE
         } else {
             binding.tvDescription.visibility = View.GONE

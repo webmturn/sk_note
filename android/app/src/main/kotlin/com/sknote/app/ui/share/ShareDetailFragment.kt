@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +28,9 @@ import com.sknote.app.util.prefill
 import com.sknote.app.util.requireLoggedIn
 import com.sknote.app.util.showSkeleton
 import com.sknote.app.util.slideNavOptions
+import io.noties.markwon.Markwon
+import io.noties.markwon.image.glide.GlideImagesPlugin
+import io.noties.markwon.linkify.LinkifyPlugin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.sknote.app.util.AppSnackbar
@@ -35,6 +39,7 @@ class ShareDetailFragment : Fragment() {
 
     private var _binding: FragmentShareDetailBinding? = null
     private val binding get() = _binding!!
+    private lateinit var markwon: Markwon
     private var shareId: Long = 0
     private var currentShare: Share? = null
     private var currentUserId: Long = -1
@@ -63,6 +68,10 @@ class ShareDetailFragment : Fragment() {
             findNavController().navigateUp()
             return
         }
+        markwon = Markwon.builder(requireContext())
+            .usePlugin(GlideImagesPlugin.create(requireContext()))
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
+            .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         val navHandle = findNavController().currentBackStackEntry?.savedStateHandle
@@ -230,7 +239,7 @@ class ShareDetailFragment : Fragment() {
         val browsableUri = buildBrowsableUri(downloadUrl)
 
         binding.tvTitle.text = share.title
-        binding.tvDescription.text = share.description.orEmpty().ifEmpty { "暂无描述" }
+        markwon.setMarkdown(binding.tvDescription, share.description.orEmpty().ifEmpty { "暂无描述" })
         binding.tvCategory.text = ShareCategories.getLabel(share.category.orEmpty())
         binding.tvFileSize.text = share.fileSize.orEmpty().ifEmpty { "未知大小" }
         binding.tvAuthor.text = share.authorName.orEmpty().ifEmpty { "匿名" }

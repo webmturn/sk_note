@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +23,6 @@ import com.sknote.app.databinding.FragmentReferenceDetailBinding
 import com.sknote.app.util.slideNavOptions
 import io.noties.markwon.Markwon
 import io.noties.markwon.linkify.LinkifyPlugin
-import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
 class ReferenceDetailFragment : Fragment() {
@@ -48,9 +48,11 @@ class ReferenceDetailFragment : Fragment() {
         ReferenceData.init(requireContext())
         referenceId = arguments?.getLong("reference_id", 0L) ?: 0L
         if (referenceId <= 0L) return
+        // 裸 URL 也能点。**不挂** MovementMethodPlugin：本页的 TextView（含下面代码里 new
+        // 出来的 tvParams / tvUsage）都不是 textIsSelectable，movementMethod 为 null，
+        // core 的 CorePlugin.afterSetText 会自动补 LinkMovementMethod（挂了是空转）。
         markwon = Markwon.builder(requireContext())
-            .usePlugin(MovementMethodPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 

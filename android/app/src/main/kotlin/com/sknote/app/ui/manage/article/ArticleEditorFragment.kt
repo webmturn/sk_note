@@ -1,6 +1,7 @@
 package com.sknote.app.ui.manage.article
 
 import android.os.Bundle
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +19,6 @@ import com.sknote.app.data.model.UpdateArticleRequest
 import com.sknote.app.databinding.FragmentArticleEditorBinding
 import io.noties.markwon.Markwon
 import io.noties.markwon.linkify.LinkifyPlugin
-import io.noties.markwon.movement.MovementMethodPlugin
 import com.sknote.app.util.AppSnackbar
 
 class ArticleEditorFragment : Fragment() {
@@ -66,10 +66,11 @@ class ArticleEditorFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // 预览与详情页保持一致：链接可点、裸 URL 也能点。
+        // 预览与详情页保持一致：裸 URL 也能点。这里**不挂** MovementMethodPlugin ——
+        // 本 TextView 不是 textIsSelectable，movementMethod 为 null，core 的
+        // CorePlugin.afterSetText 本来就会补 LinkMovementMethod（挂了也是空转）。
         markwon = Markwon.builder(requireContext())
-            .usePlugin(MovementMethodPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
 
         savedInstanceState?.let {

@@ -2,6 +2,7 @@ package com.sknote.app.ui.article
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.util.Linkify
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -60,17 +61,18 @@ class ArticleDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
-            // 正文里的链接默认**点不动**：Markwon 不会自己给 TextView 设 movementMethod，
-            // 而 ClickableSpan 必须有 MovementMethod 才能接到点击。这个插件是可选件
-            // （markwon-core 的 io.noties.markwon.movement.MovementMethodPlugin），
-            // 它的 beforeSetText 会无条件把 movementMethod 换成 LinkMovementMethod
-            // 并通知 CorePlugin 让路 —— 所以与布局里的 textIsSelectable 可以共存：
-            // 链接点得开，长按仍能选中复制。
-            .usePlugin(MovementMethodPlugin.create())
-            // 裸 URL（用户直接粘贴的网址）默认只是普通文字 —— core 不识别裸 URL，
-            // 要靠 LinkifyPlugin 才能变成可点链接。顺序无所谓：movementMethod 在
-            // beforeSetText 装好，linkify 在 afterSetText 补 span，正好衔接。
-            .usePlugin(LinkifyPlugin.create())
+            // 正文里的链接默认**点不动**：ClickableSpan 必须有 MovementMethod 才接得到点击，
+            // 而 core 只在 movementMethod 为 null 时才补 LinkMovementMethod
+            // （CorePlugin.afterSetText）—— 布局里的 textIsSelectable="true" 已把它设成
+            // ArrowKeyMovementMethod，于是"能选中但点不开"。MovementMethodPlugin 的
+            // beforeSetText 是无条件覆盖，并通知 CorePlugin 让路，所以与 textIsSelectable
+            // 共存：链接点得开，长按仍能选中复制（第四十三批真机截图已证）。
+            .usePlugin(MovementMethodPlugin.link())
+            // 裸 URL（用户直接粘贴的网址）默认只是普通文字 —— core 不识别裸 URL，要靠
+            // LinkifyPlugin 在**渲染期**补 span（它往 CorePlugin 注册 OnTextAddedListener，
+            // 与 movementMethod 是两回事，所以两个插件的注册顺序无所谓）。口径收窄到
+            // WEB_URLS：默认的 create() 连邮箱和电话也会变成 mailto:/tel: 链接。
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_article_detail)

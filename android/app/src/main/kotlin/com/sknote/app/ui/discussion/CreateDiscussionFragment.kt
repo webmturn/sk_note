@@ -15,6 +15,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import android.text.Editable
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -108,9 +109,11 @@ class CreateDiscussionFragment : Fragment() {
 
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
-            // 预览与正式渲染保持一致：链接可点、裸 URL 也能点。
-            .usePlugin(MovementMethodPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            // 预览与正式渲染保持一致：链接可点（预览 TextView 是 textIsSelectable，
+            // movementMethod 已被设成 ArrowKeyMovementMethod，必须显式覆盖）、裸 URL
+            // 也能点（口径收窄到 WEB_URLS，理由见 build.gradle.kts 的依赖注释）。
+            .usePlugin(MovementMethodPlugin.link())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
 
         binding.toolbar.setNavigationOnClickListener { confirmExit() }

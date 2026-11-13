@@ -2,6 +2,7 @@ package com.sknote.app.ui.discussion
 
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.text.util.Linkify
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -270,10 +271,12 @@ class DiscussionDetailFragment : Fragment() {
         }
         markwon = Markwon.builder(requireContext())
             .usePlugin(GlideImagesPlugin.create(requireContext()))
-            // 与文章详情同一套：Markwon 不会自己设 movementMethod（链接点不动），
-            // 也不识别裸 URL（`https://…` 只是普通文字）。讨论正文里就有这种裸 URL。
-            .usePlugin(MovementMethodPlugin.create())
-            .usePlugin(LinkifyPlugin.create())
+            // 与文章详情同一套：core 只在 movementMethod 为 null 时才补
+            // LinkMovementMethod，而讨论正文（textIsSelectable="true"）已被设成
+            // ArrowKeyMovementMethod，所以要显式覆盖；core 也不识别裸 URL
+            // （`https://…` 只是普通文字，讨论正文里就有这种裸 URL）。
+            .usePlugin(MovementMethodPlugin.link())
+            .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
         // 折叠状态活过旋转：fragment 实例会随配置变更重建，字段本身留不住。
         savedInstanceState?.getLongArray(STATE_EXPANDED_ROOTS)?.forEach { expandedRoots.add(it) }
