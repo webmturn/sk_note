@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -59,6 +60,7 @@ class DiscussionDetailFragment : Fragment() {
     private var cachedUserId: Long = -1
     private var cachedRole: String = "user"
     private var isLoggedIn: Boolean = false
+    private var isSendingComment: Boolean = false
     private var currentDiscussionAuthorId: Long = -1
     private var replyParentCommentId: Long? = null
     private var replyTargetName: String = ""
@@ -107,6 +109,10 @@ class DiscussionDetailFragment : Fragment() {
         const val COLLAPSED_REPLY_PREVIEW = 0
 
         const val STATE_EXPANDED_ROOTS = "expanded_roots"
+        const val STATE_EXPANDED_COMMENTS = "expanded_comments"
+        const val STATE_REPLY_PARENT_ID = "reply_parent_id"
+        const val STATE_REPLY_TARGET_NAME = "reply_target_name"
+        const val STATE_REPLY_QUOTE = "reply_quote"
     }
 
     private val hb: LayoutDiscussionDetailHeaderBinding?
@@ -278,8 +284,18 @@ class DiscussionDetailFragment : Fragment() {
             .usePlugin(MovementMethodPlugin.link())
             .usePlugin(LinkifyPlugin.create(Linkify.WEB_URLS))
             .build()
-        // 折叠状态活过旋转：fragment 实例会随配置变更重建，字段本身留不住。
+        // 折叠与回复目标都要活过旋转：fragment 实例和适配器都会随配置变更重建。
         savedInstanceState?.getLongArray(STATE_EXPANDED_ROOTS)?.forEach { expandedRoots.add(it) }
+        val savedReplyId = savedInstanceState?.getLong(STATE_REPLY_PARENT_ID, -1L) ?: -1L
+        val savedReplyName = savedInstanceState?.getString(STATE_REPLY_TARGET_NAME).orEmpty()
+        if (savedReplyId > 0L && savedReplyName.isNotBlank()) {
+            replyParentCommentId = savedReplyId
+            replyTargetName = savedReplyName
+            applyReplyTargetUi(
+                savedReplyName,
+                savedInstanceState?.getString(STATE_REPLY_QUOTE).orEmpty()
+            )
+        }
         binding.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.toolbar.inflateMenu(R.menu.menu_discussion_detail)
 
@@ -301,7 +317,16 @@ class DiscussionDetailFragment : Fragment() {
                 }
             }
 
-        headerAdapter = DiscussionHeaderAdapter()
+        headerAdapter = DiscussionHeaderAdapter().apply {
+            onHeaderViewCreated = {
+                // 页面重建时 cached discussion 可能先于页头回调；等本次布局提交后重放一次。
+                binding.rvMain.post {
+                    if (_binding != null && !contentShown && viewModel.discussion.value != null) {
+                        viewModel.replayCachedDiscussion()
+                    }
+                }
+            }
+        }
         commentPlaceholderAdapter = CommentPlaceholderAdapter()
         commentAdapter = CommentAdapter(
             onReplyClick = { comment ->
@@ -350,6 +375,9 @@ class DiscussionDetailFragment : Fragment() {
                 renderComments(displayedComments)
             }
         )
+        savedInstanceState?.getLongArray(STATE_EXPANDED_COMMENTS)?.let {
+            commentAdapter.restoreExpandedComments(it)
+        }
         binding.rvMain.apply {
             layoutManager = LinearLayoutManager(context)
             // 顺序即版面顺序：页头 → 占位评论行 → 真实评论行。
@@ -374,6 +402,8 @@ class DiscussionDetailFragment : Fragment() {
             findNavController().navigate(R.id.loginFragment, null, slideNavOptions())
         }
 
+        binding.etReply.doAfterTextChanged { updateSendButtonState() }
+        updateSendButtonState()
         binding.btnSend.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 if (!requireLoggedIn(binding.root)) {
@@ -384,7 +414,8 @@ class DiscussionDetailFragment : Fragment() {
                     AppSnackbar.make(binding.root, "请输入评论内容", Snackbar.LENGTH_SHORT).show()
                     return@launch
                 }
-                binding.btnSend.isEnabled = false
+                isSendingComment = true
+                updateSendButtonState()
                 viewModel.sendComment(discussionId, content, replyParentCommentId)
             }
         }
@@ -398,6 +429,11 @@ class DiscussionDetailFragment : Fragment() {
             replyParentCommentId?.let { jumpToComment(it) }
         }
 
+        // rvMain 在 XML 里是 invisible。重建时若已有缓存内容，却继续让它不可见，
+        // RecyclerView 不会创建页头 ViewHolder，页头回调也就永远不触发。先放行布局。
+        if (savedInstanceState != null && !contentShown && viewModel.discussion.value != null) {
+            binding.rvMain.visibility = View.VISIBLE
+        }
         observeData()
         // 观察者注册之后再套用预填，保证 setPrefilledDiscussion 一定会被渲染。
         renderPendingPrefill()
@@ -606,7 +642,8 @@ class DiscussionDetailFragment : Fragment() {
         }
 
         viewModel.isSending.observe(viewLifecycleOwner) { sending ->
-            binding.btnSend.isEnabled = !sending
+            isSendingComment = sending
+            updateSendButtonState()
         }
 
         viewModel.commentSent.observe(viewLifecycleOwner) { sent ->
@@ -648,6 +685,14 @@ class DiscussionDetailFragment : Fragment() {
         }
     }
 
+    /** 空草稿与发送中都呈禁用态；不要只等点击后再提示。 */
+    private fun updateSendButtonState() {
+        val hasText = binding.etReply.text?.isNotBlank() == true
+        val enabled = hasText && !isSendingComment
+        binding.btnSend.isEnabled = enabled
+        binding.btnSend.alpha = if (enabled) 1f else 0.45f
+    }
+
     private fun renderReplyComposer() {
         val isClosed = viewModel.discussion.value?.isClosed == 1
         val canBypassLock = cachedRole == "admin" || cachedRole == "editor"
@@ -666,18 +711,25 @@ class DiscussionDetailFragment : Fragment() {
     private fun beginReplyTo(comment: com.sknote.app.data.model.Comment) {
         replyParentCommentId = comment.id
         replyTargetName = comment.authorName ?: "匿名"
-        binding.etReply.hint = "回复 @$replyTargetName"
-        binding.tvReplyIndicator.text = "正在回复 @$replyTargetName"
         // 引用原文预览：写作时能看见自己要回的是哪句话。父评论本来就在本地列表里
         // （评论整篇一次返回，见 comments 观察者），不用再发请求。
         val quoted = comment.content?.trim().orEmpty()
-        binding.tvReplyQuote.text = if (quoted.isEmpty()) "" else "「$quoted」"
-        binding.tvReplyQuote.visibility = if (quoted.isEmpty()) View.GONE else View.VISIBLE
-        binding.layoutReplyIndicator.visibility = View.VISIBLE
+        applyReplyTargetUi(
+            replyTargetName,
+            if (quoted.isEmpty()) "" else "「$quoted」"
+        )
         binding.etReply.requestFocus()
         // 弹出键盘
         val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.showSoftInput(binding.etReply, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun applyReplyTargetUi(targetName: String, quote: String) {
+        binding.etReply.hint = "回复 @$targetName"
+        binding.tvReplyIndicator.text = "正在回复 @$targetName"
+        binding.tvReplyQuote.text = quote
+        binding.tvReplyQuote.visibility = if (quote.isEmpty()) View.GONE else View.VISIBLE
+        binding.layoutReplyIndicator.visibility = View.VISIBLE
     }
 
     private fun clearReplyTarget() {
@@ -880,6 +932,14 @@ class DiscussionDetailFragment : Fragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putLongArray(STATE_EXPANDED_ROOTS, expandedRoots.toLongArray())
+        if (::commentAdapter.isInitialized) {
+            outState.putLongArray(STATE_EXPANDED_COMMENTS, commentAdapter.expandedCommentState())
+        }
+        replyParentCommentId?.takeIf { it > 0L }?.let { parentId ->
+            outState.putLong(STATE_REPLY_PARENT_ID, parentId)
+            outState.putString(STATE_REPLY_TARGET_NAME, replyTargetName)
+            outState.putString(STATE_REPLY_QUOTE, _binding?.tvReplyQuote?.text?.toString().orEmpty())
+        }
     }
 
     override fun onDestroyView() {

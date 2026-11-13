@@ -10,6 +10,9 @@ class DiscussionHeaderAdapter : RecyclerView.Adapter<DiscussionHeaderAdapter.Vie
     private var _binding: LayoutDiscussionDetailHeaderBinding? = null
     val headerBinding get() = _binding
 
+    /** 页头 ViewHolder 创建完成。旋转后用它补发缓存 discussion，见 Fragment 的说明。 */
+    var onHeaderViewCreated: (() -> Unit)? = null
+
     class ViewHolder(val binding: LayoutDiscussionDetailHeaderBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -17,6 +20,7 @@ class DiscussionHeaderAdapter : RecyclerView.Adapter<DiscussionHeaderAdapter.Vie
             LayoutInflater.from(parent.context), parent, false
         )
         _binding = b
+        onHeaderViewCreated?.invoke()
         return ViewHolder(b)
     }
 

@@ -55,6 +55,15 @@ class DiscussionDetailViewModel : ViewModel() {
         _discussion.value = discussion
     }
 
+    /**
+     * 重新派发缓存数据。旋转后 LiveData 会在页头 ViewHolder 就绪前先回调一次，
+     * Fragment 因 `hb == null` 提前退出且之后不会再有新值；页头就绪后重放一次即可。
+     */
+    fun replayCachedDiscussion() {
+        val cached = _discussion.value ?: return
+        _discussion.value = cached
+    }
+
     fun loadDiscussion(id: Long) {
         viewModelScope.launch {
             _isLoading.value = true

@@ -98,6 +98,15 @@ class CommentAdapter(
         return true
     }
 
+    fun expandedCommentState(): LongArray = expandedCommentIds.toLongArray()
+
+    fun restoreExpandedComments(ids: LongArray) {
+        expandedCommentIds.clear()
+        longCommentIds.clear()
+        expandedCommentIds.addAll(ids.toList())
+        longCommentIds.addAll(ids.toList())
+    }
+
     /**
      * 设置高亮目标（**只改状态，不自己刷新**），传 null 清除。
      *
