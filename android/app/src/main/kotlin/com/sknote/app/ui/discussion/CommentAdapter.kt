@@ -1,11 +1,14 @@
 package com.sknote.app.ui.discussion
 
+import android.text.TextUtils
 import android.text.method.LinkMovementMethod
 import android.text.util.Linkify
-import android.view.View
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -14,35 +17,28 @@ import com.google.android.material.color.MaterialColors
 import com.sknote.app.R
 import com.sknote.app.data.model.Comment
 import com.sknote.app.databinding.ItemCommentBinding
-import com.sknote.app.databinding.ItemCommentExpandBinding
 import com.sknote.app.util.TimeUtil
 
 /**
- * 列表行：要么是一条评论，要么是「展开其余 N 条回复 / 收起回复」的折叠行。
+ * 列表行模型。折叠入口不是独立行，而是根评论上的楼层信息（[threadReplyCount] /
+ * [threadExpanded]）—— 早先的 32dp 整行入口横向几乎全空，既占空间又不像操作项。
  *
- * 行模型从 `Comment` 换成这一层，是因为折叠功能让列表里出现了**非评论的行**；
- * [CommentRow] 的包装本身也是必要的：DiffUtil 只比较 item 自身，若 item 仍是
- * [Comment]，父评论被编辑（正文变了、子评论对象没变）时子项不会重绑，引用块会一直
- * 显示旧正文。包一层之后「引用内容」也参与比较，父评论一变、引用它的行自动重绑。
+ * [CommentRow] 的包装仍有必要：DiffUtil 只比较 item 自身，若 item 仍是 [Comment]，
+ * 父评论被编辑（正文变了、子评论对象没变）时子项不会重绑，引用块会一直显示旧正文。
+ * 包一层之后「引用内容」和楼层折叠状态也参与比较，状态一变根评论就会重绑。
  */
 sealed class CommentRow {
-    /** DiffUtil 的身份键：评论用真实 id，折叠行用负的根评论 id（不会与真实 id 冲突）。 */
+    /** DiffUtil 的身份键：评论 id 在本篇内唯一。 */
     abstract val key: Long
 
-    data class Item(val comment: Comment, val parent: Comment?) : CommentRow() {
-        override val key: Long get() = comment.id
-    }
-
-    /**
-     * [totalCount] 是这一楼的回复**总数**（B站 的 `rcount`，文案「共 N 条回复」用的就是它）；
-     * [expanded] 为 true 时这一行是「收起回复」。
-     */
-    data class Expand(
-        val rootId: Long,
-        val totalCount: Int,
-        val expanded: Boolean
+    data class Item(
+        val comment: Comment,
+        val parent: Comment?,
+        /** 这一楼的回复总数；仅根评论且确有回复时非 0。 */
+        val threadReplyCount: Int = 0,
+        val threadExpanded: Boolean = false
     ) : CommentRow() {
-        override val key: Long get() = -rootId
+        override val key: Long get() = comment.id
     }
 }
 
@@ -59,31 +55,32 @@ class CommentAdapter(
 
     private var currentUserId: Long = -1L
     private var currentUserRole: String = "user"
+    private var discussionAuthorId: Long = -1L
 
     /** 被跳转命中的评论 id：短暂高亮，由调用方定时清掉（见 highlight()）。 */
     private var highlightedId: Long? = null
 
+    /** 长评论展开状态只影响当前适配器实例；列表重建后回到默认折叠。 */
+    private val expandedCommentIds = mutableSetOf<Long>()
+    private val longCommentIds = mutableSetOf<Long>()
+
     class CommentViewHolder(val binding: ItemCommentBinding) : RecyclerView.ViewHolder(binding.root)
-    class ExpandViewHolder(val binding: ItemCommentExpandBinding) : RecyclerView.ViewHolder(binding.root)
 
     companion object DiffCallback : DiffUtil.ItemCallback<CommentRow>() {
         override fun areItemsTheSame(a: CommentRow, b: CommentRow) = a.key == b.key
         override fun areContentsTheSame(a: CommentRow, b: CommentRow) = a == b
 
-        private const val TYPE_COMMENT = 0
-        private const val TYPE_EXPAND = 1
+        private const val MENU_COPY = 1
+        private const val MENU_EDIT = 2
+        private const val MENU_DELETE = 3
+        private const val COLLAPSED_CONTENT_LINES = 6
+        private const val LONG_TEXT_CHARS = 180
+        private const val LONG_TEXT_NEWLINES = 5
     }
-
-    override fun getItemViewType(position: Int): Int =
-        if (getItem(position) is CommentRow.Expand) TYPE_EXPAND else TYPE_COMMENT
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == TYPE_EXPAND) {
-            ExpandViewHolder(ItemCommentExpandBinding.inflate(inflater, parent, false))
-        } else {
-            CommentViewHolder(ItemCommentBinding.inflate(inflater, parent, false))
-        }
+        return CommentViewHolder(ItemCommentBinding.inflate(inflater, parent, false))
     }
 
     fun updateUserContext(userId: Long, userRole: String) {
@@ -92,6 +89,13 @@ class CommentAdapter(
         currentUserId = userId
         currentUserRole = role
         notifyDataSetChanged()
+    }
+
+    /** 返回是否发生变化；调用方负责通过根 ConcatAdapter 刷新，单独 notify 在这里不生效。 */
+    fun updateDiscussionAuthor(authorId: Long): Boolean {
+        if (discussionAuthorId == authorId) return false
+        discussionAuthorId = authorId
+        return true
     }
 
     /**
@@ -113,30 +117,7 @@ class CommentAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val row = getItem(position)) {
-            is CommentRow.Expand -> bindExpand(holder as ExpandViewHolder, row)
-            is CommentRow.Item -> bindComment(holder as CommentViewHolder, row)
-        }
-    }
-
-    private fun bindExpand(holder: ExpandViewHolder, row: CommentRow.Expand) {
-        val b = holder.binding
-        // 文案对齐 B站 的 sub_reply_entry_text：「共 xx 条回复」（总数口径）
-        b.tvExpandLabel.text = if (row.expanded) "收起回复" else "共 ${row.totalCount} 条回复"
-        b.ivExpandIcon.setImageResource(
-            if (row.expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
-        )
-        b.layoutExpand.contentDescription = b.tvExpandLabel.text
-        b.layoutExpand.setOnClickListener { onExpandClick(row.rootId, row.expanded) }
-        // 与回复卡片左对齐（回复 = 卡片边距 + 回复缩进），读起来才算「这一楼的一部分」
-        val lp = b.root.layoutParams as? ViewGroup.MarginLayoutParams
-        if (lp != null) {
-            val res = b.root.resources
-            lp.marginStart = res.getDimensionPixelSize(R.dimen.comment_card_inset) +
-                res.getDimensionPixelSize(R.dimen.comment_reply_indent)
-            lp.marginEnd = res.getDimensionPixelSize(R.dimen.comment_card_inset)
-            b.root.layoutParams = lp
-        }
+        bindComment(holder as CommentViewHolder, getItem(position) as CommentRow.Item)
     }
 
     private fun bindComment(holder: CommentViewHolder, row: CommentRow.Item) {
@@ -144,6 +125,9 @@ class CommentAdapter(
         val parent = row.parent
         val b = holder.binding
         b.tvAuthor.text = comment.authorName ?: "匿名"
+        b.tvOpBadge.visibility = if (
+            discussionAuthorId > 0L && comment.authorId == discussionAuthorId
+        ) View.VISIBLE else View.GONE
         val placeholderPadding = (4 * b.root.context.resources.displayMetrics.density).toInt()
         if (!comment.authorAvatar.isNullOrEmpty()) {
             b.ivAvatar.imageTintList = null
@@ -159,6 +143,7 @@ class CommentAdapter(
             b.ivAvatar.setPadding(placeholderPadding, placeholderPadding, placeholderPadding, placeholderPadding)
         }
         bindLinkifiedText(b.tvContent, comment.content.orEmpty())
+        bindExpandableText(b, comment)
         b.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         b.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
         bindQuote(holder, comment, parent)
@@ -185,15 +170,46 @@ class CommentAdapter(
         b.tvAuthor.setOnClickListener { onAvatarClick(comment) }
         b.btnLike.setOnClickListener { onLikeClick(comment) }
         b.btnReply.setOnClickListener { onReplyClick(comment) }
-        b.btnCopy.setOnClickListener { onCopyClick(comment) }
+
+        if (row.threadReplyCount > 0) {
+            b.btnThread.visibility = View.VISIBLE
+            b.btnThread.text = if (row.threadExpanded) "收起回复" else "${row.threadReplyCount} 条回复"
+            b.btnThread.contentDescription = b.btnThread.text
+            b.btnThread.setOnClickListener { onExpandClick(comment.id, row.threadExpanded) }
+        } else {
+            b.btnThread.visibility = View.GONE
+            b.btnThread.setOnClickListener(null)
+        }
 
         val canEdit = comment.authorId == currentUserId || currentUserRole == "admin"
-        b.btnEdit.visibility = if (canEdit) View.VISIBLE else View.GONE
-        b.btnEdit.setOnClickListener { onEditClick(comment) }
-
         val canDelete = comment.authorId == currentUserId || currentUserRole == "admin" || currentUserRole == "editor"
-        b.btnDelete.visibility = if (canDelete) View.VISIBLE else View.GONE
-        b.btnDelete.setOnClickListener { onDeleteClick(comment) }
+        b.btnMore.setOnClickListener { showActionsMenu(b.btnMore, comment, canEdit, canDelete) }
+    }
+
+    private fun showActionsMenu(
+        anchor: View,
+        comment: Comment,
+        canEdit: Boolean,
+        canDelete: Boolean
+    ) {
+        val popup = PopupMenu(anchor.context, anchor).apply { setForceShowIcon(true) }
+        popup.menu.add(Menu.NONE, MENU_COPY, 0, "复制").setIcon(R.drawable.ic_copy)
+        if (canEdit) {
+            popup.menu.add(Menu.NONE, MENU_EDIT, 1, "编辑").setIcon(R.drawable.ic_edit)
+        }
+        if (canDelete) {
+            popup.menu.add(Menu.NONE, MENU_DELETE, 2, "删除").setIcon(R.drawable.ic_delete)
+        }
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                MENU_COPY -> onCopyClick(comment)
+                MENU_EDIT -> onEditClick(comment)
+                MENU_DELETE -> onDeleteClick(comment)
+                else -> return@setOnMenuItemClickListener false
+            }
+            true
+        }
+        popup.show()
     }
 
     /**
@@ -233,12 +249,51 @@ class CommentAdapter(
         }
     }
 
+    /**
+     * 长评论默认收成 6 行，避免一条几百字的评论吞掉整屏。列表复用下用
+     * `Layout.getEllipsisCount()` 判断会漏掉首次布局，因此采用保守的内容阈值：
+     * 180 字或 5 个换行以上才出现“展开全文”，短评论完全不增加控件。
+     * 展开状态存在适配器内，点击时就地改 TextView，不需要刷新列表。
+     */
+    private fun bindExpandableText(b: ItemCommentBinding, comment: Comment) {
+        val id = comment.id
+        val content = comment.content.orEmpty()
+        val longByContent = content.length > LONG_TEXT_CHARS ||
+            content.count { it == '\n' } >= LONG_TEXT_NEWLINES
+        if (longByContent) {
+            longCommentIds.add(id)
+        } else {
+            // 评论被编辑成短文本时，不能留下过期的展开状态。
+            longCommentIds.remove(id)
+            expandedCommentIds.remove(id)
+        }
+        val expanded = id in expandedCommentIds
+        val showToggle = expanded || id in longCommentIds
+        b.tvContent.maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_CONTENT_LINES
+        b.tvContent.ellipsize = if (expanded) null else TextUtils.TruncateAt.END
+        b.btnExpandText.visibility = if (showToggle) View.VISIBLE else View.GONE
+        b.btnExpandText.text = if (expanded) "收起" else "展开全文"
+        b.btnExpandText.contentDescription = b.btnExpandText.text
+        b.btnExpandText.setOnClickListener {
+            val nowExpanded = id !in expandedCommentIds
+            if (nowExpanded) expandedCommentIds.add(id) else expandedCommentIds.remove(id)
+            applyTextExpansion(b, nowExpanded)
+        }
+    }
+
+    private fun applyTextExpansion(b: ItemCommentBinding, expanded: Boolean) {
+        b.tvContent.maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_CONTENT_LINES
+        b.tvContent.ellipsize = if (expanded) null else TextUtils.TruncateAt.END
+        b.btnExpandText.text = if (expanded) "收起" else "展开全文"
+        b.btnExpandText.contentDescription = b.btnExpandText.text
+    }
+
     private fun bindHighlight(holder: CommentViewHolder, comment: Comment) {
         val card = holder.binding.root
         val attr = if (comment.id == highlightedId) {
             com.google.android.material.R.attr.colorSecondaryContainer
         } else {
-            com.google.android.material.R.attr.colorSurfaceVariant
+            com.google.android.material.R.attr.colorSurfaceContainerHigh
         }
         card.setCardBackgroundColor(MaterialColors.getColor(card, attr))
     }

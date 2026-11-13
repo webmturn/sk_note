@@ -12,8 +12,8 @@
   minLines + skeleton_block 背景」。高度由此处的字体度量算出，与真实 TextView 走的是同一套
   计算，因此不需要手算 dp，也不会因为 includeFontPadding / 字体缩放 / 用户改字号而失配。
 
-  旧实现用的是固定高度色块，实际差得很远：按钮行只有 11dp，而真实 btnLike 是 48dp 的
-  触控区；作者行 11dp vs 真实 13sp 行盒；正文两行 35dp vs 真实 14sp×1.3 的两行盒。
+  旧实现用的是固定高度色块，实际差得很远：按钮行只有 11dp，而真实 btnLike 是 40dp 的
+  触控区；作者行 11dp vs 真实 13sp 行盒；正文两行 35dp vs 真实 14sp×1.45 的两行盒。
   逐行累计下来每行比真实矮约 57dp —— 这正是「呼吸骨架 → 加载完成」跳变的一大来源。
 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
@@ -24,14 +24,18 @@
     android:layout_marginHorizontal="@dimen/comment_card_inset"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:strokeWidth="0dp"
-    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutlineVariant"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="4dp">
 
         <!-- 头像：与 item_comment 的 32dp 卡片 + marginEnd/marginTop 完全一致 -->
         <View
@@ -77,21 +81,21 @@
                     android:importantForAccessibility="no" />
             </LinearLayout>
 
-            <!-- 正文：按「两行评论」占位，与真实 14sp×1.3 的两行盒等高 -->
+            <!-- 正文：按「两行评论」占位，与真实 14sp×1.45 的两行盒等高 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:minLines="2"
                 android:textSize="14sp"
-                android:lineSpacingMultiplier="1.3"
-                android:layout_marginTop="4dp"
+                android:lineSpacingMultiplier="1.45"
+                android:layout_marginTop="6dp"
                 android:background="@drawable/skeleton_block"
                 android:importantForAccessibility="no" />
 
-            <!-- 操作行：真实行高度由 48dp 的 btnLike 决定，这里直接对齐 48dp -->
+            <!-- 操作行：真实行高度由 40dp 的 btnLike 决定，这里直接对齐 40dp -->
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="48dp"
+                android:layout_height="40dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:layout_marginTop="4dp">

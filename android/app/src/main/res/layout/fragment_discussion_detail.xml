@@ -261,6 +261,7 @@
                 android:layout_height="42dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
+                android:contentDescription="发送评论"
                 app:icon="@drawable/ic_send"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"

@@ -7,16 +7,18 @@
     android:layout_marginHorizontal="@dimen/comment_card_inset"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:strokeWidth="0dp"
-    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+    app:strokeWidth="1dp"
+    app:strokeColor="?attr/colorOutlineVariant"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingHorizontal="12dp"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
     android:paddingTop="12dp"
-    android:paddingBottom="6dp">
+    android:paddingBottom="4dp">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="32dp"
@@ -52,11 +54,25 @@
                 android:id="@+id/tvAuthor"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:maxWidth="160dp"
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/tvOpBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
+                android:background="@drawable/bg_chip_secondary"
+                android:text="楼主"
+                android:textColor="?attr/colorOnSecondaryContainer"
+                android:textSize="11sp"
+                android:visibility="gone" />
 
             <Space
                 android:layout_width="0dp"
@@ -67,6 +83,7 @@
                 android:id="@+id/tvTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:textSize="11sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
@@ -75,8 +92,8 @@
           引用块（第三十八批）：回复某条评论时，把被引用评论的作者与原文带过来 ——
           此前只有作者行里一行「→ @某某」，看不到被回复的到底是什么，回复一多就断链。
 
-          结构刻意用「左侧竖条」而不是块内再加一层带背景的卡片：评论卡本身已是
-          colorSurfaceVariant 底 + 16dp 圆角，块内再套一层有底色的块，深色下会叠出
+          结构刻意用「左侧竖条」而不是块内再加一层带背景的卡片：评论卡本身已有
+          colorSurfaceContainerHigh 底 + 16dp 圆角，块内再套一层有底色的块，深色下会叠出
           三层明度差（页面/卡片/引用），看起来像嵌套错误。竖条取 colorOnSurfaceVariant
           加 45% 透明度，昼夜都成立，不需要新色号。
 
@@ -90,8 +107,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="8dp"
             android:paddingVertical="4dp"
+            android:paddingStart="0dp"
             android:paddingEnd="8dp"
             android:background="?attr/selectableItemBackground"
             android:clickable="true"
@@ -120,6 +138,7 @@
                     android:maxLines="1"
                     android:ellipsize="end"
                     android:textSize="11sp"
+                    android:textStyle="bold"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
@@ -139,12 +158,29 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:lineSpacingMultiplier="1.3"
-            android:layout_marginTop="4dp" />
+            android:lineSpacingMultiplier="1.45"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginTop="6dp" />
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/btnExpandText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="8dp"
+            android:paddingVertical="2dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:text="展开全文"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:layout_marginTop="4dp">
@@ -154,8 +190,9 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:src="@drawable/ic_thumb_up"
-                android:padding="10dp"
+                android:padding="11dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="?attr/colorOnSurfaceVariant"
                 android:clickable="true"
                 android:focusable="true"
                 android:contentDescription="点赞" />
@@ -168,67 +205,67 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginStart="2dp" />
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/btnReply"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:gravity="center"
-                android:layout_marginStart="10dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginStart="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="3dp"
-                android:text="回复"
+                android:paddingHorizontal="8dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_reply"
+                    app:tint="?attr/colorOnSurfaceVariant"
+                    android:layout_marginEnd="5dp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="回复"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btnThread"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginStart="2dp"
+                android:paddingHorizontal="8dp"
+                android:gravity="center"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:maxWidth="112dp"
                 android:textColor="?attr/colorPrimary"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/btnCopy"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="3dp"
-                android:text="复制"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/btnEdit"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="3dp"
-                android:text="编辑"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/btnDelete"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:layout_marginStart="8dp"
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:id="@+id/btnMore"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_more_vert"
+                android:padding="10dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="?attr/colorOnSurfaceVariant"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="3dp"
-                android:text="删除"
-                android:textColor="?attr/colorError"
-                android:textSize="12sp"
-                android:visibility="gone" />
+                android:contentDescription="更多操作" />
         </LinearLayout>
     </LinearLayout>
 
