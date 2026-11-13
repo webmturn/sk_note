@@ -2754,6 +2754,128 @@ Markdown 的 `[文字](网址)` **一个都没有**。而 Markwon 的 core **不
 
 ---
 
+### 第四十五批（回审最近两批：Markdown 链接交互 —— 6 项核对、2 处自我更正、1 处口径收窄）
+
+**起因**：用户「审查最近的修改」→「核对完全了吗」→「一步一步核对」→ 选定「先把已核完的 1 / 3 / 6 落地
+（含第 2 条的 `Linkify.WEB_URLS` 收窄）」。
+
+**对象**：`dfe4fc1`（第四十三批）与 `bd29e63`（第四十四批）—— 同一件事的两半（文章详情挂 Movement、
+再推广到 5 个渲染点 + linkify）。
+**依据**：本机 Gradle 缓存里的 `core-4.6.2-sources.jar` / `linkify-4.6.2-sources.jar` **真源码**，
+以及 `Android/Sdk/sources/android-36.1` 的**平台源码**；下面所有 `Xxx.java:行` 都是这两处源码的行号，不是仓库文件。
+
+**6 项核对结论**（✅ = 源码级核到底）
+
+| # | 结论 | 证据 | 状态 |
+|---|---|---|---|
+| 1 | `ArticleDetailFragment` 注释称「linkify 在 afterSetText 补 span」——**不成立** | `LinkifyPlugin.java`（4.6.2，共 155 行）只有 `configure()` 一个插件回调，全文搜 `SetText` **0 命中**；它靠 `CorePlugin.addOnTextAddedListener` 在**渲染期**（Text 节点访问器，`CorePlugin.java:220-226`）补 span。顺序无所谓的真正原因是两者作用对象不同（spans ↔ movementMethod）；阶段顺序见 `MarkwonImpl.java:113`（先 `toMarkdown`）→ `:120` beforeSetText → `:137` setText → `:140` afterSetText | ✅ |
+| 2 | `LinkifyPlugin.create()` 口径比注释宽：**邮箱 + 电话**也识别 | `LinkifyPlugin.java:36-50`：`create()` → `create(false)` → `create(EMAIL_ADDRESSES \| PHONE_NUMBERS \| WEB_URLS, false)`。点击会走 `mailto:` / `tel:`。另：电话分支在较新系统上走 libphonenumber（`Linkify.java:672-694` `findNumbers(..., Leniency.POSSIBLE, ...)`），**每个文本节点**都要跑一次 | ✅（前提） |
+| 3 | `MovementMethodPlugin` 在 2/5 个点是**空转**，且注释机制与 core 相反 | core 只在 movementMethod 为 null 时才补 LinkMovementMethod（`CorePlugin.java:199-208`）。只有 3 个 `textIsSelectable="true"` 的点需要它：`fragment_article_detail.xml:145`、`fragment_create_discussion.xml:362`、`layout_discussion_detail_header.xml:141`（XML 已设为 ArrowKeyMovementMethod，抵消了点击）；`ArticleEditorFragment` 的 `tvPreview` 与 `ReferenceDetailFragment`（含代码里 `new` 的 tvParams/tvUsage）都不是 selectable ⇒ 插件没改任何东西。附带：设了 movementMethod 后 `TextView.fixFocusableAndClickableSettings` 会 `setFocusable(FOCUSABLE)` + clickable + longClickable（`TextView.java:2827-2837`） | ✅ |
+| 4 | 评论 / 回复仍是**纯文本**，链接点不开 | `CommentAdapter.kt:158` `b.tvContent.text = comment.content.orEmpty()`、引用块 `:216`；`item_comment.xml` 无 Markdown、无 `autoLink`。同类：`SnippetDetailFragment.kt:188`、`ShareDetailFragment.kt:233` | ✅（未穷举其它入口） |
+| 5 | 5 个点的插件集合**仍不统一**：`GlideImagesPlugin` 只挂了 3 个点 | 挂了：文章详情 `:63`、发帖预览 `:111`、讨论正文 `:273`；没挂：文章编辑器预览、参考详情 ⇒ 这两处 Markdown 图片不会显示（无 loader 时 `AsyncDrawableLoaderNoOp.load()` 空实现、`placeholder()` 返回 `null`，见 `MarkwonConfiguration.java:148-149`） | ✅（可见效果未实测） |
+| 6 | 链接**文字本身是 URL** 时会套两层 Link span，点击落到内层 | 内层 linkify span 在 Text 访问期插入（`CorePlugin.java:220-226`），外层在 `visitChildren` **之后**才插（`CorePlugin.java:539` → `:545`），且 Markwon 不带 `SPAN_PRIORITY`（`SpannableBuilder.java:139`）；触摸点击取 `links[0]`（`LinkMovementMethod.java:234/239`），同优先级按插入顺序升序（`SpannableStringBuilder.java:1146-1156`）⇒ 静态推定点开的是**文字里的** URL，而不是 Markdown 目标 | ✅（静态推定，未真机） |
+
+**2 处自我更正**（上一轮我表述有误，回审时逐条查平台源码才发现）
+
+1. **撤回**「`2024-09-17` 会被判成电话」。API 36 的 `PHONE_NUMBERS` 走 libphonenumber（`Leniency.POSSIBLE`
+   + SIM 国家），不是宽松正则；我没有证据说日期会被命中，此例作废。**已证实**的只有"口径含邮箱 + 电话"这一点。
+2. `TextView` 那处副作用是 `setFocusable(FOCUSABLE)` + `setClickable(true)` + `setLongClickable(true)`
+   （`TextView.java:2827-2837`），**不是**我先说的 `focusableInTouchMode`。
+
+**本批改动（6 个文件，只有插件配置与注释，无逻辑重构）**
+
+1. 5 个渲染点：`LinkifyPlugin.create()` → **`LinkifyPlugin.create(Linkify.WEB_URLS)`**（各加 `import android.text.util.Linkify`）；
+2. 3 个 `textIsSelectable` 点：`MovementMethodPlugin.create()` → **`link()`**（`create()` 自 4.5.0 起 `@deprecated`）；
+3. 2 个非 selectable 点（`ArticleEditorFragment`、`ReferenceDetailFragment`）：**删掉** `MovementMethodPlugin`（空转）+ 删 import；
+4. 注释纠错 2 处（第 1 条的机制、第 3 条的"Markwon 不会自己设 movementMethod"）；
+5. `build.gradle.kts` 的依赖注释补上口径与理由（WEB_URLS 同时省掉每节点一次 `findNumbers`）。
+
+**为什么删掉那 2 处是安全的**：core 的 `CorePlugin.afterSetText` 在 `movementMethod == null` 时补
+`LinkMovementMethod`（`CorePlugin.java:199-208`），且 `MarkwonImpl` 是先 `setText` 再 `afterSetText`
+（`:137` → `:140`）；全 `src/main` 再无第二处设置 movementMethod / `autoLink`（grep `setMovementMethod` /
+`LinkMovementMethod` / `autoLink` → 0 命中；`LogicVisualizerFragment.kt:1293` 的 `setTextIsSelectable(true)`
+不是 Markdown 渲染点）。⇒ 这两处的 Markdown 链接照样可点，第四十四批的裸 URL 能力不受影响。
+**前提（再次复核查到的一环）**：`RegistryImpl` 自己**不会**补 CorePlugin —— 缺了会抛
+`Requested plugin is not added`（`RegistryImpl.java:93-95`），CorePlugin 是 `Markwon.builder()` 注入的
+（`Markwon.java:50-53` = `new MarkwonBuilderImpl(ctx).usePlugin(CorePlugin.create())`）。所以这条结论的
+前提是**用 `builder()` 而不是 `builderNoCore()`**（全 app 搜 `builderNoCore` → 0 命中）；将来若改用后者，
+这 2 处会既没有 movementMethod，`LinkifyPlugin` 也会在 `build()` 时抛异常。
+
+**改动后逐条代码核对**（全部用 `Select-String` 复核，理由见第 3 条）
+
+1. 5 个点的最终配置：3 个 `textIsSelectable` 点是 `MovementMethodPlugin.link()` +
+   `LinkifyPlugin.create(Linkify.WEB_URLS)`；2 个非 selectable 点只剩 `LinkifyPlugin.create(Linkify.WEB_URLS)`；
+   全 `src/main` 已无无参 `LinkifyPlugin.create()`；两个文件里 `MovementMethodPlugin` 只出现在注释里。
+2. **`WEB_URLS` 的覆盖面比我原先以为的宽**：不要求 scheme 或 `www.`，只要 TLD 在 IANA 名单里就会命中，
+   且 framework 会给没有 scheme 的匹配补 `http://`（`Patterns.java:416-425` 的 `STRICT_DOMAIN_NAME`、
+   `Linkify.java:621-647` `makeUrl` 里 `prefixes[0]`；`Linkify.java:68-70` / `:203` 的文档注释也这么写）。
+   ⇒ 纯域名（`example.com/x`）也能点，不必要求用户写 `https://`。（反面见残留 7。）
+3. **工具教训（本机是 Windows PowerShell 5.1）**：`Get-Content` 读这些 UTF-8 无 BOM 的中文文件会**少报行数** ——
+   `UI_REVIEW.md` 当时实际 2863 行、`(Get-Content …).Count` 报 **1979**；`CommentAdapter.kt` 实际 233 行、报 **216**。
+   ⇒ `file:line` 核对只能用 `Select-String` / `[System.IO.File]::ReadAllLines()` / 编辑器，
+   **别用 `(Get-Content f)[n-1]`** —— 这一轮我先被它骗出两个"假不符"（`CommentAdapter.kt:158/:216` 本来是对的）。
+4. **产物级复核**（`dexdump -d`，build-tools 37.0.0，对 `app-debug.apk` 里含这 5 个 fragment 的 4 个 dex）：
+   `LinkifyPlugin.create:(I)` **5 处**（每个 fragment 一处），且每处前面的立即数都是 `const/4 …, #int 1`
+   ⇒ 运行时用的就是 `WEB_URLS`；无参 `LinkifyPlugin.create:()` **0 处**（旧的默认 mask 7 没进包）；
+   `MovementMethodPlugin.link:()` **3 处**（正是文章详情 / 发帖预览 / 讨论正文），`MovementMethodPlugin.create:(` **0 处**；
+   文章编辑器与参考详情所在的两个 dex 里 `MovementMethodPlugin` 引用数为 **0** ⇒ 删除确实生效。
+   （与第四十三批 `javap -c` 同一个路子：看字节码，不靠猜；这次看的是产物。）
+
+**门禁**：`:app:assembleDebug` + `:app:lintDebug --offline` → **BUILD SUCCESSFUL**（4m38s）；
+lint `2347 warnings / 0 errors / 0 fatal`；编译输出里已无 Markwon 相关 deprecation 警告。
+（本节核对未再改代码，门禁结论仍然有效。）
+
+**顺带核实**：`git status` 里 5 个 `M`（AndroidManifest / 3 个 assets json / package-lock）**不是内容改动** ——
+实测工作区是 CRLF、索引是 LF（如 AndroidManifest：2360B / 59 个 CRLF vs 2301B / 0 个 CRLF），
+`core.autocrlf=true` 归一化后一致，`git diff` 为空。
+
+**残留 / 未验证**
+
+1. **本批真机未复测**（无设备）：只改了插件配置与注释，风险面很小，但按惯例应过两条 ——
+   讨论详情点裸 URL → 浏览器、文章详情长按 → 复制。
+2. **第 6 条**（嵌套 span）频率极低，且"所见即所得"未必算缺陷 —— 留给产品判定。要改的话，渲染期拿不到父节点
+   （`MarkwonVisitor` 无父节点 API），得自写 Text 访问器或包一层 Link span 工厂。
+3. ~~**评论 / 引用块**（第 4 条）：回复里的裸 URL 依然点不开。~~ **已处理**，见第四十六批。
+4. **图片**（第 5 条）：两处不挂 `GlideImagesPlugin` 的点，Markdown 图片不会显示。真要统一，
+   应抽一个 `MarkwonFactory.create(ctx, images = …)` —— 第四十四批存在的原因正是第四十三批只改了 1/5。
+5. **老系统电话行为未验证**：本机只有 `sources/android-36.1`，本会话无网络，API 24/25 的 `gatherTelLinks`
+   老实现核不了；本批已收窄 mask，**不再影响行为**。
+6. ~~`ARTICLE_UI_REVIEW_FACTS.md` 仍未跟踪（第四十三批的事实底稿，处置待定）。~~ **已随第四十六批纳入版本控制。**
+7. **裸 URL 的边界**（本轮核对新增）：带 scheme 的、纯域名（TLD 在 IANA 名单内）、IP 都能点；
+   但**源码里被换行拆开**的 URL 点不开 —— `SoftLineBreak` 是独立节点（`CorePlugin.java:477-492`），
+   两侧是两个 Text 节点，谁都不含完整 URL；未知 TLD（`foo.invalidtld`）同样不行。
+
+---
+
+### 第四十六批（补齐评论与详情描述的链接渲染；评论/引用真机验证）
+
+**起因**：第四十五批残留第 3 条指出「评论 / 引用块仍是纯文本」，第 4 条同类指出片段、分享详情描述绕过了 Markwon。
+
+**改动（3 个文件）**
+
+1. `CommentAdapter.kt`：评论正文与引用正文统一走 `Linkify.WEB_URLS`；只有 `Linkify.addLinks` 返回 `true`
+   才设置 `LinkMovementMethod`，无链接的复用行清空 movementMethod —— 避免引用块父容器的「查看父评论」点击被抢走。
+2. `SnippetDetailFragment.kt`：描述改用 Markwon（`GlideImagesPlugin` + `LinkifyPlugin.create(WEB_URLS)`）；
+   标题、代码块和语法高亮保持原路径。
+3. `ShareDetailFragment.kt`：描述同样改用 Markwon；下载地址、复制/下载按钮和链接有效性判断未改。
+
+**验证（真机：LIO-AN00，Android 版本按设备当前系统）**
+
+1. `:app:assembleDebug` → **BUILD SUCCESSFUL**；`:app:lintDebug` → **0 errors**（2358 warnings，均为项目既有类型）。
+2. 讨论 11：评论裸 URL 点击后打开系统 `HwResolverActivity`（浏览器 / APKPure / ADM Editor），确认不是仅着色。
+3. 讨论 11：无链接引用块点击后仍跳转到父评论并高亮，确认没有引入「引用块点击被吞」回归。
+4. 片段详情（Snippet 1）：标题、描述、代码、标签正常渲染，描述纯文本无回归。
+5. 最近 800 行 logcat 无 `FATAL EXCEPTION` / SkNote 崩溃记录。
+
+**未验证 / 限制**
+
+1. 线上片段描述没有 Markdown 样本，`**粗体**` 等样式未做真机验证；现有普通描述已验证不回归。
+2. 线上分享列表为空，`ShareDetailFragment` 的 Markdown 描述只过了编译与静态检查，未做真机数据验证。
+3. 项目当前无单元测试源码，`:app:testDebugUnitTest` 为 `NO-SOURCE`；本次验证依据编译、lint 和真机交互。
+4. Gradle Wrapper 指定的 8.7 发行包下载超时，本次使用本机缓存的 Gradle 8.13 完成构建；AGP 8.5.2 编译通过。
+
+---
+
 ## 九、剩余待办
 
 > 「第一批」到「第十四批」均已完成。「第十五批」是盘点结论，未执行。
