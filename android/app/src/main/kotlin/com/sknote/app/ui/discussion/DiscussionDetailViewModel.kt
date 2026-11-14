@@ -195,18 +195,47 @@ class DiscussionDetailViewModel : ViewModel() {
 
     fun likeComment(discussionId: Long, commentId: Long) {
         if (!likingCommentIds.add(commentId)) return
+        val original = _comments.value?.firstOrNull { it.id == commentId }
+        if (original == null) {
+            likingCommentIds.remove(commentId)
+            return
+        }
+
+        // 先本地翻转，点击后立刻看到填充/取消；失败再回滚。
+        val optimisticLiked = !original.liked
+        val optimisticCount = (original.likeCount + if (optimisticLiked) 1 else -1).coerceAtLeast(0)
+        updateCommentLike(commentId, optimisticLiked, optimisticCount)
+
         viewModelScope.launch {
             try {
                 val response = ApiClient.getService().likeComment(discussionId, commentId)
+                val result = response.body()
                 if (response.isSuccessful) {
-                    loadDiscussion(discussionId)
+                    if (result != null && result.liked != optimisticLiked) {
+                        val correctedCount = (original.likeCount + if (result.liked) 1 else -1)
+                            .coerceAtLeast(0)
+                        updateCommentLike(commentId, result.liked, correctedCount)
+                    }
                 } else {
+                    updateCommentLike(commentId, original.liked, original.likeCount)
                     _error.value = "操作失败: ${response.code()}"
                 }
             } catch (e: Exception) {
+                updateCommentLike(commentId, original.liked, original.likeCount)
                 _error.value = ErrorUtil.friendlyMessage(e)
             } finally {
                 likingCommentIds.remove(commentId)
+            }
+        }
+    }
+
+    private fun updateCommentLike(commentId: Long, liked: Boolean, likeCount: Int) {
+        val current = _comments.value ?: return
+        _comments.value = current.map { comment ->
+            if (comment.id == commentId) {
+                comment.copy(liked = liked, likeCount = likeCount)
+            } else {
+                comment
             }
         }
     }

@@ -188,18 +188,32 @@ discussionRoutes.get('/:id', authMiddleware(false), async (c) => {
 
   if (!discussion) return c.json({ error: '讨论不存在' }, 404);
 
+  // 当前用户是否赞过每条评论。未登录时 viewerId=0，所有 liked 均为 false。
+  const viewerId = c.get('user')?.id ?? 0;
+
   // 获取评论
   const comments = await c.env.DB.prepare(`
-    SELECT cm.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar, COALESCE(NULLIF(pu.nickname,''), pu.username) as parent_author_name
+    SELECT cm.*, COALESCE(NULLIF(u.nickname,''), u.username) as author_name, u.avatar_url as author_avatar,
+      COALESCE(NULLIF(pu.nickname,''), pu.username) as parent_author_name,
+      EXISTS(
+        SELECT 1 FROM likes l
+        WHERE l.user_id = ? AND l.target_type = 'comment' AND l.target_id = cm.id
+      ) as liked
     FROM comments cm
     LEFT JOIN users u ON cm.author_id = u.id
     LEFT JOIN comments pcm ON cm.parent_id = pcm.id
     LEFT JOIN users pu ON pcm.author_id = pu.id
     WHERE cm.discussion_id = ?
     ORDER BY cm.created_at ASC
-  `).bind(id).all();
+  `).bind(viewerId, id).all();
 
-  return c.json({ discussion, comments: comments.results });
+  // SQLite 的 EXISTS 返回 0/1，显式转成 JSON 布尔值，避免客户端布尔反序列化差异。
+  const commentRows = (comments.results as Array<Record<string, unknown>>).map((row) => ({
+    ...row,
+    liked: Boolean(row.liked),
+  }));
+
+  return c.json({ discussion, comments: commentRows });
 });
 
 // 发起讨论（需要登录）

@@ -35,6 +35,8 @@ data class Comment(
     @SerializedName("parent_id") val parentId: Long? = null,
     @SerializedName("parent_author_name") val parentAuthorName: String? = null,
     @SerializedName("like_count") val likeCount: Int = 0,
+    /** 当前登录用户是否已赞；未登录或旧接口缺字段时按未赞处理。 */
+    val liked: Boolean = false,
     @SerializedName("created_at") val createdAt: String? = null,
     @SerializedName("updated_at") val updatedAt: String? = null
 )

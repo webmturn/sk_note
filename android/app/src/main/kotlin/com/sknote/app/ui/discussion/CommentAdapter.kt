@@ -154,7 +154,21 @@ class CommentAdapter(
         bindLinkifiedText(b.tvContent, comment.content.orEmpty())
         bindExpandableText(b, comment)
         b.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
-        b.tvLikeCount.text = if (comment.likeCount > 0) "${comment.likeCount}" else ""
+        b.ivLikeIcon.isSelected = comment.liked
+        if (comment.likeCount > 0) {
+            b.tvLikeCount.text = "${comment.likeCount}"
+            b.tvLikeCount.visibility = View.VISIBLE
+        } else {
+            // INVISIBLE 而不是 GONE：固定槽位要一直占宽，否则点赞数 0↔1 时会把回复图标挤走。
+            b.tvLikeCount.text = ""
+            b.tvLikeCount.visibility = View.INVISIBLE
+        }
+        b.btnLike.contentDescription = when {
+            comment.liked && comment.likeCount > 0 -> "取消点赞，${comment.likeCount} 个赞"
+            comment.liked -> "取消点赞"
+            comment.likeCount > 0 -> "点赞，${comment.likeCount} 个赞"
+            else -> "点赞"
+        }
         bindQuote(holder, comment, parent)
         bindHighlight(holder, comment)
         // 回复评论左侧缩进。注意必须在 comment_card_inset 的基础上【叠加】，

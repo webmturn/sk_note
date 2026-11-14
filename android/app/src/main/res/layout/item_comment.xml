@@ -187,53 +187,55 @@
             android:gravity="center_vertical"
             android:layout_marginTop="4dp">
 
-            <ImageView
-                android:id="@+id/btnLike"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_thumb_up"
-                android:padding="11dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                app:tint="?attr/colorOnSurfaceVariant"
-                android:clickable="true"
-                android:focusable="true"
-                android:contentDescription="点赞" />
-
-            <TextView
-                android:id="@+id/tvLikeCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:layout_marginStart="2dp" />
-
             <LinearLayout
-                android:id="@+id/btnReply"
+                android:id="@+id/btnLike"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginStart="6dp"
+                android:paddingHorizontal="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
-                android:paddingHorizontal="8dp">
+                android:contentDescription="点赞">
 
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_reply"
-                    app:tint="?attr/colorOnSurfaceVariant"
-                    android:layout_marginEnd="5dp"
+                    android:id="@+id/ivLikeIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_thumb_up_state"
+                    app:tint="@color/like_icon_tint"
                     android:importantForAccessibility="no" />
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:id="@+id/tvLikeCount"
+                    android:layout_width="18dp"
                     android:layout_height="wrap_content"
-                    android:text="回复"
+                    android:layout_marginStart="2dp"
+                    android:gravity="start|center_vertical"
+                    android:maxLines="1"
+                    android:textSize="12sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="13sp" />
+                    android:importantForAccessibility="no"
+                    android:visibility="invisible"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="8sp"
+                    app:autoSizeMaxTextSize="12sp"
+                    app:autoSizeStepGranularity="1sp" />
             </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnReply"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="0dp"
+                android:padding="9dp"
+                android:src="@drawable/ic_reply_action"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="回复" />
 
             <TextView
                 android:id="@+id/btnThread"
