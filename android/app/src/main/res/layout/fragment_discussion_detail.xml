@@ -122,9 +122,9 @@
                     android:importantForAccessibility="no" />
 
                 <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:src="@drawable/ic_reply_action"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_reply_bubble"
                     app:tint="?attr/colorPrimary"
                     android:layout_marginEnd="8dp"
                     android:importantForAccessibility="no" />

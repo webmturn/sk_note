@@ -155,6 +155,7 @@ class CommentAdapter(
         bindExpandableText(b, comment)
         b.tvTime.text = TimeUtil.formatRelative(comment.createdAt)
         b.ivLikeIcon.isSelected = comment.liked
+        b.tvLikeCount.isSelected = comment.liked
         if (comment.likeCount > 0) {
             b.tvLikeCount.text = "${comment.likeCount}"
             b.tvLikeCount.visibility = View.VISIBLE
