@@ -20,6 +20,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
@@ -39,7 +40,6 @@ import com.sknote.app.R
 import com.sknote.app.data.api.BackendImageUploader
 import com.sknote.app.data.model.DiscussionCategory
 import com.sknote.app.databinding.FragmentCreateDiscussionBinding
-import com.sknote.app.util.DiscussionIconResolver
 import io.noties.markwon.Markwon
 import io.noties.markwon.image.glide.GlideImagesPlugin
 import io.noties.markwon.linkify.LinkifyPlugin
@@ -117,6 +117,7 @@ class CreateDiscussionFragment : Fragment() {
             .build()
 
         binding.toolbar.setNavigationOnClickListener { confirmExit() }
+        setupPublishAction()
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner,
             object : OnBackPressedCallback(true) {
@@ -144,8 +145,6 @@ class CreateDiscussionFragment : Fragment() {
             setupPaletteShare()
         }
 
-        binding.btnSubmit.setOnClickListener { submitDiscussion() }
-
         observeData()
         updateGuideCard()
         updateFormState()
@@ -154,6 +153,44 @@ class CreateDiscussionFragment : Fragment() {
         discussionId?.let { viewModel.loadDiscussion(it) }
         if (discussionId == null) {
             promptRestoreDraftIfNeeded()
+        }
+    }
+
+    private fun setupPublishAction() {
+        binding.toolbar.inflateMenu(R.menu.menu_create_discussion)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.action_publish) {
+                submitDiscussion()
+                true
+            } else {
+                false
+            }
+        }
+        publishButton()?.setOnClickListener { submitDiscussion() }
+        updatePublishAction()
+    }
+
+    private fun publishButton(): Button? {
+        val actionView = binding.toolbar.menu.findItem(R.id.action_publish)?.actionView ?: return null
+        return actionView as? Button ?: actionView.findViewById(R.id.btnPublish)
+    }
+
+    private fun updatePublishAction() {
+        val isLoading = viewModel.isLoading.value == true
+        val button = publishButton() ?: return
+        // 空标题/空正文不直接禁用：点击后在字段上给出具体错误，比一个不能点的按钮更好理解。
+        button.isEnabled = !isLoading
+        button.text = when {
+            isLoading && discussionId != null -> "保存中…"
+            isLoading -> "发布中…"
+            discussionId != null -> "保存"
+            else -> "发布"
+        }
+        button.contentDescription = when {
+            isLoading && discussionId != null -> "正在保存讨论"
+            isLoading -> "正在发布讨论"
+            discussionId != null -> "保存修改"
+            else -> "发布讨论"
         }
     }
 
@@ -336,7 +373,6 @@ class CreateDiscussionFragment : Fragment() {
             chip.id = View.generateViewId()
             chip.tag = category.slug
             chip.text = category.name
-            chip.setChipIconResource(DiscussionIconResolver.category(category.slug))
             chip.isChecked = category.slug == selectedCategory
             group.addView(chip)
         }
@@ -794,8 +830,10 @@ class CreateDiscussionFragment : Fragment() {
 
     private fun validateBeforeSubmit(title: String, content: String): Boolean {
         var isValid = true
+        var firstInvalid: View? = null
         if (title.isEmpty()) {
             binding.layoutTitle.error = "请输入标题"
+            firstInvalid = binding.etTitle
             isValid = false
         } else {
             binding.layoutTitle.error = null
@@ -809,13 +847,28 @@ class CreateDiscussionFragment : Fragment() {
         val hasBodyContent = content.isNotEmpty() || imageAdapter.size() > 0 || blockJson != null || paletteJson != null
         if (!hasBodyContent) {
             binding.layoutContent.error = "请输入正文，或添加图片/分享内容"
+            if (firstInvalid == null) firstInvalid = binding.etContent
             isValid = false
         } else {
             binding.layoutContent.error = null
         }
 
-        if (!isValid) updateFormState()
+        if (!isValid) {
+            updateFormState()
+            firstInvalid?.let { revealField(it) }
+        }
         return isValid
+    }
+
+    private fun revealField(field: View) {
+        field.requestFocus()
+        val target = if (field === binding.etContent) binding.layoutContent else binding.layoutTitle
+        binding.formScroll.post {
+            binding.formScroll.smoothScrollTo(0, target.top)
+        }
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+            as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(field, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun captureInitialDraftState() {
@@ -867,38 +920,39 @@ class CreateDiscussionFragment : Fragment() {
             linkedArticleId != null -> "发起文章讨论"
             else -> "发起讨论"
         }
-        binding.layoutContent.hint = when {
-            discussionId != null -> "修改标题、正文或分类后，会同步更新当前讨论内容。"
-            blockJson != null -> "可以补充适用场景、参数说明或遇到的问题，方便别人复用和讨论。"
-            paletteJson != null -> "建议写清配色用途、适配场景和使用建议，让别人更容易参考。"
-            linkedArticleId != null -> "这条讨论会关联到文章，适合继续追问、反馈补充或延伸交流。"
-            else -> "尽量写清背景、现象和期望结果，别人更容易理解并回复。"
+        binding.etContent.hint = when {
+            discussionId != null -> "修改后同步更新当前讨论"
+            blockJson != null -> "补充适用场景、参数或问题"
+            paletteJson != null -> "写清配色用途和适配场景"
+            linkedArticleId != null -> "围绕文章继续追问或补充"
+            else -> "写清背景、现象和期望结果"
         }
     }
 
     private fun updateFormState() {
         val isLoading = viewModel.isLoading.value == true
-        val title = binding.etTitle.text?.toString()?.trim().orEmpty()
-        val content = binding.etContent.text?.toString()?.trim().orEmpty()
-        val hasBodyContent = content.isNotEmpty() || imageAdapter.size() > 0 || blockJson != null || paletteJson != null
-        val isUploadingImages = imageAdapter.size() > 0 && !imageAdapter.allUploaded()
-        val canSubmit = !isLoading && title.isNotEmpty() && hasBodyContent && !isUploadingImages
-
-        binding.btnSubmit.isEnabled = canSubmit
-        binding.btnSubmit.alpha = if (canSubmit) 1f else 0.6f
+        setFormEnabled(!isLoading)
         binding.btnAddImage.isEnabled = !isLoading && imageAdapter.size() < maxImages
         binding.btnAddImage.alpha = if (binding.btnAddImage.isEnabled) 1f else 0.6f
-        // 底栏这行说的是「当前能不能发、还差什么」（状态），不再重复标题字段上那句
-        // 静态建议 —— 两句话相隔 500px 说同一件事，是这页原先最明显的冗余。
-        binding.tvSubmitHint.text = when {
-            isLoading && discussionId != null -> "正在保存讨论修改，请稍候…"
-            isLoading -> "正在发布讨论，请稍候…"
-            isUploadingImages -> "图片仍在上传中，上传完成后即可发布"
-            title.isEmpty() -> "还差一个标题"
-            !hasBodyContent -> "正文还是空的，写点内容或添加图片/分享内容"
-            discussionId != null -> "可以保存了，修改会同步到详情与列表"
-            linkedArticleId != null -> "可以发布了，发布后会挂在这篇文章下"
-            else -> "可以发布了，也可以继续补充"
+        binding.loadingProgress.visibility = if (isLoading) View.VISIBLE else View.GONE
+        updatePublishAction()
+        if (isLoading) {
+            val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                as android.view.inputmethod.InputMethodManager
+            imm.hideSoftInputFromWindow(binding.etContent.windowToken, 0)
+        }
+    }
+
+    private fun setFormEnabled(enabled: Boolean) {
+        setEnabledRecursively(binding.formContainer, enabled)
+    }
+
+    private fun setEnabledRecursively(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                setEnabledRecursively(view.getChildAt(index), enabled)
+            }
         }
     }
 
@@ -932,13 +986,7 @@ class CreateDiscussionFragment : Fragment() {
             }
         }
 
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.btnSubmit.text = when {
-                isLoading && discussionId != null -> "保存中..."
-                isLoading -> "发布中..."
-                discussionId != null -> "保存修改"
-                else -> "发布讨论"
-            }
+        viewModel.isLoading.observe(viewLifecycleOwner) {
             updateFormState()
         }
     }

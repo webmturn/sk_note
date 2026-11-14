@@ -18,442 +18,383 @@
             app:title="发起讨论"
             app:navigationIcon="@drawable/ic_close" />
 
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/loadingProgress"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:visibility="gone"
+            android:indeterminate="true"
+            app:trackThickness="3dp" />
+
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/formScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:overScrollMode="never"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <androidx.core.widget.NestedScrollView
+        <LinearLayout
+            android:id="@+id/formContainer"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="true"
-            android:overScrollMode="never">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="32dp">
+
+            <FrameLayout
+                android:id="@+id/blockPreviewWrapper"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone">
+
+                <FrameLayout
+                    android:id="@+id/blockPreviewContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClearAttachment"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="-4dp"
+                    android:layout_marginEnd="-4dp"
+                    android:contentDescription="移除附件"
+                    android:tooltipText="移除附件"
+                    android:insetTop="10dp"
+                    android:insetBottom="10dp"
+                    android:insetLeft="10dp"
+                    android:insetRight="10dp"
+                    android:padding="0dp"
+                    app:cornerRadius="14dp"
+                    app:icon="@drawable/ic_close"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="16dp" />
+            </FrameLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layoutTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="标题"
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:errorEnabled="true">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:maxLength="100"
+                    android:paddingVertical="6dp"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/categoryScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupCategory"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="6dp"
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/tvCategoryDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="12sp"
+                tools:text="通用讨论" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="4dp"
+                app:dividerColor="?attr/colorOutlineVariant" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="4dp"
+                android:overScrollMode="never"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/formatToolbar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTogglePreview"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:contentDescription="预览"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="预览 / 返回编辑"
+                        app:icon="@drawable/ic_visibility"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.divider.MaterialDivider
+                        android:layout_width="1dp"
+                        android:layout_height="20dp"
+                        android:layout_marginEnd="4dp"
+                        app:dividerColor="?attr/colorOutlineVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddImage"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="添加图片"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="添加图片（最多 9 张，自动压缩到 ≤ 1MB）"
+                        app:icon="@drawable/ic_add_photo"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatBold"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="加粗"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="加粗"
+                        app:icon="@drawable/ic_format_bold"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatItalic"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="斜体"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="斜体"
+                        app:icon="@drawable/ic_format_italic"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatCode"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="行内代码"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="行内代码"
+                        app:icon="@drawable/ic_code"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatCodeBlock"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="代码块"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="代码块"
+                        app:icon="@drawable/ic_terminal"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatLink"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="插入链接"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="插入链接"
+                        app:icon="@drawable/ic_link"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatQuote"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="引用"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="引用"
+                        app:icon="@drawable/ic_format_quote"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFormatList"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="项目列表"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="36dp"
+                        android:tooltipText="项目列表"
+                        app:icon="@drawable/ic_format_list"
+                        app:iconSize="18dp"
+                        app:iconTint="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layoutContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:boxBackgroundMode="none"
+                app:errorEnabled="true"
+                app:hintEnabled="false">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    android:gravity="top"
+                    android:hint="写清背景、现象和期望结果"
+                    android:inputType="textMultiLine"
+                    android:lineSpacingMultiplier="1.5"
+                    android:maxLength="5000"
+                    android:minLines="10"
+                    android:paddingVertical="8dp"
+                    android:textSize="16sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardPreview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                app:cardCornerRadius="12dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <TextView
+                    android:id="@+id/tvPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingMultiplier="1.4"
+                    android:padding="14dp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="15sp"
+                    android:textIsSelectable="true"
+                    tools:text="预览内容" />
+            </com.google.android.material.card.MaterialCardView>
+
+
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingHorizontal="20dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="24dp">
-
-                <!-- 原先这里有一张「引导卡」（colorSurfaceContainerLow + 描边 + 20dp 圆角，
-                     里面一句话说明）。按主流发布器的做法删掉了：Discourse 改版时设计者写的
-                     理由就是去掉「一片灰」、减少边框、多留白，并让页面上只有两样东西抢注意力
-                     —— 编辑器本身与操作按钮。模式提示语改由正文框的占位符承担
-                     （见 CreateDiscussionFragment.updateGuideCard），输入前照样看得见。 -->
-
-                <!-- Block/palette share preview (hidden by default) -->
-                <FrameLayout
-                    android:id="@+id/blockPreviewWrapper"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:visibility="gone">
-
-                    <FrameLayout
-                        android:id="@+id/blockPreviewContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnClearAttachment"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="top|end"
-                        android:layout_marginTop="-4dp"
-                        android:layout_marginEnd="-4dp"
-                        android:contentDescription="移除附件"
-                        android:tooltipText="移除附件"
-                        android:insetTop="10dp"
-                        android:insetBottom="10dp"
-                        android:insetLeft="10dp"
-                        android:insetRight="10dp"
-                        android:padding="0dp"
-                        app:cornerRadius="14dp"
-                        app:icon="@drawable/ic_close"
-                        app:iconGravity="textStart"
-                        app:iconPadding="0dp"
-                        app:iconSize="16dp" />
-                </FrameLayout>
-
-                <!-- Title -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layoutTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
-                    android:hint="标题"
-                    app:counterEnabled="true"
-                    app:counterMaxLength="100"
-                    app:boxStrokeWidth="0dp"
-                    app:boxStrokeWidthFocused="0dp"
-                    app:boxBackgroundMode="none"
-                    app:helperText="建议用一句话概括你的问题或观点"
-                    app:hintTextAppearance="@style/TextAppearance.Material3.BodySmall">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:maxLength="100"
-                        android:background="@android:color/transparent"
-                        android:paddingVertical="8dp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.divider.MaterialDivider
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    app:dividerColor="?attr/colorOutlineVariant" />
-
-                <!-- Category section -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="选择分类"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:layout_marginBottom="6dp" />
-
-                <HorizontalScrollView
-                    android:id="@+id/categoryScroll"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none"
-                    android:overScrollMode="never">
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupCategory"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:singleLine="true"
-                        app:singleSelection="true"
-                        app:selectionRequired="true"
-                        app:chipSpacingHorizontal="6dp" />
-                </HorizontalScrollView>
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/tvCategoryDescription"
-                    android:layout_width="match_parent"
+                    android:layout_width="24dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:layout_marginBottom="12dp"
+                    android:text="#"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="12sp"
-                    tools:text="通用讨论" />
+                    android:textSize="16sp" />
 
-                <!-- Markdown formatting toolbar -->
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none"
-                    android:overScrollMode="never">
-
-                    <LinearLayout
-                        android:id="@+id/formatToolbar"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <!-- 预览/编辑做成工具条上的图标按钮（Discourse 的做法）。
-                             原来这里是带「预览」二字的 TextButton，约占 72dp；改成 36dp 图标后
-                             这一行正好放得下「7 个格式图标 + 分隔线 + 图片图标」
-                             （实测：72+252+9+36 = 369dp 会挤出可视区，36+252+9+36 = 333dp 放得下，
-                             可视宽度 392-40 = 352dp）。状态由图标切换表达，文案走无障碍描述。 -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTogglePreview"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:layout_marginEnd="4dp"
-                            android:contentDescription="预览"
-                            android:tooltipText="预览 / 返回编辑"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_visibility"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.divider.MaterialDivider
-                            android:layout_width="1dp"
-                            android:layout_height="20dp"
-                            android:layout_marginEnd="4dp"
-                            app:dividerColor="?attr/colorOutlineVariant" />
-
-                        <!-- 图片入口收进工具条（原先是正文下方一个 122dp×48dp 的独立胶囊按钮
-                             ＋一行常驻灰字）。Discourse 的发布器就是把上传图片做成工具条上的一个图标。
-                             放在格式组【最前】而不是最后：这一行实测会溢出可视区
-                             （8 个图标 × 46dp = 368dp > 352dp，图标实际宽度受 IconButton 样式内边距影响，
-                             不是 minWidth 的 36dp），放最后就等于看不见。图片是常用动作，
-                             溢出的应该是尾巴上少用的「引用 / 项目列表」—— 它们仍可横向滚动到。 -->
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddImage"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="添加图片"
-                            android:tooltipText="添加图片（最多 9 张，自动压缩到 ≤ 1MB）"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_add_photo"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatBold"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="加粗"
-                            android:tooltipText="加粗"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_format_bold"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatItalic"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="斜体"
-                            android:tooltipText="斜体"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_format_italic"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatCode"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="行内代码"
-                            android:tooltipText="行内代码"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_code"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatCodeBlock"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="代码块"
-                            android:tooltipText="代码块"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_terminal"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatLink"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="插入链接"
-                            android:tooltipText="插入链接"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_link"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatQuote"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="引用"
-                            android:tooltipText="引用"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_format_quote"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnFormatList"
-                            style="@style/Widget.Material3.Button.IconButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="36dp"
-                            android:contentDescription="项目列表"
-                            android:tooltipText="项目列表"
-                            android:minWidth="36dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            app:icon="@drawable/ic_format_list"
-                            app:iconSize="18dp"
-                            app:iconTint="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-                </HorizontalScrollView>
-
-                <!-- Content -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/layoutContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:hint="写下你的想法..."
-                    app:counterEnabled="true"
-                    app:counterMaxLength="5000"
-                    app:boxCornerRadiusTopStart="12dp"
-                    app:boxCornerRadiusTopEnd="12dp"
-                    app:boxCornerRadiusBottomStart="12dp"
-                    app:boxCornerRadiusBottomEnd="12dp"
-                    app:helperText="支持 Markdown、图片，以及积木块/调色板分享内容"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etContent"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minLines="8"
-                        android:gravity="top"
-                        android:inputType="textMultiLine"
-                        android:textSize="15sp"
-                        android:lineSpacingMultiplier="1.4"
-                        android:maxLength="5000" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardPreview"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone"
-                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                    app:cardCornerRadius="12dp"
-                    app:strokeColor="?attr/colorOutlineVariant"
-                    app:strokeWidth="1dp">
-
-                    <TextView
-                        android:id="@+id/tvPreview"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:padding="14dp"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textSize="15sp"
-                        android:lineSpacingMultiplier="1.4"
-                        android:textIsSelectable="true"
-                        tools:text="预览内容" />
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- 标签：与片段发布页同一种输入方式与存储（逗号分隔文本），
-                     位置也一致 —— 放在正文之后，元数据收尾。 -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layoutTags"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:hint="标签（用逗号分隔，可选）"
-                    app:counterEnabled="true"
-                    app:counterMaxLength="80"
-                    app:helperText="便于他人按主题找到这条讨论，最多 5 个">
+                    android:layout_weight="1"
+                    app:boxBackgroundMode="none"
+                    app:hintEnabled="false">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etTags"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="@android:color/transparent"
+                        android:hint="添加标签（可选，逗号分隔）"
                         android:imeOptions="actionDone"
                         android:inputType="text"
                         android:maxLength="80"
-                        android:singleLine="true" />
+                        android:paddingVertical="8dp"
+                        android:singleLine="true"
+                        android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
 
-                <!-- 已选图片区：只在实际有图片时出现（由 updateImageUI 控制整块可见性）。
-                     这样页面上不再有一条常驻的「最多 9 张…」灰字 —— 该信息移到了工具条
-                     那个图片图标的 tooltip，以及张数用满时已有的提示条。 -->
-                <LinearLayout
-                    android:id="@+id/layoutImages"
+            <LinearLayout
+                android:id="@+id/layoutImages"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvImages"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="12dp"
-                    android:visibility="gone">
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="false" />
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvImages"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:clipToPadding="false"
-                        android:nestedScrollingEnabled="false" />
-
-                    <TextView
-                        android:id="@+id/tvImageHint"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:textSize="11sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-
+                <TextView
+                    android:id="@+id/tvImageHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp" />
             </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
 
-        <!-- Bottom submit bar。android:tag 供 AppSnackbar 把提示条抬到这条栏之上，
-             否则提示条会盖住「发布」按钮（与详情页底部操作栏同一处理）。 -->
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <LinearLayout
-            android:tag="snackbar_anchor"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="10dp"
-            android:gravity="center_vertical"
-            android:background="?attr/colorSurface"
-            android:elevation="4dp">
-
-            <TextView
-                android:id="@+id/tvSubmitHint"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="分享你的想法、问题或反馈"
-                android:maxLines="2"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSubmit"
-                android:layout_width="wrap_content"
-                android:layout_height="42dp"
-                android:text="发布"
-                android:textSize="14sp"
-                app:icon="@drawable/ic_send"
-                app:iconSize="16dp"
-                app:cornerRadius="21dp" />
         </LinearLayout>
-
-    </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

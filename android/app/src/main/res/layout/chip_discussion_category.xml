@@ -6,7 +6,5 @@
     android:layout_height="wrap_content"
     android:textSize="13sp"
     app:checkedIconVisible="false"
-    app:chipIconVisible="true"
-    app:chipIconSize="16dp"
-    app:chipIconTint="?attr/colorOnSurfaceVariant"
+    app:chipIconVisible="false"
     app:ensureMinTouchTargetSize="false" />
