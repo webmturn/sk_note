@@ -24,8 +24,9 @@ android/.idea/
 Thumbs.db
 desktop.ini
 
-# AI conversation logs
+# AI conversation logs and local WorkBuddy project data
 ai_conversations/
+.workbuddy/
 
 # Secrets & credentials
 *.jks
