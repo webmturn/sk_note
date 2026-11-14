@@ -2,6 +2,20 @@
 
 一个为 Sketchware-Pro 社区打造的手册 + 讨论 App。
 
+> 当前 Android 版本：**1.2.4**（versionCode 7）
+>
+> 最新 Release：https://github.com/webmturn/sk_note/releases/tag/v1.2.4
+
+## 功能
+
+- **手册**：分类浏览、搜索、Markdown 详情、点赞、收藏与阅读历史。
+- **讨论**：分类、标签、排序、未读/新回复标记、评论点赞、引用回复、草稿恢复。
+- **创作**：文档式发起讨论、Markdown 格式工具、图片上传、积木块/调色板分享、预览。
+- **代码与分享**：代码片段、文件分享、下载计数、点赞与审核。
+- **社区**：关注/粉丝、公开资料、通知、全局搜索。
+- **分析器**：项目分析、资源与逻辑可视化。
+- **其他**：深浅色主题、应用内更新检查、管理员后台。
+
 ## 架构
 
 ```
@@ -11,9 +25,13 @@ sk_note/
 │   │   ├── index.ts              # 路由挂载 + Hono 应用配置
 │   │   ├── server.ts             # Node.js 服务入口（@hono/node-server）
 │   │   ├── db.ts                 # better-sqlite3 D1 兼容层
+│   │   ├── clientIp.ts           # 客户端 IP 解析
+│   │   ├── likeUtils.ts          # 点赞计数与通知辅助
+│   │   ├── sqlUtils.ts           # SQL 查询拼装辅助
 │   │   ├── middleware/
 │   │   │   ├── auth.ts           # JWT 认证中间件
-│   │   │   └── cache.ts          # 缓存中间件
+│   │   │   ├── cache.ts          # 缓存中间件
+│   │   │   └── rateLimit.ts      # 接口限流
 │   │   └── routes/
 │   │       ├── auth.ts                  # 注册/登录/用户信息/修改密码/图片上传/管理员
 │   │       ├── articles.ts              # 文章 CRUD + 搜索 + 点赞
@@ -54,6 +72,9 @@ sk_note/
 │   │   │   │   ├── share/                # 分享列表 + 详情
 │   │   │   │   ├── bookmark/             # 收藏 + 阅读历史
 │   │   │   │   ├── search/               # 搜索
+│   │   │   │   ├── analyzer/             # 项目分析器/逻辑可视化
+│   │   │   │   ├── manage/               # 内容、版本、用户管理
+│   │   │   │   ├── common/               # 通用 UI 组件
 │   │   │   │   └── admin/                # 管理后台
 │   │   │   └── util/                     # 工具类
 │   │   └── res/                          # 布局 + 资源文件
@@ -93,6 +114,10 @@ sk_note/
 - PM2 进程名：`sk-note-api`
 - 域名：`https://api.wsqh.cn`
 - 反向代理：`Nginx`
+
+本地工作目录中的 `backend/deploy_now.py`（已在 `.gitignore` 中忽略）封装了当前生产部署流程：预检 `src` 文件、SFTP 上传、执行迁移、重启 PM2。连接信息从环境变量或本地 `backend/.env` 读取；需要的键见 `.env.example` 中的 `SKNOTE_DEPLOY_HOST`、`SKNOTE_DEPLOY_USER`、`SKNOTE_DEPLOY_PASSWORD`。
+
+> **安全提示**：不要把 `.env`、部署脚本、SSH 密码或私钥提交到 Git。若凭据曾经进入提交历史，应立即轮换；清理历史不能替代轮换。
 
 ### 2. 初始化新服务器（Ubuntu 22.04+）
 
@@ -172,6 +197,18 @@ cp data/sk-note.db data/sk-note.db.bak.$(date +%Y%m%d%H%M%S)
 # 结构迁移：讨论分类表与讨论分类约束
 sqlite3 data/sk-note.db < migrate_discussion_categories.sql
 
+# 结构迁移：内容浏览量
+sqlite3 data/sk-note.db < migrate_content_views.sql
+
+# 结构迁移：参考手册字段
+sqlite3 data/sk-note.db < migrate_references_columns.sql
+
+# 结构迁移：讨论标签
+sqlite3 data/sk-note.db < migrate_discussion_tags.sql
+
+# 结构迁移：讨论已读记录
+sqlite3 data/sk-note.db < migrate_discussion_reads.sql
+
 # 结构迁移：通知 related_type 支持 share
 sqlite3 data/sk-note.db < migrate_notifications_share.sql
 
@@ -182,11 +219,11 @@ sqlite3 data/sk-note.db < migrate_notifications_actor.sql
 sqlite3 data/sk-note.db < migrate_cleanup_old_data.sql
 ```
 
-其中 `migrate_discussion_categories.sql` 与 `migrate_notifications_share.sql` 属于结构迁移，建议只在升级时执行；`migrate_cleanup_old_data.sql` 是周期性维护脚本，可重复执行。
+结构迁移建议只在升级时执行；部分迁移重复执行会报 `duplicate column name`，说明列已存在，可忽略。`migrate_cleanup_old_data.sql` 是周期性维护脚本，可重复执行。`backend/deploy_now.py` 已内置其中一部分迁移的执行步骤。
 
 ### 5. 配置域名与 HTTPS
 
-`api.wsqh.cn` 当前直接指向自托管服务器（DNS A 记录到源站 IP，未使用 CDN 代理）。完成服务启动后使用 certbot 签发 Let’s Encrypt 证书：
+`api.wsqh.cn` 当前指向自托管服务器。完成服务启动后使用 certbot 签发 Let’s Encrypt 证书：
 
 ```bash
 sudo certbot --nginx -d api.wsqh.cn
@@ -215,7 +252,31 @@ cd android
 
 Windows 下同样需要设置 `ANDROID_HOME`（或 `local.properties` 中的 `sdk.dir`）指向 Android SDK 根目录。
 
-### 7. 创建管理员账号
+### 7. 发布 Android 版本
+
+当前仓库未配置正式签名，沿用历史发布方式，Release 资产使用 `app-debug.apk`。
+
+```bash
+cd android
+
+# 1. 修改 app/build.gradle.kts 中的 versionCode / versionName
+# 2. 构建 APK
+./gradlew assembleDebug
+
+# 3. 打 tag 并推送
+cd ..
+git tag v1.2.4
+git push origin master
+git push origin v1.2.4
+```
+
+然后：
+
+1. 在 GitHub 创建对应 Release，上传 `android/app/build/outputs/apk/debug/app-debug.apk`。
+2. 在 App 管理后台“版本管理”中登记版本号、versionCode、更新说明、APK 下载地址、文件大小和 Release 页面；或调用 `POST /api/app/releases`。
+3. 未登记到 `app_releases` 的 GitHub Release 不会被 `/api/app/check-update` 检测到。
+
+### 8. 创建管理员账号
 
 注册一个账号后，通过 SQLite 手动提升为管理员：
 
@@ -225,6 +286,8 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 ```
 
 ## API 接口
+
+以下为常用接口，未逐条列出所有管理、审核和内部路由；完整定义以 `backend/src/routes/` 为准。
 
 ### 首页与统计
 
@@ -280,7 +343,7 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
 | GET | /api/discussions | 讨论列表（分页/分类/关联文章/搜索） | 公开 |
-| GET | /api/discussions/:id | 讨论详情（含评论） | 公开 |
+| GET | /api/discussions/:id | 讨论详情（含评论；可选登录，评论带 `liked`） | 公开 |
 | POST | /api/discussions | 发起讨论 | 登录 |
 | PUT | /api/discussions/:id | 编辑讨论 | 作者/管理员 |
 | DELETE | /api/discussions/:id | 删除讨论 | 作者/编辑/管理员 |
@@ -365,6 +428,7 @@ sqlite3 data/sk-note.db "UPDATE users SET role = 'admin' WHERE username = 'your_
 | GET | /api/app/check-update | 检查应用更新 | 公开 |
 | GET | /api/app/releases | 版本列表 | 管理员 |
 | POST | /api/app/releases | 发布新版本 | 管理员 |
+| PUT | /api/app/releases/:id/active | 上架/下架版本 | 管理员 |
 | DELETE | /api/app/releases/:id | 删除版本 | 管理员 |
 
 ## License
