@@ -185,6 +185,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
                     app:cardCornerRadius="20dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">
@@ -244,13 +245,13 @@
                             android:layout_marginBottom="12dp"
                             android:hint="个人简介"
                             app:counterEnabled="true"
-                            app:counterMaxLength="200">
+                            app:counterMaxLength="200"
+                            app:placeholderText="介绍一下自己吧">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/etBio"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:hint="介绍一下自己吧"
                                 android:imeOptions="actionNext"
                                 android:inputType="textMultiLine"
                                 android:maxLength="200"
@@ -310,6 +311,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
                     app:cardCornerRadius="20dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="0dp">

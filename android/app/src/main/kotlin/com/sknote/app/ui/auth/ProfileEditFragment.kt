@@ -326,8 +326,6 @@ class ProfileEditFragment : Fragment() {
 
         binding.btnSaveProfile.isEnabled = !isLoading && profileChanged && !invalidAvatarUrl
         binding.btnChangePassword.isEnabled = !isLoading && passwordReady
-        binding.btnSaveProfile.alpha = if (binding.btnSaveProfile.isEnabled) 1f else 0.7f
-        binding.btnChangePassword.alpha = if (binding.btnChangePassword.isEnabled) 1f else 0.7f
         binding.btnUploadAvatar.alpha = if (isLoading) 0.7f else 1f
         binding.ivAvatar.alpha = if (isLoading) 0.72f else 1f
 
