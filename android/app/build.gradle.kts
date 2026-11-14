@@ -11,8 +11,8 @@ android {
         applicationId = "com.sknote.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.2.3"
+        versionCode = 7
+        versionName = "1.2.4"
 
         // 当前默认 API 地址为生产域名；如需切换环境，请修改这里
         buildConfigField("String", "API_BASE_URL", "\"https://api.wsqh.cn\"")
