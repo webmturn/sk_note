@@ -713,11 +713,11 @@ class DiscussionDetailFragment : Fragment() {
         replyTargetName = comment.authorName ?: "匿名"
         // 引用原文预览：写作时能看见自己要回的是哪句话。父评论本来就在本地列表里
         // （评论整篇一次返回，见 comments 观察者），不用再发请求。
-        val quoted = comment.content?.trim().orEmpty()
-        applyReplyTargetUi(
-            replyTargetName,
-            if (quoted.isEmpty()) "" else "「$quoted」"
-        )
+        val quoted = comment.content
+            ?.trim()
+            ?.replace(Regex("\\s+"), " ")
+            .orEmpty()
+        applyReplyTargetUi(replyTargetName, quoted)
         binding.etReply.requestFocus()
         // 弹出键盘
         val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
@@ -726,10 +726,21 @@ class DiscussionDetailFragment : Fragment() {
 
     private fun applyReplyTargetUi(targetName: String, quote: String) {
         binding.etReply.hint = "回复 @$targetName"
-        binding.tvReplyIndicator.text = "正在回复 @$targetName"
+        binding.tvReplyIndicator.text = "回复 @$targetName"
         binding.tvReplyQuote.text = quote
         binding.tvReplyQuote.visibility = if (quote.isEmpty()) View.GONE else View.VISIBLE
-        binding.layoutReplyIndicator.visibility = View.VISIBLE
+        binding.layoutReplyIndicator.contentDescription = "查看 @$targetName 的原评论"
+
+        val indicator = binding.layoutReplyIndicator
+        indicator.animate().cancel()
+        indicator.visibility = View.VISIBLE
+        indicator.alpha = 0f
+        indicator.translationY = 4f * resources.displayMetrics.density
+        indicator.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(120L)
+            .start()
     }
 
     private fun clearReplyTarget() {
@@ -738,7 +749,13 @@ class DiscussionDetailFragment : Fragment() {
         binding.etReply.hint = "写评论..."
         binding.tvReplyQuote.text = ""
         binding.tvReplyQuote.visibility = View.GONE
-        binding.layoutReplyIndicator.visibility = View.GONE
+        binding.layoutReplyIndicator.apply {
+            animate().cancel()
+            alpha = 1f
+            translationY = 0f
+            contentDescription = null
+            visibility = View.GONE
+        }
     }
 
     /** 点评论里的引用块：跳到它引用的那条评论。 */

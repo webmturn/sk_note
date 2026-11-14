@@ -86,79 +86,90 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Reply indicator banner -->
-        <!-- 整条可点：点它跳回被引用的那条评论（与点评论里的引用块同一行为）。
-             波纹走 foreground —— background 已被 colorSecondaryContainer 占用，
-             换成 selectableItemBackground 会把底色丢掉。minSdk 24，foreground 可用。 -->
-        <LinearLayout
+        <!-- Reply indicator：内嵌引用卡。整卡可点回原评论，右侧 X 只负责取消。 -->
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/layoutReplyIndicator"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="6dp"
-            android:background="?attr/colorSecondaryContainer"
-            android:foreground="?attr/selectableItemBackground"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="4dp"
             android:clickable="true"
             android:focusable="true"
-            android:visibility="gone">
-
-            <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
-                android:src="@drawable/ic_reply"
-                app:tint="?attr/colorOnSecondaryContainer"
-                android:layout_marginEnd="6dp"
-                android:importantForAccessibility="no" />
+            android:foreground="?attr/selectableItemBackground"
+            android:visibility="gone"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="4dp"
+                android:paddingVertical="8dp">
 
-                <TextView
-                    android:id="@+id/tvReplyIndicator"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSecondaryContainer"
-                    android:singleLine="true"
-                    android:ellipsize="end" />
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/bg_reply_accent"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:importantForAccessibility="no" />
 
-                <!-- 引用原文预览（第三十八批）：此前只显示「正在回复 @某某」，
-                     写作时看不到自己到底在回哪句话。 -->
-                <TextView
-                    android:id="@+id/tvReplyQuote"
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_reply_action"
+                    app:tint="?attr/colorPrimary"
+                    android:layout_marginEnd="8dp"
+                    android:importantForAccessibility="no" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:textSize="11sp"
-                    android:alpha="0.75"
-                    android:textColor="?attr/colorOnSecondaryContainer"
-                    android:visibility="gone" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvReplyIndicator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/tvReplyQuote"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/btnCancelReply"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_close"
+                    android:padding="12dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="取消回复"
+                    app:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
-
-            <ImageView
-                android:id="@+id/btnCancelReply"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_close"
-                android:padding="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:focusable="true"
-                android:contentDescription="取消回复"
-                app:tint="?attr/colorOnSecondaryContainer" />
-        </LinearLayout>
-
-        <!-- Reply bar -->
-        <com.google.android.material.divider.MaterialDivider
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:id="@+id/layoutReplyGuest"
